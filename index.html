@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Жылдам оқу — Speed Reader</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #F5EDD6; font-family: 'Georgia','Times New Roman',serif; overflow: hidden; }
+  #app { display: flex; flex-direction: column; height: 100vh; background: #F5EDD6; color: #2C1A0E; }
+
+  #toolbar { background: #EDE0C0; border-bottom: 1px solid #C9B98A; padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+  #toolbar label { font-size: 13px; color: #6B4C2A; }
+  select { font-family: Georgia,serif; font-size: 13px; background: #F5EDD6; border: 1px solid #C9B98A; color: #2C1A0E; border-radius: 6px; padding: 3px 7px; }
+  .btn { font-family: Georgia,serif; font-size: 13px; background: #D4B483; border: 1px solid #B8965A; color: #2C1A0E; border-radius: 6px; padding: 4px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .btn:hover { background: #C4A060; }
+  #upload-btn { background: #8B5E3C; color: #F5EDD6; border-color: #6B4020; }
+  #upload-btn:hover { background: #6B4020; }
+  #fs-btn { background: #4A6741; color: #F5EDD6; border-color: #2E4A26; margin-left: auto; }
+  #fs-btn:hover { background: #2E4A26; }
+  #play-btn { background: #8B5E3C; color: #F5EDD6; border-color: #6B4020; padding: 4px 16px; }
+  #play-btn:hover { background: #6B4020; }
+  #file-input { display: none; }
+  #stats { font-size: 12px; color: #8B6A3A; }
+  #save-notice { font-size: 11px; color: #4A6741; background: #DFF0D8; border: 1px solid #A8D08A; border-radius: 5px; padding: 2px 8px; display: none; }
+  #file-name { font-size: 12px; color: #6B4C2A; font-style: italic; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #progress-bar-wrap { padding: 4px 20px 3px; background: #F5EDD6; flex-shrink: 0; }
+  #progress-bar-bg { background: #DDD0A8; border-radius: 4px; height: 5px; overflow: hidden; }
+  #progress-bar-fill { background: #8B5E3C; height: 5px; border-radius: 4px; transition: width 0.2s; width: 0%; }
+
+  #reader-area { flex: 1; padding: 24px 56px 0px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
+  #columns-wrap { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 52px; overflow: hidden; min-height: 0; max-height: 100%; align-content: start; }
+  .col { font-size: 19px; line-height: 2; color: #2C1A0E; text-align: justify; word-spacing: 1px; overflow: hidden; }
+
+  .w { display: inline; padding: 1px 2px; border-radius: 3px; cursor: pointer; }
+  .w:hover { background: #E8D8A0; }
+  .w.hi { background: #C9A84C; color: #1A0E00; border-radius: 3px; }
+  #placeholder { color: #A08050; font-size: 18px; text-align: center; font-style: italic; padding: 60px 0; grid-column: 1/-1; }
+
+  #bottom { flex-shrink: 0; background: #EDE0C0; border-top: 1px solid #C9B98A; }
+  #controls { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 16px 4px; flex-wrap: wrap; }
+  #hint { text-align: center; font-size: 11px; color: #B09060; padding: 2px 0 4px; }
+
+
+
+  #books-panel { background: #E8D9B8; border-top: 1px solid #C9B98A; padding: 5px 16px; font-size: 12px; color: #6B4C2A; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .book-tag { background: #F5EDD6; border: 1px solid #C9B98A; border-radius: 5px; padding: 2px 8px; font-size: 12px; color: #2C1A0E; display: inline-flex; align-items: center; gap: 3px; }
+  .book-tag.clickable { cursor: pointer; }
+  .book-tag.clickable:hover { background: #DDD0A8; }
+  .book-tag .del { color: #8B5E3C; cursor: pointer; margin-left: 2px; }
+  .book-tag .del:hover { color: #500; }
+
+  /* bookmark */
+  #bookmark-bar { display: flex; align-items: center; gap: 8px; padding: 0 16px 5px; justify-content: center; }
+  #bookmark-btn { background: #4A6741; color: #F5EDD6; border: 1px solid #2E4A26; border-radius: 6px; padding: 3px 12px; font-family: Georgia,serif; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+  #bookmark-btn:hover { background: #2E4A26; }
+  #bookmark-goto { background: #D4B483; border: 1px solid #B8965A; color: #2C1A0E; border-radius: 6px; padding: 3px 10px; font-family: Georgia,serif; font-size: 12px; cursor: pointer; display: none; align-items: center; gap: 4px; }
+  #bookmark-goto:hover { background: #C4A060; }
+  #bookmark-info { font-size: 12px; color: #4A6741; font-style: italic; display: none; }
+  .w.bookmark-hi { background: #7BC67A !important; color: #0A2E0A !important; }
+
+  /* ── timer ── */
+  #timer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+  }
+  #timer-display {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: #2C1A0E;
+    min-width: 52px;
+    text-align: center;
+    background: #F5EDD6;
+    border: 1px solid #C9B98A;
+    border-radius: 6px;
+    padding: 2px 8px;
+    letter-spacing: 1px;
+  }
+  #timer-display.warning { color: #8B2000; background: #FFE8E0; border-color: #D4806A; }
+  #timer-select {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    background: #F5EDD6;
+    border: 1px solid #C9B98A;
+    color: #2C1A0E;
+    border-radius: 6px;
+    padding: 3px 7px;
+  }
+  #timer-start-btn {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    background: #4A6741;
+    border: 1px solid #2E4A26;
+    color: #F5EDD6;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  #timer-start-btn:hover { background: #2E4A26; }
+  #timer-start-btn.active { background: #8B2000; border-color: #6B0000; }
+
+  /* timer done overlay */
+  #timer-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(44,26,14,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+  #timer-overlay.show { display: flex; }
+  #timer-overlay-box {
+    background: #F5EDD6;
+    border: 2px solid #C9B98A;
+    border-radius: 16px;
+    padding: 36px 48px;
+    text-align: center;
+    font-family: Georgia, serif;
+  }
+  #timer-overlay-box h2 { font-size: 24px; color: #2C1A0E; margin-bottom: 10px; }
+  #timer-overlay-box p { font-size: 15px; color: #6B4C2A; margin-bottom: 20px; }
+  #timer-overlay-box button { font-family: Georgia, serif; font-size: 14px; background: #8B5E3C; color: #F5EDD6; border: none; border-radius: 8px; padding: 8px 24px; cursor: pointer; }
+  #timer-overlay-box button:hover { background: #6B4020; }
+
+  /* heading words */
+  .heading-word {
+    font-size: 1.18em;
+    font-weight: bold;
+    color: #1A0800;
+  }
+  .heading-word.hi {
+    background: #C9A84C;
+    color: #1A0E00;
+  }
+
+  /* fullscreen mode — hide toolbar and bottom */
+  #app.fs-mode #toolbar { display: none; }
+  #app.fs-mode #progress-bar-wrap { display: none; }
+  #app.fs-mode #bottom { display: none; }
+  #app.fs-mode #books-panel { display: none; }
+  #app.fs-mode #reader-area { padding: 40px 56px; }
+
+  /* exit hint in fullscreen */
+  #fs-hint {
+    display: none;
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    font-size: 12px;
+    color: rgba(44,26,14,0.4);
+    font-family: Georgia, serif;
+    z-index: 50;
+    pointer-events: none;
+  }
+  #app.fs-mode #fs-hint { display: block; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <button class="btn" id="upload-btn" onclick="document.getElementById('file-input').click()"><i class="ti ti-upload"></i> Файл жүктеу</button>
+    <input type="file" id="file-input" accept=".txt,.pdf,.epub">
+    <span id="file-name"></span>
+    <label>Жылдамдық:</label>
+    <select id="wpm-select">
+      <option value="100">100 WPM</option><option value="150">150 WPM</option>
+      <option value="200">200 WPM</option><option value="250" selected>250 WPM</option>
+      <option value="300">300 WPM</option><option value="400">400 WPM</option><option value="500">500 WPM</option>
+    </select>
+    <label>Бөлік:</label>
+    <select id="chunk-select">
+      <option value="1">1/3 жол</option>
+      <option value="2" selected>2/3 жол</option>
+      <option value="3">3/3 жол</option>
+    </select>
+    <span id="stats">—</span>
+    <span id="save-notice">✓ Сақталды</span>
+    <div id="timer-wrap">
+      <select id="timer-select">
+        <option value="10" selected>10 мин</option>
+        <option value="15">15 мин</option>
+        <option value="25">25 мин</option>
+        <option value="40">40 мин</option>
+      </select>
+      <button id="timer-start-btn" onclick="toggleTimer()"><i class="ti ti-clock"></i> Таймер</button>
+      <span id="timer-display" style="display:none;">10:00</span>
+    </div>
+    <button class="btn" id="fs-btn" onclick="toggleFS()"><i class="ti ti-arrows-maximize"></i> Толық экран</button>
+  </div>
+  <div id="progress-bar-wrap"><div id="progress-bar-bg"><div id="progress-bar-fill"></div></div></div>
+
+  <div id="reader-area">
+    <div id="columns-wrap">
+      <div id="col1" class="col"><div id="placeholder">PDF немесе TXT файл жүктеңіз<br><br><span style="font-size:14px;">Немесе төменде сақталған кітапты таңдаңыз</span></div></div>
+      <div id="col2" class="col"></div>
+    </div>
+  </div>
+
+  <div id="fs-hint">Esc — шығу &nbsp;·&nbsp; Space — ойнату/тоқтату</div>
+
+  <div id="bottom">
+    <div id="controls">
+      <button class="btn" onclick="goPage(currentPage-1)" title="Артқы бет"><i class="ti ti-chevrons-left"></i> Артқы бет</button>
+      <button class="btn" onclick="jump(-10)"><i class="ti ti-chevron-left"></i></button>
+      <button class="btn" id="play-btn" onclick="togglePlay()"><i class="ti ti-player-play"></i> Бастау</button>
+      <button class="btn" onclick="jump(10)"><i class="ti ti-chevron-right"></i></button>
+      <button class="btn" onclick="goPage(currentPage+1)" title="Келесі бет">Келесі бет <i class="ti ti-chevrons-right"></i></button>
+      <span id="page-counter" style="font-size:13px;color:#6B4C2A;font-family:Georgia,serif;font-weight:bold;min-width:110px;text-align:center;">—</span>
+      <span id="word-progress" style="font-size:12px;color:#8B6A3A;"></span>
+      <input id="goto-page-input" type="number" min="1" placeholder="бет №"
+        style="width:72px;font-family:Georgia,serif;font-size:13px;background:#F5EDD6;border:1px solid #C9B98A;border-radius:6px;padding:4px 6px;color:#2C1A0E;"
+        onkeydown="if(event.key==='Enter') gotoPageInput()">
+      <button class="btn" onclick="gotoPageInput()" style="background:#8B5E3C;color:#F5EDD6;border-color:#6B4020;"><i class="ti ti-corner-down-left"></i> Өт</button>
+    </div>
+    <div id="hint">Space — ойнату/тоқтату &nbsp;·&nbsp; ← → — 10 сөз &nbsp;·&nbsp; F — толық экран</div>
+    <div id="bookmark-bar">
+      <button id="bookmark-btn" onclick="setBookmark()"><i class="ti ti-bookmark"></i> Бет белгі қой</button>
+      <button id="bookmark-goto" onclick="gotoBookmark()"><i class="ti ti-bookmark-filled"></i> Белгіге өт</button>
+      <span id="bookmark-info"></span>
+    </div>
+  </div>
+
+  <div id="books-panel">
+    <strong>Сақталған кітаптар:</strong>
+    <span id="books-list" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
+    <span id="no-books" style="color:#A08050;font-style:italic;">—</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let words = [], pos = 0, playing = false, timer = null;
+let currentFileName = '', autoSaveTimer = null;
+let pages = [], currentPage = 0, pageSpans = {};
+
+const LS      = 'sr5_prog_';
+const LS_TEXT = 'sr5_text_';
+
+const getWPM   = () => parseInt(document.getElementById('wpm-select').value);
+const getChunk = () => parseInt(document.getElementById('chunk-select').value);
+// Correct WPM: interval = (avg_words_per_chunk / WPM) * 60000
+// avg_words_per_chunk ≈ 3 (standard line ~9 words / 3 chunks)
+const AVG_WORDS_PER_CHUNK = 3;
+const getIv = () => Math.round((AVG_WORDS_PER_CHUNK / getWPM()) * 60000);
+
+/* ══════════════════════════════════════════
+   ҚАЗАҚ МӘТІНІН ТАЗАЛАУ
+   ══════════════════════════════════════════ */
+function cleanKazakhText(text) {
+  const kazAlpha = 'а-яёА-ЯЁәіңқғүұөһӘІҢҚҒҮҰӨҺa-zA-Z';
+  text = text.replace(new RegExp('([' + kazAlpha + '])-\s+([' + kazAlpha + '])', 'g'), '$1$2');
+  const tokens = text.split(/\s+/);
+  const cleaned = [];
+  for (let tok of tokens) {
+    if (!tok) continue;
+    if (/^\d{1,4}$/.test(tok)) continue;
+    if (!new RegExp('[' + kazAlpha + '0-9]').test(tok)) continue;
+    tok = tok.replace(new RegExp('[^' + kazAlpha + '0-9.,!?:;«»“”\'\-–—()\[\]…]', 'g'), '');
+    if (!tok || /^[-–—.,!?:;]+$/.test(tok)) continue;
+    if (tok.length === 1 && new RegExp('[^' + kazAlpha + '0-9]').test(tok)) continue;
+    cleaned.push(tok);
+  }
+  return cleaned.join(' ');
+}
+
+/* ══════════════════════════════════════════
+   PAGINATION
+   ══════════════════════════════════════════ */
+function measureWordsPerPage() {
+  const col1el = document.getElementById('col1');
+  const colW   = col1el.clientWidth;
+  // Use the reader-area's actual inner height for precise measurement
+  const readerArea = document.getElementById('reader-area');
+  const readerStyle = window.getComputedStyle(readerArea);
+  const paddingTop = parseFloat(readerStyle.paddingTop);
+  const paddingBot = parseFloat(readerStyle.paddingBottom);
+  const colH = readerArea.clientHeight - paddingTop - paddingBot;
+  if (!colW || !colH || !words.length) return;
+
+  const probe = document.createElement('div');
+  probe.style.cssText = `position:absolute;visibility:hidden;width:${colW}px;font-size:19px;line-height:2;text-align:justify;word-spacing:1px;font-family:'Georgia','Times New Roman',serif;white-space:normal;`;
+  document.body.appendChild(probe);
+
+  // Small safety margin so last line is never cut
+  const safeH = colH - 4;
+
+  function countFit(startIdx) {
+    let lo = 0, hi = Math.min(1000, words.length - startIdx);
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      probe.textContent = words.slice(startIdx, startIdx + mid).join(' ');
+      if (probe.scrollHeight <= safeH) lo = mid; else hi = mid - 1;
+    }
+    return lo;
+  }
+
+  pages = [];
+  let idx = 0;
+  while (idx < words.length) {
+    const c1 = countFit(idx);
+    if (c1 === 0) { idx++; continue; }
+    const c2start = idx + c1;
+    const c2 = countFit(c2start);
+    const end = c2start + (c2 > 0 ? c2 : 0);
+    pages.push({ start: idx, col1End: c2start, end: Math.min(end, words.length) });
+    idx = end > idx ? end : idx + 1;
+  }
+  document.body.removeChild(probe);
+}
+
+// lineChunks: array of {start, end} word indices per 1/3 of visual line
+let lineChunks = [];
+let chunkIndex = 0;
+
+function splitIntoThirds(n) {
+  // Balanced split: middle gets extra if n%3==1, sides get extra if n%3==2
+  // 4->1+2+1, 5->2+1+2, 6->2+2+2, 7->2+3+2, 8->3+2+3, 9->3+3+3
+  // 10->3+4+3, 11->4+3+4, 12->4+4+4
+  const base = Math.floor(n / 3);
+  const extra = n % 3;
+  if (extra === 0) return [base, base, base];
+  if (extra === 1) return [base, base + 1, base];       // middle gets extra
+  return [base + 1, base, base + 1];                    // sides get extra
+}
+
+function buildLineChunks() {
+  lineChunks = [];
+
+  const col1el = document.getElementById('col1');
+  const col2el = document.getElementById('col2');
+
+  function processColumn(colEl) {
+    const colSpans = colEl.querySelectorAll('.w');
+    if (!colSpans.length) return;
+
+    const colTop = colEl.getBoundingClientRect().top;
+
+    // Group spans by visual line (rounded to nearest 2px for sub-pixel safety)
+    const groups = {};
+    colSpans.forEach(span => {
+      const wordIdx = parseInt(span.dataset.idx);
+      if (isNaN(wordIdx)) return;
+      const relTop = Math.round((span.getBoundingClientRect().top - colTop) / 2) * 2;
+      if (!groups[relTop]) groups[relTop] = [];
+      groups[relTop].push(wordIdx);
+    });
+
+    const tops = Object.keys(groups).map(Number).sort((a, b) => a - b);
+    for (const top of tops) {
+      const line = groups[top].sort((a, b) => a - b);
+      const n = line.length;
+      if (n === 0) continue;
+
+      const sizes = splitIntoThirds(n);
+      let offset = 0;
+      for (const size of sizes) {
+        if (size === 0) continue;
+        const slice = line.slice(offset, offset + size);
+        if (slice.length === 0) break;
+        lineChunks.push({
+          start: slice[0],
+          end:   slice[slice.length - 1] + 1
+        });
+        offset += size;
+      }
+    }
+  }
+
+  processColumn(col1el);
+  processColumn(col2el);
+  lineChunks.sort((a, b) => a.start - b.start);
+}
+
+function renderPage(pageIdx) {
+  if (pageIdx < 0 || pageIdx >= pages.length) return;
+  currentPage = pageIdx;
+  const pg = pages[pageIdx];
+  const col1 = document.getElementById('col1');
+  const col2 = document.getElementById('col2');
+  col1.innerHTML = '';
+  col2.innerHTML = '';
+  pageSpans = {};
+
+  function fill(container, from, to) {
+    for (let i = from; i < to && i < words.length; i++) {
+      const s = document.createElement('span');
+      s.className = 'w';
+      s.textContent = words[i];
+      s.dataset.idx = i;  // store word index for buildLineChunks
+      const ii = i;
+      s.onclick = () => {
+        const ci = lineChunks.findIndex(c => ii >= c.start && ii < c.end);
+        chunkIndex = ci >= 0 ? ci : 0;
+        pos = lineChunks[chunkIndex] ? lineChunks[chunkIndex].start : ii;
+        applyHighlight();
+        if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+      };
+      container.appendChild(s);
+      container.appendChild(document.createTextNode(' '));
+      pageSpans[i] = s;
+    }
+  }
+
+  fill(col1, pg.start, pg.col1End);
+  fill(col2, pg.col1End, pg.end);
+  updateUI();
+
+  // After DOM paint: build line chunks, then highlight
+  requestAnimationFrame(() => {
+    buildLineChunks();
+    // Find chunk that contains current pos
+    let ci = lineChunks.findIndex(c => pos >= c.start && pos < c.end);
+    if (ci < 0) ci = 0;
+    chunkIndex = ci;
+    if (lineChunks[chunkIndex]) pos = lineChunks[chunkIndex].start;
+    _doHighlight();
+    refreshBookmarkSpan();
+    if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+  });
+}
+
+
+function pageOf(i) {
+  for (let p = 0; p < pages.length; p++) {
+    if (i >= pages[p].start && i < pages[p].end) return p;
+  }
+  return 0;
+}
+
+function goPage(p) {
+  p = Math.max(0, Math.min(pages.length - 1, p));
+  pos = pages[p].start;
+  chunkIndex = 0;
+  renderPage(p); // renderPage calls applyHighlight via rAF after buildLineChunks
+  if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+}
+
+function _doHighlight() {
+  if (!lineChunks.length) return;
+  const chunkCount = getChunk(); // how many thirds to highlight
+  const firstChunk = lineChunks[chunkIndex];
+  const lastChunkIdx = Math.min(chunkIndex + chunkCount - 1, lineChunks.length - 1);
+  const lastChunk = lineChunks[lastChunkIdx];
+  if (!firstChunk || !lastChunk) return;
+  const hiStart = firstChunk.start;
+  const hiEnd   = lastChunk.end;
+  Object.entries(pageSpans).forEach(([i, s]) => {
+    const ii = parseInt(i);
+    (ii >= hiStart && ii < hiEnd)
+      ? s.classList.add('hi')
+      : s.classList.remove('hi');
+  });
+  updateUI();
+}
+
+function applyHighlight() {
+  const pg = pageOf(pos);
+  if (pg !== currentPage) {
+    renderPage(pg); // renderPage will call _doHighlight after rAF
+    return;
+  }
+  _doHighlight();
+}
+
+function updateUI() {
+  const pct  = words.length > 1 ? (pos / (words.length - 1)) * 100 : 0;
+  const mins = Math.round(Math.max(0, words.length - pos) / getWPM());
+  document.getElementById('progress-bar-fill').style.width = Math.min(100, pct).toFixed(1) + '%';
+  document.getElementById('stats').textContent = (pos + 1) + ' / ' + words.length + ' · ~' + mins + ' мин';
+  document.getElementById('page-counter').textContent = pages.length
+    ? 'Бет ' + (currentPage + 1) + ' / ' + pages.length : '—';
+  document.getElementById('word-progress').textContent = pages.length
+    ? '(' + (currentPage + 1) + ' бет оқылды)' : '';
+}
+
+/* ══════════════════════════════════════════
+   PLAYBACK
+   ══════════════════════════════════════════ */
+function step() {
+  const advance = getChunk();
+  if (chunkIndex + advance >= lineChunks.length) {
+    if (currentPage + 1 >= pages.length) { stop(); lsSave(); return; }
+    const nextPage = currentPage + 1;
+    pos = pages[nextPage].start;
+    chunkIndex = 0;
+    renderPage(nextPage);
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(lsSave, 5000);
+    return;
+  }
+  chunkIndex += advance;
+  pos = lineChunks[chunkIndex].start;
+  _doHighlight();
+  // Reschedule with accurate interval based on actual words in next chunk
+  clearInterval(timer);
+  timer = setTimeout(() => {
+    step();
+  }, getIv());
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(lsSave, 5000);
+}
+function togglePlay() { if (!words.length) return; playing ? stop() : start(); }
+function start() {
+  playing = true;
+  document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-pause"></i> Тоқтату';
+  // Use setTimeout chain instead of setInterval for accurate per-chunk timing
+  timer = setInterval(step, getIv());
+}
+function stop() {
+  playing = false;
+  document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-play"></i> Бастау';
+  clearInterval(timer);
+  lsSave();
+}
+function jump(n) {
+  chunkIndex = Math.max(0, Math.min(lineChunks.length - 1, chunkIndex + n));
+  if (lineChunks[chunkIndex]) pos = lineChunks[chunkIndex].start;
+  applyHighlight();
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(lsSave, 2000);
+  if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+}
+
+/* ══════════════════════════════════════════
+   LOCALSTORAGE
+   ══════════════════════════════════════════ */
+function lsSave() {
+  if (!currentFileName || !words.length) return;
+  try {
+    localStorage.setItem(LS + currentFileName, JSON.stringify({
+      pos, total: words.length, wpm: getWPM(), chunk: 1,
+      savedAt: new Date().toLocaleString('kk-KZ')
+    }));
+  } catch(e) {}
+  const el = document.getElementById('save-notice');
+  el.style.display = 'inline-block';
+  setTimeout(() => el.style.display = 'none', 2000);
+  renderBooksList();
+}
+
+function lsSaveText(fileName, text) {
+  try { localStorage.setItem(LS_TEXT + fileName, text.slice(0, 4000000)); } catch(e) {}
+}
+function lsLoadText(fileName) {
+  try { return localStorage.getItem(LS_TEXT + fileName) || null; } catch(e) { return null; }
+}
+function lsLoadProgress(fileName) {
+  try { const r = localStorage.getItem(LS + fileName); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function lsAllBooks() {
+  const books = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(LS) && !k.startsWith(LS_TEXT)) books.push(k.slice(LS.length));
+  }
+  return books;
+}
+
+function renderBooksList() {
+  const list = document.getElementById('books-list');
+  const none = document.getElementById('no-books');
+  list.innerHTML = '';
+  const books = lsAllBooks();
+  none.style.display = books.length ? 'none' : 'inline';
+  books.forEach(name => {
+    const d = lsLoadProgress(name) || {};
+    const pct = d.total ? Math.round(d.pos / d.total * 100) : 0;
+    const hasText = !!lsLoadText(name);
+    const tag = document.createElement('span');
+    tag.className = 'book-tag' + (hasText ? ' clickable' : '');
+    tag.title = hasText ? 'Басыңыз — кітапты жүктемей ашасыз' : 'Файлды қайта жүктеңіз';
+    tag.innerHTML = name + ' <small>(' + pct + '%)</small>';
+    if (hasText) tag.onclick = () => loadFromCache(name);
+    const del = document.createElement('span');
+    del.className = 'del'; del.textContent = ' ✕';
+    del.onclick = (e) => {
+      e.stopPropagation();
+      if(confirm('"' + name + '" жоясыз ба?')) {
+        localStorage.removeItem(LS + name);
+        localStorage.removeItem(LS_TEXT + name);
+        renderBooksList();
+      }
+    };
+    tag.appendChild(del);
+    list.appendChild(tag);
+  });
+}
+
+function loadFromCache(fileName) {
+  const text = lsLoadText(fileName);
+  if (!text) { alert('Мәтін сақталмаған, файлды қайта жүктеңіз'); return; }
+  loadWords(text, fileName, lsLoadProgress(fileName));
+}
+
+/* ══════════════════════════════════════════
+   LOAD WORDS
+   ══════════════════════════════════════════ */
+function loadWords(text, fileName, savedProgress) {
+  const cleaned = cleanKazakhText(text);
+  words = cleaned.split(/\s+/).filter(w => w.length > 0);
+  pos = 0; stop();
+  currentFileName = fileName;
+  document.getElementById('file-name').textContent = fileName;
+  document.getElementById('col1').innerHTML = '';
+  document.getElementById('col2').innerHTML = '';
+
+  setTimeout(() => {
+    measureWordsPerPage();
+    if (savedProgress && savedProgress.total === words.length && savedProgress.pos > 0) {
+      pos = savedProgress.pos;
+      document.getElementById('wpm-select').value   = savedProgress.wpm   || 250;
+      document.getElementById('chunk-select').value = savedProgress.chunk || 2;
+    }
+    renderPage(pageOf(pos));
+    applyHighlight();
+    loadBookmark(fileName);
+  }, 120);
+}
+
+
+/* ══════════════════════════════════════════
+   EPUB PARSER
+   ══════════════════════════════════════════ */
+async function parseEpub(arrayBuffer) {
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  
+  // 1. Find container.xml to get OPF path
+  const containerXml = await zip.file('META-INF/container.xml').async('string');
+  const parser = new DOMParser();
+  const containerDoc = parser.parseFromString(containerXml, 'application/xml');
+  const opfPath = containerDoc.querySelector('rootfile').getAttribute('full-path');
+  const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
+  
+  // 2. Parse OPF to get spine order
+  const opfXml = await zip.file(opfPath).async('string');
+  const opfDoc = parser.parseFromString(opfXml, 'application/xml');
+  
+  // Get manifest items
+  const manifest = {};
+  opfDoc.querySelectorAll('manifest item').forEach(item => {
+    manifest[item.getAttribute('id')] = {
+      href: item.getAttribute('href'),
+      type: item.getAttribute('media-type')
+    };
+  });
+  
+  // Get spine order
+  const spineItems = [];
+  opfDoc.querySelectorAll('spine itemref').forEach(ref => {
+    const id = ref.getAttribute('idref');
+    if (manifest[id]) spineItems.push(manifest[id].href);
+  });
+  
+  // 3. Extract text from each spine item in order
+  let fullText = '';
+  for (const href of spineItems) {
+    const fullHref = opfDir + href;
+    const file = zip.file(fullHref) || zip.file(href);
+    if (!file) continue;
+    try {
+      const html = await file.async('string');
+      const doc = parser.parseFromString(html, 'application/xhtml+xml');
+      // Remove script, style tags
+      doc.querySelectorAll('script, style').forEach(el => el.remove());
+      // Get text content
+      const body = doc.querySelector('body');
+      if (body) fullText += body.textContent + ' ';
+    } catch(e) { continue; }
+  }
+  return fullText;
+}
+
+/* ══════════════════════════════════════════
+   FILE INPUT
+   ══════════════════════════════════════════ */
+document.getElementById('file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  let rawText = '';
+  if (file.name.endsWith('.txt')) {
+    rawText = await file.text();
+  } else if (file.name.endsWith('.pdf')) {
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const pg = await pdf.getPage(i);
+      rawText += (await pg.getTextContent()).items.map(x => x.str).join(' ') + ' ';
+    }
+  } else if (file.name.endsWith('.epub')) {
+    rawText = await parseEpub(await file.arrayBuffer());
+  }
+  const cleanedText = cleanKazakhText(rawText);
+  lsSaveText(file.name, cleanedText);
+  loadWords(rawText, file.name, lsLoadProgress(file.name));
+  e.target.value = '';
+});
+
+/* ══════════════════════════════════════════
+   FULLSCREEN / KEYBOARD / RESIZE
+   ══════════════════════════════════════════ */
+function toggleFS() {
+  const app = document.getElementById('app');
+  const btn = document.getElementById('fs-btn');
+  if (app.classList.contains('fs-mode')) {
+    app.classList.remove('fs-mode');
+    btn.innerHTML = '<i class="ti ti-arrows-maximize"></i> Толық экран';
+  } else {
+    app.classList.add('fs-mode');
+    btn.innerHTML = '<i class="ti ti-arrows-minimize"></i> Кішірейту';
+  }
+  // No page recalculation — pages stay the same
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space')      { e.preventDefault(); togglePlay(); }
+  if (e.code === 'ArrowLeft')  jump(-10);
+  if (e.code === 'ArrowRight') jump(10);
+  if (e.code === 'KeyF')       toggleFS();
+  if (e.code === 'Escape' && document.getElementById('app').classList.contains('fs-mode')) toggleFS();
+});
+document.getElementById('wpm-select').addEventListener('change', () => {
+  if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+});
+document.getElementById('chunk-select').addEventListener('change', () => {
+  if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+});
+
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (words.length) { measureWordsPerPage(); renderPage(pageOf(pos)); applyHighlight(); }
+  }, 300);
+});
+
+
+/* ══════════════════════════════════════════
+   BOOKMARK
+   ══════════════════════════════════════════ */
+let bookmarkPos = -1;
+
+function setBookmark() {
+  bookmarkPos = pos;
+  const pct = words.length > 1 ? Math.round(pos / (words.length-1) * 100) : 0;
+  try { localStorage.setItem(LS + currentFileName + '_bm', JSON.stringify({ pos: bookmarkPos, pct })); } catch(e) {}
+  updateBookmarkUI();
+  // flash green on current highlighted words
+  const chunk = 1;
+  for (let i = pos; i < pos + chunk && i < words.length; i++) {
+    if (pageSpans[i]) {
+      pageSpans[i].classList.add('bookmark-hi');
+      setTimeout(() => { if(pageSpans[i]) pageSpans[i].classList.remove('bookmark-hi'); }, 1500);
+    }
+  }
+}
+
+function gotoBookmark() {
+  if (bookmarkPos < 0) return;
+  pos = bookmarkPos;
+  applyHighlight();
+  if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+}
+
+function loadBookmark(fileName) {
+  try {
+    const raw = localStorage.getItem(LS + fileName + '_bm');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    bookmarkPos = d.pos || -1;
+    updateBookmarkUI();
+  } catch(e) {}
+}
+
+function updateBookmarkUI() {
+  const btn  = document.getElementById('bookmark-goto');
+  const info = document.getElementById('bookmark-info');
+  if (bookmarkPos >= 0 && words.length > 0) {
+    const pct = Math.round(bookmarkPos / (words.length-1) * 100);
+    btn.style.display = 'inline-flex';
+    info.style.display = 'inline';
+    info.textContent = '📍 ' + (bookmarkPos+1) + '-сөз (' + pct + '%)';
+    // mark the bookmark word on current page
+    refreshBookmarkSpan();
+  } else {
+    btn.style.display = 'none';
+    info.style.display = 'none';
+  }
+}
+
+function refreshBookmarkSpan() {
+  // remove old bookmark highlights
+  document.querySelectorAll('.bookmark-hi').forEach(el => el.classList.remove('bookmark-hi'));
+  if (bookmarkPos >= 0 && pageSpans[bookmarkPos]) {
+    pageSpans[bookmarkPos].classList.add('bookmark-hi');
+  }
+}
+
+
+/* ══════════════════════════════════════════
+   TIMER
+   ══════════════════════════════════════════ */
+let timerInterval = null;
+let timerSeconds = 0;
+let timerRunning = false;
+let timerStartPos = 0;
+
+function toggleTimer() {
+  if (timerRunning) {
+    stopTimer(false);
+  } else {
+    startTimer();
+  }
+}
+
+function startTimer() {
+  const mins = parseInt(document.getElementById('timer-select').value);
+  timerSeconds = mins * 60;
+  timerStartPos = pos;
+  timerRunning = true;
+
+  const btn = document.getElementById('timer-start-btn');
+  btn.classList.add('active');
+  btn.innerHTML = '<i class="ti ti-clock-stop"></i> Тоқтату';
+
+  const display = document.getElementById('timer-display');
+  display.style.display = 'inline-block';
+  display.classList.remove('warning');
+  updateTimerDisplay();
+
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    updateTimerDisplay();
+    if (timerSeconds <= 60) {
+      display.classList.add('warning');
+    }
+    if (timerSeconds <= 0) {
+      stopTimer(true);
+    }
+  }, 1000);
+}
+
+function stopTimer(done) {
+  clearInterval(timerInterval);
+  timerRunning = false;
+
+  const btn = document.getElementById('timer-start-btn');
+  btn.classList.remove('active');
+  btn.innerHTML = '<i class="ti ti-clock"></i> Таймер';
+
+  const display = document.getElementById('timer-display');
+  display.style.display = 'none';
+  display.classList.remove('warning');
+
+  if (done) {
+    stop(); // stop reading
+    // beep
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.3, 0.6].forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 660;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.25);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.25);
+      });
+    } catch(e) {}
+    // show overlay
+    const wordsRead = pos - timerStartPos;
+    const mins = parseInt(document.getElementById('timer-select').value);
+    document.getElementById('timer-stats-msg').textContent =
+      mins + ' минутта ' + wordsRead + ' сөз оқыдыңыз!';
+    document.getElementById('timer-overlay').classList.add('show');
+  }
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerSeconds / 60);
+  const s = timerSeconds % 60;
+  document.getElementById('timer-display').textContent =
+    String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function closeTimerOverlay() {
+  document.getElementById('timer-overlay').classList.remove('show');
+}
+
+
+function gotoPageInput() {
+  const input = document.getElementById('goto-page-input');
+  const p = parseInt(input.value) - 1; // convert to 0-based
+  if (isNaN(p)) return;
+  goPage(Math.max(0, Math.min(pages.length - 1, p)));
+  input.value = '';
+}
+
+window.addEventListener('beforeunload', lsSave);
+renderBooksList();
+</script>
+
+<!-- timer done overlay -->
+<div id="timer-overlay">
+  <div id="timer-overlay-box">
+    <h2>⏰ Уақыт бітті!</h2>
+    <p id="timer-stats-msg"></p>
+    <button onclick="closeTimerOverlay()">Жабу</button>
+  </div>
+</div>
+</body>
+</html>
