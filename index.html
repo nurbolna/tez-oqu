@@ -164,10 +164,59 @@
     pointer-events: none;
   }
   #app.fs-mode #fs-hint { display: block; }
+
+  /* ══ auth chip ══ */
+  #auth-chip { background: #4A6741; color: #F5EDD6; border-color: #2E4A26; }
+  #auth-chip:hover { background: #2E4A26; }
+
+  /* ══ auth overlay ══ */
+  #auth-overlay { display: none; position: fixed; inset: 0; background: rgba(44,26,14,0.7); z-index: 1000; align-items: center; justify-content: center; }
+  #auth-overlay.show { display: flex; }
+  #auth-box { position: relative; background: #F5EDD6; border: 2px solid #C9B98A; border-radius: 16px; padding: 32px 36px; text-align: center; font-family: Georgia, serif; width: 340px; max-width: 88vw; }
+  #auth-box h2 { font-size: 20px; color: #2C1A0E; margin-bottom: 6px; }
+  .auth-hint { font-size: 13px; color: #6B4C2A; margin: 14px 0 8px; text-align: left; }
+  #auth-bot-link { display: inline-flex; align-items: center; gap: 6px; background: #4A6741; color: #F5EDD6; border: 1px solid #2E4A26; border-radius: 8px; padding: 8px 16px; text-decoration: none; font-size: 14px; }
+  #auth-bot-link:hover { background: #2E4A26; }
+  #auth-phone-input, #auth-otp-input { width: 100%; font-family: Georgia, serif; font-size: 16px; background: #FFFDF6; border: 1px solid #C9B98A; border-radius: 8px; padding: 10px 12px; color: #2C1A0E; margin-bottom: 14px; text-align: center; }
+  #auth-send-btn, #auth-verify-btn { width: 100%; font-family: Georgia, serif; font-size: 14px; background: #8B5E3C; color: #F5EDD6; border: none; border-radius: 8px; padding: 10px 24px; cursor: pointer; }
+  #auth-send-btn:hover, #auth-verify-btn:hover { background: #6B4020; }
+  #auth-send-btn:disabled, #auth-verify-btn:disabled { opacity: 0.6; cursor: default; }
+  #auth-back-link { margin-top: 12px; font-size: 12px; color: #8B6A3A; cursor: pointer; text-decoration: underline; }
+  #auth-back-link:hover { color: #6B4020; }
+  #auth-error { display: none; margin-top: 14px; font-size: 12px; color: #8B2000; background: #FFE8E0; border: 1px solid #D4806A; border-radius: 6px; padding: 8px 10px; text-align: left; }
+  #auth-close { position: absolute; top: 10px; right: 14px; cursor: pointer; color: #8B6A3A; font-size: 18px; line-height: 1; }
+  #auth-close:hover { color: #2C1A0E; }
+
+  /* ══ dashboard ══ */
+  #dashboard { display: none; height: 100vh; overflow-y: auto; background: #F5EDD6; color: #2C1A0E; }
+  #dashboard-inner { max-width: 720px; margin: 0 auto; }
+  #dash-header { background: #EDE0C0; border-bottom: 1px solid #C9B98A; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  #dash-logo { font-size: 19px; font-weight: bold; }
+  #dash-user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4A6741; background: #F5EDD6; border: 1px solid #A8D08A; border-radius: 6px; padding: 5px 10px; }
+  #dash-signout { cursor: pointer; color: #8B6A3A; margin-left: 2px; font-size: 15px; }
+  #dash-signout:hover { color: #8B2000; }
+  #dashboard-loading { text-align: center; padding: 70px 0; color: #A08050; font-style: italic; }
+  #dashboard-content { display: none; padding: 20px; }
+  #dash-greeting { font-size: 15px; color: #6B4C2A; margin-bottom: 18px; }
+  #dash-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 22px; }
+  .dash-stat-tile { background: #EDE0C0; border: 1px solid #C9B98A; border-radius: 8px; padding: 12px 14px; }
+  .dash-stat-label { font-size: 12px; color: #8B6A3A; margin-bottom: 4px; }
+  .dash-stat-value { font-size: 21px; font-weight: bold; }
+  .dash-stat-sub { font-size: 11px; color: #A08050; margin-top: 2px; }
+  #dash-chart-section { margin-bottom: 24px; }
+  #dash-chart-bars { display: flex; align-items: flex-end; gap: 10px; height: 50px; }
+  #dash-chart-labels { display: flex; gap: 10px; margin-top: 5px; }
+  #dash-books-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
+  #dash-books-title { font-size: 17px; font-weight: bold; }
+  #dash-books-list { display: flex; flex-direction: column; gap: 10px; }
+  .dash-book-card { background: #F0E6C8; border: 1px solid #C9B98A; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 14px; }
+  .dash-book-card:hover { background: #EDE0C0; }
+  #dash-local-link { margin-top: 18px; text-align: center; font-size: 12px; color: #8B6A3A; cursor: pointer; text-decoration: underline; }
+  #dash-local-link:hover { color: #6B4020; }
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" style="display:none;">
   <div id="toolbar">
     <button class="btn" id="upload-btn" onclick="document.getElementById('file-input').click()"><i class="ti ti-upload"></i> Файл жүктеу</button>
     <input type="file" id="file-input" accept=".txt,.pdf,.epub">
@@ -197,6 +246,7 @@
       <span id="timer-display" style="display:none;">10:00</span>
     </div>
     <button class="btn" id="fs-btn" onclick="toggleFS()"><i class="ti ti-arrows-maximize"></i> Толық экран</button>
+    <span class="btn" id="auth-chip" onclick="onAuthChipClick()"><i class="ti ti-brand-telegram"></i> <span id="auth-chip-text">Кіру</span></span>
   </div>
   <div id="progress-bar-wrap"><div id="progress-bar-bg"><div id="progress-bar-fill"></div></div></div>
 
@@ -238,8 +288,74 @@
   </div>
 </div>
 
+<div id="dashboard">
+  <div id="dashboard-inner">
+    <div id="dash-header">
+      <div id="dash-logo">Тез Оқу</div>
+      <div id="dash-user-chip">
+        <i class="ti ti-brand-telegram" aria-hidden="true"></i> <span id="dash-phone"></span>
+        <span id="dash-signout" onclick="signOut()" title="Шығу"><i class="ti ti-logout"></i></span>
+      </div>
+    </div>
+    <div id="dashboard-loading">Жүктелуде...</div>
+    <div id="dashboard-content">
+      <div id="dash-greeting">Қайта келдіңіз!</div>
+      <div id="dash-stats-grid">
+        <div class="dash-stat-tile">
+          <div class="dash-stat-label">Бұл апта</div>
+          <div class="dash-stat-value" id="dash-week-pages">—</div>
+          <div class="dash-stat-sub" id="dash-week-words"></div>
+        </div>
+        <div class="dash-stat-tile">
+          <div class="dash-stat-label">Бұл ай</div>
+          <div class="dash-stat-value" id="dash-month-pages">—</div>
+          <div class="dash-stat-sub" id="dash-month-words"></div>
+        </div>
+        <div class="dash-stat-tile">
+          <div class="dash-stat-label">Орташа жылдамдық</div>
+          <div class="dash-stat-value" id="dash-wpm">—</div>
+        </div>
+      </div>
+      <div id="dash-chart-section">
+        <div class="dash-stat-label">Апталық белсенділік (сөз)</div>
+        <div id="dash-chart-bars"></div>
+        <div id="dash-chart-labels"></div>
+      </div>
+      <div id="dash-books-header">
+        <div id="dash-books-title">Кітаптарың</div>
+        <button class="btn" id="dash-upload-btn" style="background:#8B5E3C;color:#F5EDD6;border-color:#6B4020;"><i class="ti ti-plus"></i> Жаңа кітап</button>
+      </div>
+      <div id="dash-books-list"></div>
+      <div id="dash-local-link" onclick="showReaderView()">Немесе жергілікті кітапты аш →</div>
+    </div>
+  </div>
+</div>
+
+<div id="auth-overlay">
+  <div id="auth-box">
+    <span id="auth-close" onclick="closeAuthOverlay()"><i class="ti ti-x"></i></span>
+    <div id="auth-step-phone">
+      <h2>Telegram арқылы кіру</h2>
+      <p class="auth-hint">1. Алдымен ботпен байланысыңыз:</p>
+      <a href="https://t.me/tezoku_bot" target="_blank" rel="noopener" id="auth-bot-link"><i class="ti ti-brand-telegram"></i> @tezoku_bot ашу</a>
+      <p class="auth-hint">2. Телефон нөміріңізді енгізіңіз:</p>
+      <input type="tel" id="auth-phone-input" placeholder="+7 707 123 45 67">
+      <button id="auth-send-btn" onclick="requestOtp()">Кодты жіберу</button>
+    </div>
+    <div id="auth-step-otp" style="display:none;">
+      <h2>Кодты енгізіңіз</h2>
+      <p class="auth-hint">Telegram-дағы боттан келген 6 таңбалы код</p>
+      <input type="text" id="auth-otp-input" inputmode="numeric" maxlength="6" placeholder="000000">
+      <button id="auth-verify-btn" onclick="verifyOtpCode()">Растау</button>
+      <div id="auth-back-link" onclick="showAuthStep('phone')">← Артқа</div>
+    </div>
+    <div id="auth-error"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -550,6 +666,8 @@ function lsSave() {
   el.style.display = 'inline-block';
   setTimeout(() => el.style.display = 'none', 2000);
   renderBooksList();
+
+  if (authUser && currentBookId) syncProgressToCloud();
 }
 
 function lsSaveText(fileName, text) {
@@ -610,6 +728,7 @@ function loadFromCache(fileName) {
    LOAD WORDS
    ══════════════════════════════════════════ */
 function loadWords(text, fileName, savedProgress) {
+  currentBookId = null;
   const cleaned = cleanKazakhText(text);
   words = cleaned.split(/\s+/).filter(w => w.length > 0);
   pos = 0; stop();
@@ -637,18 +756,18 @@ function loadWords(text, fileName, savedProgress) {
    ══════════════════════════════════════════ */
 async function parseEpub(arrayBuffer) {
   const zip = await JSZip.loadAsync(arrayBuffer);
-  
+
   // 1. Find container.xml to get OPF path
   const containerXml = await zip.file('META-INF/container.xml').async('string');
   const parser = new DOMParser();
   const containerDoc = parser.parseFromString(containerXml, 'application/xml');
   const opfPath = containerDoc.querySelector('rootfile').getAttribute('full-path');
   const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
-  
+
   // 2. Parse OPF to get spine order
   const opfXml = await zip.file(opfPath).async('string');
   const opfDoc = parser.parseFromString(opfXml, 'application/xml');
-  
+
   // Get manifest items
   const manifest = {};
   opfDoc.querySelectorAll('manifest item').forEach(item => {
@@ -657,14 +776,14 @@ async function parseEpub(arrayBuffer) {
       type: item.getAttribute('media-type')
     };
   });
-  
+
   // Get spine order
   const spineItems = [];
   opfDoc.querySelectorAll('spine itemref').forEach(ref => {
     const id = ref.getAttribute('idref');
     if (manifest[id]) spineItems.push(manifest[id].href);
   });
-  
+
   // 3. Extract text from each spine item in order
   let fullText = '';
   for (const href of spineItems) {
@@ -690,6 +809,7 @@ async function parseEpub(arrayBuffer) {
 document.getElementById('file-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  showReaderView();
   let rawText = '';
   if (file.name.endsWith('.txt')) {
     rawText = await file.text();
@@ -706,6 +826,8 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
   lsSaveText(file.name, cleanedText);
   loadWords(rawText, file.name, lsLoadProgress(file.name));
   e.target.value = '';
+
+  if (authUser) uploadBookToCloud(file.name, cleanedText).catch(() => {});
 });
 
 /* ══════════════════════════════════════════
@@ -910,8 +1032,354 @@ function gotoPageInput() {
   input.value = '';
 }
 
+/* ══════════════════════════════════════════
+   CLOUD (Supabase) — auth, dashboard, sync
+   ══════════════════════════════════════════ */
+const SUPABASE_URL = 'https://cvntpzojjszczjgpzkac.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_--SS0ekU58u-SwQJyfb3IA_HUTXxYf6';
+
+let sb = null;
+try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
+
+let authUser = null;
+let authPhone = '';
+let currentBookId = null;
+let lastSyncedPos = 0;
+
+function normalizePhone(raw) {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('8')) digits = '7' + digits.slice(1);
+  if (digits.length === 10) digits = '7' + digits;
+  return '+' + digits;
+}
+
+function showReaderView() {
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+function openAuthOverlay() {
+  document.getElementById('auth-overlay').classList.add('show');
+  showAuthStep('phone');
+}
+function closeAuthOverlay() {
+  document.getElementById('auth-overlay').classList.remove('show');
+}
+function showAuthStep(step) {
+  document.getElementById('auth-step-phone').style.display = step === 'phone' ? 'block' : 'none';
+  document.getElementById('auth-step-otp').style.display = step === 'otp' ? 'block' : 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+function authShowError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function requestOtp() {
+  if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
+  const raw = document.getElementById('auth-phone-input').value;
+  const phone = normalizePhone(raw);
+  if (phone.length < 11) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
+  authPhone = phone;
+  const btn = document.getElementById('auth-send-btn');
+  btn.disabled = true; btn.textContent = 'Жіберілуде...';
+  const { error } = await sb.auth.signInWithOtp({ phone });
+  btn.disabled = false; btn.textContent = 'Кодты жіберу';
+  if (error) {
+    authShowError('Код жіберілмеді. Алдымен Telegram ботына өтіп, /start басыңыз, содан кейін қайта көріңіз.');
+    return;
+  }
+  showAuthStep('otp');
+}
+
+async function verifyOtpCode() {
+  if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
+  const token = document.getElementById('auth-otp-input').value.trim();
+  if (token.length !== 6) { authShowError('6 таңбалы кодты енгізіңіз'); return; }
+  const btn = document.getElementById('auth-verify-btn');
+  btn.disabled = true; btn.textContent = 'Тексерілуде...';
+  const { data, error } = await sb.auth.verifyOtp({ phone: authPhone, token, type: 'sms' });
+  btn.disabled = false; btn.textContent = 'Растау';
+  if (error) { authShowError('Код қате немесе мерзімі өткен'); return; }
+  authUser = data.user;
+  document.getElementById('auth-otp-input').value = '';
+  closeAuthOverlay();
+  updateAuthChip();
+  await showDashboard();
+}
+
+function onAuthChipClick() {
+  if (authUser) { showDashboard(); } else { openAuthOverlay(); }
+}
+
+async function signOut() {
+  if (sb) { try { await sb.auth.signOut(); } catch(e) {} }
+  authUser = null;
+  currentBookId = null;
+  updateAuthChip();
+  showReaderView();
+}
+
+function updateAuthChip() {
+  const textEl = document.getElementById('auth-chip-text');
+  if (authUser) {
+    textEl.textContent = authUser.phone ? formatPhoneShort(authUser.phone) : 'Кабинет';
+  } else {
+    textEl.textContent = 'Кіру';
+  }
+}
+
+function formatPhoneShort(p) {
+  const d = p.replace(/\D/g, '');
+  if (d.length < 11) return '+' + d;
+  return '+' + d.slice(0,1) + ' ' + d.slice(1,4) + ' *** ' + d.slice(-2);
+}
+
+async function initAuth() {
+  renderBooksList();
+  if (sb) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session && session.user) {
+        authUser = session.user;
+        updateAuthChip();
+        await showDashboard();
+        return;
+      }
+    } catch(e) {}
+  }
+  updateAuthChip();
+  document.getElementById('app').style.display = 'flex';
+}
+
+/* ── dashboard ── */
+async function showDashboard() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('dashboard-loading').style.display = 'block';
+  document.getElementById('dashboard-content').style.display = 'none';
+  document.getElementById('dash-phone').textContent = authUser.phone ? formatPhoneShort(authUser.phone) : '';
+
+  const [statsData, booksData] = await Promise.all([loadStats(), loadCloudBooks()]);
+  renderStats(statsData);
+  renderWeekChart(statsData.daily);
+  renderBooksGrid(booksData);
+
+  document.getElementById('dashboard-loading').style.display = 'none';
+  document.getElementById('dashboard-content').style.display = 'block';
+}
+
+async function loadStats() {
+  const empty = { weekWords: 0, weekPages: 0, monthWords: 0, monthPages: 0, avgWpm: 0, daily: [0,0,0,0,0,0,0] };
+  if (!sb || !authUser) return empty;
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const sinceStr = since.toISOString().slice(0,10);
+  const { data, error } = await sb.from('reading_sessions')
+    .select('words_read, wpm, session_date')
+    .gte('session_date', sinceStr);
+  if (error || !data) return empty;
+
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  const dow = (startOfWeek.getDay() + 6) % 7;
+  startOfWeek.setDate(startOfWeek.getDate() - dow);
+  startOfWeek.setHours(0,0,0,0);
+
+  let weekWords = 0, monthWords = 0, wpmSum = 0, wpmCount = 0;
+  const daily = [0,0,0,0,0,0,0];
+
+  data.forEach(r => {
+    const d = new Date(r.session_date + 'T00:00:00');
+    monthWords += r.words_read || 0;
+    if (d >= startOfWeek) {
+      weekWords += r.words_read || 0;
+      const idx = (d.getDay() + 6) % 7;
+      daily[idx] += r.words_read || 0;
+    }
+    if (r.wpm) { wpmSum += r.wpm; wpmCount++; }
+  });
+
+  const WORDS_PER_PAGE = 300;
+  return {
+    weekWords, monthWords,
+    weekPages: Math.round(weekWords / WORDS_PER_PAGE),
+    monthPages: Math.round(monthWords / WORDS_PER_PAGE),
+    avgWpm: wpmCount ? Math.round(wpmSum / wpmCount) : 0,
+    daily
+  };
+}
+
+function renderStats(s) {
+  document.getElementById('dash-week-pages').textContent = s.weekPages + ' бет';
+  document.getElementById('dash-week-words').textContent = s.weekWords.toLocaleString('kk-KZ') + ' сөз';
+  document.getElementById('dash-month-pages').textContent = s.monthPages + ' бет';
+  document.getElementById('dash-month-words').textContent = s.monthWords.toLocaleString('kk-KZ') + ' сөз';
+  document.getElementById('dash-wpm').textContent = s.avgWpm ? s.avgWpm + ' WPM' : '—';
+}
+
+function renderWeekChart(daily) {
+  const labels = ['Дс','Сс','Ср','Бс','Жм','Сб','Жс'];
+  const max = Math.max(1, ...daily);
+  const barsWrap = document.getElementById('dash-chart-bars');
+  const labelWrap = document.getElementById('dash-chart-labels');
+  barsWrap.innerHTML = '';
+  labelWrap.innerHTML = '';
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  daily.forEach((v, i) => {
+    const h = Math.max(3, Math.round((v / max) * 50));
+    const bar = document.createElement('div');
+    bar.style.cssText = 'width:32px;height:' + h + 'px;background:' + (i === todayIdx ? '#8B5E3C' : '#C9A84C') + ';border-radius:3px 3px 0 0;';
+    barsWrap.appendChild(bar);
+    const lab = document.createElement('div');
+    lab.style.cssText = 'width:32px;text-align:center;font-size:11px;color:' + (i === todayIdx ? '#8B5E3C' : '#A08050') + ';' + (i === todayIdx ? 'font-weight:bold;' : '');
+    lab.textContent = labels[i];
+    labelWrap.appendChild(lab);
+  });
+}
+
+async function loadCloudBooks() {
+  if (!sb || !authUser) return [];
+  const { data, error } = await sb.from('books')
+    .select('id, filename, storage_key, total_words, created_at, reading_progress(position, wpm, chunk_setting, updated_at)')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data;
+}
+
+function timeAgoKk(dateStr) {
+  const d = new Date(dateStr);
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return 'бүгін';
+  if (days === 1) return 'кеше';
+  if (days < 7) return days + ' күн бұрын';
+  return Math.floor(days / 7) + ' апта бұрын';
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : s;
+  return d.innerHTML;
+}
+
+function renderBooksGrid(books) {
+  const wrap = document.getElementById('dash-books-list');
+  wrap.innerHTML = '';
+  if (!books.length) {
+    wrap.innerHTML = '<div style="color:#A08050;font-style:italic;padding:16px 0;">Әлі кітап жоқ — жаңасын жүктеңіз</div>';
+    return;
+  }
+  books.forEach(b => {
+    const prog = Array.isArray(b.reading_progress) ? b.reading_progress[0] : b.reading_progress;
+    const pct = prog && b.total_words ? Math.min(100, Math.round(prog.position / b.total_words * 100)) : 0;
+    const card = document.createElement('div');
+    card.className = 'dash-book-card';
+    card.innerHTML = '<div style="flex:1;min-width:0;">' +
+      '<div style="font-size:14px;font-weight:bold;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(b.filename) + '</div>' +
+      '<div style="background:#DDD0A8;border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px;">' +
+      '<div style="background:#8B5E3C;height:5px;width:' + pct + '%;"></div></div>' +
+      '<div style="font-size:11px;color:#A08050;">' + pct + '% оқылды' + (prog ? ' · ' + timeAgoKk(prog.updated_at) : '') + '</div></div>' +
+      '<button class="btn dash-continue-btn" style="background:#4A6741;color:#F5EDD6;border-color:#2E4A26;">Жалғастыру <i class="ti ti-arrow-right"></i></button>';
+    card.querySelector('.dash-continue-btn').onclick = () => openCloudBook(b);
+    wrap.appendChild(card);
+  });
+}
+
+document.getElementById('dash-upload-btn').addEventListener('click', () => {
+  showReaderView();
+  document.getElementById('file-input').click();
+});
+
+/* ── cloud book open/upload ── */
+async function openCloudBook(book) {
+  showReaderView();
+  document.getElementById('placeholder') && (document.getElementById('col1').innerHTML = '<div id="placeholder">Жүктелуде...</div>');
+  document.getElementById('col2').innerHTML = '';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/b2-sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ action: 'download', key: book.storage_key })
+    });
+    const signed = await res.json();
+    if (!signed.downloadUrl) { alert('Кітапты жүктеу мүмкін болмады'); return; }
+    const textRes = await fetch(signed.downloadUrl);
+    const text = await textRes.text();
+
+    const prog = Array.isArray(book.reading_progress) ? book.reading_progress[0] : book.reading_progress;
+    const savedProgress = prog ? { pos: prog.position, total: book.total_words, wpm: prog.wpm, chunk: prog.chunk_setting } : null;
+
+    lsSaveText(book.filename, text);
+    loadWords(text, book.filename, savedProgress);
+    currentBookId = book.id;
+    lastSyncedPos = prog ? prog.position : 0;
+  } catch(e) {
+    alert('Кітапты жүктеу кезінде қате шықты');
+  }
+}
+
+async function uploadBookToCloud(filename, text) {
+  if (!sb || !authUser) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const bytes = new TextEncoder().encode(text);
+    const extRaw = (filename.split('.').pop() || 'txt').toLowerCase();
+    const ext = ['pdf','txt','epub'].includes(extRaw) ? extRaw : 'txt';
+    const signRes = await fetch(SUPABASE_URL + '/functions/v1/b2-sign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ action: 'upload', filename: 'book.' + ext, size: bytes.length })
+    });
+    const signed = await signRes.json();
+    if (!signed.uploadUrl) return;
+    await fetch(signed.uploadUrl, { method: 'PUT', body: bytes });
+
+    const totalWords = text.split(/\s+/).filter(w => w).length;
+    const { data, error } = await sb.from('books').upsert({
+      user_id: session.user.id,
+      filename: filename,
+      storage_key: signed.key,
+      file_size: bytes.length,
+      total_words: totalWords
+    }, { onConflict: 'user_id,filename' }).select('id').single();
+
+    if (!error && data) {
+      currentBookId = data.id;
+      lastSyncedPos = 0;
+    }
+  } catch(e) {}
+}
+
+async function syncProgressToCloud() {
+  if (!sb || !authUser || !currentBookId) return;
+  const delta = pos - lastSyncedPos;
+  try {
+    await sb.from('reading_progress').upsert({
+      user_id: authUser.id,
+      book_id: currentBookId,
+      position: pos,
+      wpm: getWPM(),
+      chunk_setting: getChunk(),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,book_id' });
+
+    if (delta > 0) {
+      await sb.from('reading_sessions').insert({
+        user_id: authUser.id,
+        book_id: currentBookId,
+        words_read: delta,
+        wpm: getWPM()
+      });
+    }
+    lastSyncedPos = pos;
+  } catch(e) {}
+}
+
 window.addEventListener('beforeunload', lsSave);
-renderBooksList();
+initAuth();
 </script>
 
 <!-- timer done overlay -->
