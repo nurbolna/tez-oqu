@@ -8,6 +8,11 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --rt-font-family: 'Georgia','Times New Roman',serif;
+    --rt-font-size: 19px;
+  }
+
   body.theme-sepia {
     --rt-bg: #F5EDD6; --rt-text: #2C1A0E; --rt-text-muted: #6B4C2A; --rt-text-faint: #A08050;
     --rt-toolbar-bg: #EDE0C0; --rt-border: #C9B98A; --rt-panel-bg: #E8D9B8;
@@ -55,7 +60,7 @@
 
   #reader-area { flex: 1; padding: 24px 56px 0px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
   #columns-wrap { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 52px; overflow: hidden; min-height: 0; max-height: 100%; align-content: start; }
-  .col { font-size: 19px; line-height: 2; color: var(--rt-text); text-align: justify; word-spacing: 1px; overflow: hidden; }
+  .col { font-family: var(--rt-font-family); font-size: var(--rt-font-size); line-height: 2; color: var(--rt-text); text-align: justify; word-spacing: 1px; overflow: hidden; }
 
   .w { display: inline; padding: 1px 2px; border-radius: 3px; cursor: pointer; }
   .w:hover { background: var(--rt-word-hover); }
@@ -250,6 +255,20 @@
       <span class="theme-dot" data-theme="sepia" title="Сепия" style="background:#F5EDD6;border:1px solid #C9B98A;"></span>
       <span class="theme-dot" data-theme="dark" title="Қара" style="background:#121212;border:1px solid #333333;"></span>
     </div>
+    <label>Қаріп:</label>
+    <select id="font-family-select">
+      <option value="Georgia, 'Times New Roman', serif" selected>Georgia</option>
+      <option value="'Times New Roman', Times, serif">Times New Roman</option>
+      <option value="Arial, Helvetica, sans-serif">Arial</option>
+      <option value="Verdana, Geneva, sans-serif">Verdana</option>
+      <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+    </select>
+    <select id="font-size-select">
+      <option value="16">Кіші</option>
+      <option value="19" selected>Орташа</option>
+      <option value="22">Үлкен</option>
+      <option value="26">Өте үлкен</option>
+    </select>
     <label>Жылдамдық:</label>
     <select id="wpm-select">
       <option value="100">100 WPM</option><option value="150">150 WPM</option>
@@ -442,6 +461,30 @@ document.querySelectorAll('.theme-dot').forEach(d => {
 });
 applyTheme((() => { try { return localStorage.getItem(LS_THEME) || 'sepia'; } catch(e) { return 'sepia'; } })());
 
+const LS_FONT_FAMILY = 'sr5_font_family';
+const LS_FONT_SIZE   = 'sr5_font_size';
+function applyFont(family, size) {
+  document.documentElement.style.setProperty('--rt-font-family', family);
+  document.documentElement.style.setProperty('--rt-font-size', size + 'px');
+  try { localStorage.setItem(LS_FONT_FAMILY, family); localStorage.setItem(LS_FONT_SIZE, size); } catch(e) {}
+  if (words.length) { measureWordsPerPage(); renderPage(pageOf(pos)); applyHighlight(); }
+}
+document.getElementById('font-family-select').addEventListener('change', e => {
+  applyFont(e.target.value, document.getElementById('font-size-select').value);
+});
+document.getElementById('font-size-select').addEventListener('change', e => {
+  applyFont(document.getElementById('font-family-select').value, e.target.value);
+});
+(() => {
+  const savedFamily = (() => { try { return localStorage.getItem(LS_FONT_FAMILY); } catch(e) { return null; } })();
+  const savedSize   = (() => { try { return localStorage.getItem(LS_FONT_SIZE); } catch(e) { return null; } })();
+  const familySelect = document.getElementById('font-family-select');
+  const sizeSelect    = document.getElementById('font-size-select');
+  if (savedFamily && [...familySelect.options].some(o => o.value === savedFamily)) familySelect.value = savedFamily;
+  if (savedSize && [...sizeSelect.options].some(o => o.value === savedSize)) sizeSelect.value = savedSize;
+  applyFont(familySelect.value, sizeSelect.value);
+})();
+
 const getWPM   = () => parseInt(document.getElementById('wpm-select').value);
 const getChunk = () => parseInt(document.getElementById('chunk-select').value);
 // Correct WPM: interval = (avg_words_per_chunk / WPM) * 60000
@@ -483,8 +526,11 @@ function measureWordsPerPage() {
   const colH = readerArea.clientHeight - paddingTop - paddingBot;
   if (!colW || !colH || !words.length) return;
 
+  const rootStyle = getComputedStyle(document.documentElement);
+  const curFontSize   = rootStyle.getPropertyValue('--rt-font-size').trim() || '19px';
+  const curFontFamily = rootStyle.getPropertyValue('--rt-font-family').trim() || "'Georgia','Times New Roman',serif";
   const probe = document.createElement('div');
-  probe.style.cssText = `position:absolute;visibility:hidden;width:${colW}px;font-size:19px;line-height:2;text-align:justify;word-spacing:1px;font-family:'Georgia','Times New Roman',serif;white-space:normal;`;
+  probe.style.cssText = `position:absolute;visibility:hidden;width:${colW}px;font-size:${curFontSize};line-height:2;text-align:justify;word-spacing:1px;font-family:${curFontFamily};white-space:normal;`;
   document.body.appendChild(probe);
 
   // Small safety margin so last line is never cut
