@@ -246,6 +246,7 @@
       <span id="timer-display" style="display:none;">10:00</span>
     </div>
     <button class="btn" id="fs-btn" onclick="toggleFS()"><i class="ti ti-arrows-maximize"></i> Толық экран</button>
+    <span class="btn" id="local-stats-chip" onclick="openLocalStats()" style="display:none;"><i class="ti ti-chart-bar"></i> Статистикам</span>
     <span class="btn" id="auth-chip" onclick="onAuthChipClick()"><i class="ti ti-brand-telegram"></i> <span id="auth-chip-text">Кіру</span></span>
   </div>
   <div id="progress-bar-wrap"><div id="progress-bar-bg"><div id="progress-bar-fill"></div></div></div>
@@ -353,6 +354,29 @@
   </div>
 </div>
 
+<div id="local-stats-overlay" style="display:none;position:fixed;inset:0;background:rgba(44,26,14,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div id="local-stats-box" style="position:relative;background:#F5EDD6;border:2px solid #C9B98A;border-radius:16px;padding:28px 32px;font-family:Georgia,serif;width:360px;max-width:90vw;">
+    <span onclick="closeLocalStats()" style="position:absolute;top:10px;right:14px;cursor:pointer;color:#8B6A3A;font-size:18px;line-height:1;"><i class="ti ti-x"></i></span>
+    <h2 style="font-size:19px;color:#2C1A0E;margin-bottom:14px;">Менің статистикам</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+      <div style="background:#EDE0C0;border:1px solid #C9B98A;border-radius:8px;padding:10px 12px;">
+        <div style="font-size:12px;color:#8B6A3A;margin-bottom:4px;">Бұл апта</div>
+        <div style="font-size:19px;font-weight:bold;color:#2C1A0E;" id="local-week-pages">—</div>
+        <div style="font-size:11px;color:#A08050;margin-top:2px;" id="local-week-minutes"></div>
+      </div>
+      <div style="background:#EDE0C0;border:1px solid #C9B98A;border-radius:8px;padding:10px 12px;">
+        <div style="font-size:12px;color:#8B6A3A;margin-bottom:4px;">Бұл ай</div>
+        <div style="font-size:19px;font-weight:bold;color:#2C1A0E;" id="local-month-pages">—</div>
+        <div style="font-size:11px;color:#A08050;margin-top:2px;" id="local-month-minutes"></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:#8B6A3A;margin-bottom:6px;">Апталық белсенділік (сөз)</div>
+    <div id="local-chart-bars" style="display:flex;align-items:flex-end;gap:8px;height:44px;"></div>
+    <div id="local-chart-labels" style="display:flex;gap:8px;margin-top:5px;"></div>
+    <p style="font-size:11px;color:#A08050;margin-top:16px;line-height:1.5;">Тек осы браузерде сақталады. Кез келген құрылғыдан көру үшін Telegram арқылы кіріңіз.</p>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -365,6 +389,7 @@ let pages = [], currentPage = 0, pageSpans = {};
 
 const LS      = 'sr5_prog_';
 const LS_TEXT = 'sr5_text_';
+const LS_SESSIONS = 'sr5_sessions';
 
 const getWPM   = () => parseInt(document.getElementById('wpm-select').value);
 const getChunk = () => parseInt(document.getElementById('chunk-select').value);
@@ -657,6 +682,11 @@ function jump(n) {
 function lsSave() {
   if (!currentFileName || !words.length) return;
   try {
+    const prevRaw = localStorage.getItem(LS + currentFileName);
+    const prevPos = prevRaw ? (JSON.parse(prevRaw).pos || 0) : 0;
+    const delta = pos - prevPos;
+    if (delta > 0) logLocalSession(delta, getWPM());
+
     localStorage.setItem(LS + currentFileName, JSON.stringify({
       pos, total: words.length, wpm: getWPM(), chunk: 1,
       savedAt: new Date().toLocaleString('kk-KZ')
@@ -668,6 +698,71 @@ function lsSave() {
   renderBooksList();
 
   if (authUser && currentBookId) syncProgressToCloud();
+}
+
+function logLocalSession(wordsRead, wpm) {
+  try {
+    const key = new Date().toISOString().slice(0, 10);
+    const log = JSON.parse(localStorage.getItem(LS_SESSIONS) || '{}');
+    const day = log[key] || { words: 0, minutes: 0 };
+    day.words += wordsRead;
+    day.minutes += wpm ? wordsRead / wpm : 0;
+    log[key] = day;
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 35);
+    Object.keys(log).forEach(k => { if (new Date(k + 'T00:00:00') < cutoff) delete log[k]; });
+    localStorage.setItem(LS_SESSIONS, JSON.stringify(log));
+  } catch(e) {}
+}
+
+function loadLocalStats() {
+  const empty = { weekWords: 0, weekPages: 0, weekMinutes: 0, monthWords: 0, monthPages: 0, monthMinutes: 0, daily: [0,0,0,0,0,0,0] };
+  let log;
+  try { log = JSON.parse(localStorage.getItem(LS_SESSIONS) || '{}'); } catch(e) { return empty; }
+
+  const today = new Date();
+  const startOfWeek = new Date(today);
+  const dow = (startOfWeek.getDay() + 6) % 7;
+  startOfWeek.setDate(startOfWeek.getDate() - dow);
+  startOfWeek.setHours(0,0,0,0);
+
+  let weekWords = 0, monthWords = 0, weekMinutes = 0, monthMinutes = 0;
+  const daily = [0,0,0,0,0,0,0];
+
+  Object.entries(log).forEach(([dateStr, v]) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    monthWords += v.words || 0;
+    monthMinutes += v.minutes || 0;
+    if (d >= startOfWeek) {
+      weekWords += v.words || 0;
+      weekMinutes += v.minutes || 0;
+      const idx = (d.getDay() + 6) % 7;
+      daily[idx] += v.words || 0;
+    }
+  });
+
+  const WORDS_PER_PAGE = 300;
+  return {
+    weekWords, monthWords,
+    weekPages: Math.round(weekWords / WORDS_PER_PAGE),
+    monthPages: Math.round(monthWords / WORDS_PER_PAGE),
+    weekMinutes: Math.round(weekMinutes),
+    monthMinutes: Math.round(monthMinutes),
+    daily
+  };
+}
+
+function openLocalStats() {
+  const s = loadLocalStats();
+  document.getElementById('local-week-pages').textContent = s.weekPages + ' бет';
+  document.getElementById('local-week-minutes').textContent = '~' + s.weekMinutes + ' мин · ' + s.weekWords.toLocaleString('kk-KZ') + ' сөз';
+  document.getElementById('local-month-pages').textContent = s.monthPages + ' бет';
+  document.getElementById('local-month-minutes').textContent = '~' + s.monthMinutes + ' мин · ' + s.monthWords.toLocaleString('kk-KZ') + ' сөз';
+  renderLocalChart(s.daily);
+  document.getElementById('local-stats-overlay').style.display = 'flex';
+}
+
+function closeLocalStats() {
+  document.getElementById('local-stats-overlay').style.display = 'none';
 }
 
 function lsSaveText(fileName, text) {
@@ -722,6 +817,22 @@ function loadFromCache(fileName) {
   const text = lsLoadText(fileName);
   if (!text) { alert('Мәтін сақталмаған, файлды қайта жүктеңіз'); return; }
   loadWords(text, fileName, lsLoadProgress(fileName));
+  if (authUser) reconnectCloudBook(fileName);
+}
+
+async function reconnectCloudBook(fileName) {
+  if (!sb || !authUser) return;
+  try {
+    const { data } = await sb.from('books')
+      .select('id, reading_progress(position)')
+      .eq('filename', fileName)
+      .maybeSingle();
+    if (data) {
+      currentBookId = data.id;
+      const prog = Array.isArray(data.reading_progress) ? data.reading_progress[0] : data.reading_progress;
+      lastSyncedPos = prog ? prog.position : 0;
+    }
+  } catch(e) {}
 }
 
 /* ══════════════════════════════════════════
@@ -743,6 +854,12 @@ function loadWords(text, fileName, savedProgress) {
       pos = savedProgress.pos;
       document.getElementById('wpm-select').value   = savedProgress.wpm   || 250;
       document.getElementById('chunk-select').value = savedProgress.chunk || 2;
+      try {
+        localStorage.setItem(LS + fileName, JSON.stringify({
+          pos, total: words.length, wpm: savedProgress.wpm || 250, chunk: 1,
+          savedAt: new Date().toLocaleString('kk-KZ')
+        }));
+      } catch(e) {}
     }
     renderPage(pageOf(pos));
     applyHighlight();
@@ -1123,10 +1240,13 @@ async function signOut() {
 
 function updateAuthChip() {
   const textEl = document.getElementById('auth-chip-text');
+  const localStatsChip = document.getElementById('local-stats-chip');
   if (authUser) {
     textEl.textContent = authUser.phone ? formatPhoneShort(authUser.phone) : 'Кабинет';
+    localStatsChip.style.display = 'none';
   } else {
     textEl.textContent = 'Кіру';
+    localStatsChip.style.display = 'inline-flex';
   }
 }
 
@@ -1171,7 +1291,7 @@ async function showDashboard() {
 }
 
 async function loadStats() {
-  const empty = { weekWords: 0, weekPages: 0, monthWords: 0, monthPages: 0, avgWpm: 0, daily: [0,0,0,0,0,0,0] };
+  const empty = { weekWords: 0, weekPages: 0, weekMinutes: 0, monthWords: 0, monthPages: 0, monthMinutes: 0, avgWpm: 0, daily: [0,0,0,0,0,0,0] };
   if (!sb || !authUser) return empty;
   const since = new Date();
   since.setDate(since.getDate() - 30);
@@ -1187,14 +1307,17 @@ async function loadStats() {
   startOfWeek.setDate(startOfWeek.getDate() - dow);
   startOfWeek.setHours(0,0,0,0);
 
-  let weekWords = 0, monthWords = 0, wpmSum = 0, wpmCount = 0;
+  let weekWords = 0, monthWords = 0, wpmSum = 0, wpmCount = 0, weekMinutes = 0, monthMinutes = 0;
   const daily = [0,0,0,0,0,0,0];
 
   data.forEach(r => {
     const d = new Date(r.session_date + 'T00:00:00');
+    const mins = r.wpm ? (r.words_read || 0) / r.wpm : 0;
     monthWords += r.words_read || 0;
+    monthMinutes += mins;
     if (d >= startOfWeek) {
       weekWords += r.words_read || 0;
+      weekMinutes += mins;
       const idx = (d.getDay() + 6) % 7;
       daily[idx] += r.words_read || 0;
     }
@@ -1206,6 +1329,8 @@ async function loadStats() {
     weekWords, monthWords,
     weekPages: Math.round(weekWords / WORDS_PER_PAGE),
     monthPages: Math.round(monthWords / WORDS_PER_PAGE),
+    weekMinutes: Math.round(weekMinutes),
+    monthMinutes: Math.round(monthMinutes),
     avgWpm: wpmCount ? Math.round(wpmSum / wpmCount) : 0,
     daily
   };
@@ -1213,17 +1338,15 @@ async function loadStats() {
 
 function renderStats(s) {
   document.getElementById('dash-week-pages').textContent = s.weekPages + ' бет';
-  document.getElementById('dash-week-words').textContent = s.weekWords.toLocaleString('kk-KZ') + ' сөз';
+  document.getElementById('dash-week-words').textContent = s.weekWords.toLocaleString('kk-KZ') + ' сөз' + (s.weekMinutes ? ' · ~' + s.weekMinutes + ' мин' : '');
   document.getElementById('dash-month-pages').textContent = s.monthPages + ' бет';
-  document.getElementById('dash-month-words').textContent = s.monthWords.toLocaleString('kk-KZ') + ' сөз';
+  document.getElementById('dash-month-words').textContent = s.monthWords.toLocaleString('kk-KZ') + ' сөз' + (s.monthMinutes ? ' · ~' + s.monthMinutes + ' мин' : '');
   document.getElementById('dash-wpm').textContent = s.avgWpm ? s.avgWpm + ' WPM' : '—';
 }
 
-function renderWeekChart(daily) {
+function renderChartBars(daily, barsWrap, labelWrap) {
   const labels = ['Дс','Сс','Ср','Бс','Жм','Сб','Жс'];
   const max = Math.max(1, ...daily);
-  const barsWrap = document.getElementById('dash-chart-bars');
-  const labelWrap = document.getElementById('dash-chart-labels');
   barsWrap.innerHTML = '';
   labelWrap.innerHTML = '';
   const todayIdx = (new Date().getDay() + 6) % 7;
@@ -1237,6 +1360,14 @@ function renderWeekChart(daily) {
     lab.textContent = labels[i];
     labelWrap.appendChild(lab);
   });
+}
+
+function renderWeekChart(daily) {
+  renderChartBars(daily, document.getElementById('dash-chart-bars'), document.getElementById('dash-chart-labels'));
+}
+
+function renderLocalChart(daily) {
+  renderChartBars(daily, document.getElementById('local-chart-bars'), document.getElementById('local-chart-labels'));
 }
 
 async function loadCloudBooks() {
