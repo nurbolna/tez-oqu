@@ -1340,7 +1340,13 @@ async function showDashboard() {
 }
 
 async function loadStats() {
-  const empty = { weekWords: 0, weekPages: 0, weekMinutes: 0, monthWords: 0, monthPages: 0, monthMinutes: 0, avgWpm: 0, daily: [0,0,0,0,0,0,0] };
+  // Local-only books (never cloud-linked, e.g. opened from the bottom cache bar
+  // without a matching cloud copy) are tracked purely in localStorage — start
+  // from that so a logged-in user's reading still shows up even when a given
+  // book was never uploaded. checkpointStats() guarantees no overlap: a book's
+  // delta goes to exactly one of cloud reading_sessions or local sr5_sessions.
+  const local = loadLocalStats();
+  const empty = { weekWords: local.weekWords, weekPages: local.weekPages, weekMinutes: local.weekMinutes, monthWords: local.monthWords, monthPages: local.monthPages, monthMinutes: local.monthMinutes, avgWpm: 0, daily: local.daily };
   if (!sb || !authUser) return empty;
   const since = new Date();
   since.setDate(since.getDate() - 30);
@@ -1356,8 +1362,8 @@ async function loadStats() {
   startOfWeek.setDate(startOfWeek.getDate() - dow);
   startOfWeek.setHours(0,0,0,0);
 
-  let weekWords = 0, monthWords = 0, wpmSum = 0, wpmCount = 0, weekMinutes = 0, monthMinutes = 0;
-  const daily = [0,0,0,0,0,0,0];
+  let weekWords = local.weekWords, monthWords = local.monthWords, wpmSum = 0, wpmCount = 0, weekMinutes = local.weekMinutes, monthMinutes = local.monthMinutes;
+  const daily = local.daily.slice();
 
   data.forEach(r => {
     const d = new Date(r.session_date + 'T00:00:00');
@@ -1551,7 +1557,9 @@ async function checkpointStats() {
   const delta = pos - statsBasePos;
   statsBasePos = pos;
   if (delta <= 0) return;
-  logLocalSession(delta, getWPM());
+  // A book only ever has one home for its stats: cloud if it's cloud-linked,
+  // local otherwise — never both, or a cloud-linked book's reading would be
+  // double-counted once local + cloud stats are merged for display.
   if (authUser && currentBookId) {
     try {
       await sb.from('reading_sessions').insert({
@@ -1561,6 +1569,8 @@ async function checkpointStats() {
         wpm: getWPM()
       });
     } catch(e) {}
+  } else {
+    logLocalSession(delta, getWPM());
   }
 }
 
