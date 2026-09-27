@@ -11,6 +11,7 @@
   :root {
     --rt-font-family: 'Georgia','Times New Roman',serif;
     --rt-font-size: 19px;
+    --rt-hi-bg: #FFE9A0;
   }
 
   body.theme-sepia {
@@ -41,6 +42,7 @@
   #toolbar label { font-size: 13px; color: var(--rt-text-muted); }
   select { font-family: Georgia,serif; font-size: 13px; background: var(--rt-bg); border: 1px solid var(--rt-border); color: var(--rt-text); border-radius: 6px; padding: 3px 7px; }
   .theme-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; display: inline-block; }
+  .hi-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; display: inline-block; }
   .btn { font-family: Georgia,serif; font-size: 13px; background: #D4B483; border: 1px solid #B8965A; color: #2C1A0E; border-radius: 6px; padding: 4px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   .btn:hover { background: #C4A060; }
   #upload-btn { background: #8B5E3C; color: #F5EDD6; border-color: #6B4020; }
@@ -64,7 +66,7 @@
 
   .w { display: inline; padding: 1px 2px; border-radius: 3px; cursor: pointer; }
   .w:hover { background: var(--rt-word-hover); }
-  .w.hi { background: #FFE9A0; color: #1A0E00; border-radius: 0; }
+  .w.hi { background: var(--rt-hi-bg); color: #1A0E00; border-radius: 0; }
   .w.hi.hi-l { border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
   .w.hi.hi-r { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
   #placeholder { color: var(--rt-text-faint); font-size: 18px; text-align: center; font-style: italic; padding: 60px 0; grid-column: 1/-1; }
@@ -256,6 +258,11 @@
       <span class="theme-dot" data-theme="gray" title="Сұр" style="background:#DADADA;border:1px solid #B5B5B5;"></span>
       <span class="theme-dot" data-theme="sepia" title="Сепия" style="background:#F5EDD6;border:1px solid #C9B98A;"></span>
       <span class="theme-dot" data-theme="dark" title="Қара" style="background:#121212;border:1px solid #333333;"></span>
+    </div>
+    <div id="hi-color-picker" style="display:flex;align-items:center;gap:4px;" title="Белгілеу түсі">
+      <span class="hi-dot" data-hicolor="yellow" title="Сары" style="background:#FFE9A0;border:1px solid #D8B96A;"></span>
+      <span class="hi-dot" data-hicolor="green" title="Жасыл" style="background:#C8EAB0;border:1px solid #9CBF6E;"></span>
+      <span class="hi-dot" data-hicolor="blue" title="Көгілдір" style="background:#B8E4F0;border:1px solid #7FB8C9;"></span>
     </div>
     <label>Қаріп:</label>
     <select id="font-family-select">
@@ -449,6 +456,30 @@ const LS_SESSIONS = 'sr5_sessions';
 const LS_THEME = 'sr5_theme';
 
 const THEMES = ['white', 'gray', 'sepia', 'dark'];
+
+const LS_HI_COLOR = 'sr5_hi_color';
+const HI_COLORS = {
+  yellow: { light: '#FFE9A0', deep: '#C9A84C' },
+  green:  { light: '#C8EAB0', deep: '#9CBF6E' },
+  blue:   { light: '#B8E4F0', deep: '#7FB8C9' }
+};
+let currentHiColor = (() => { try { return localStorage.getItem(LS_HI_COLOR) || 'yellow'; } catch(e) { return 'yellow'; } })();
+function applyHiColor(c) {
+  if (!HI_COLORS[c]) c = 'yellow';
+  currentHiColor = c;
+  const isSepia = document.body.classList.contains('theme-sepia');
+  const shade = isSepia ? HI_COLORS[c].deep : HI_COLORS[c].light;
+  document.documentElement.style.setProperty('--rt-hi-bg', shade);
+  document.querySelectorAll('.hi-dot').forEach(d => {
+    d.style.outline = d.dataset.hicolor === c ? '2px solid #8B5E3C' : 'none';
+    d.style.outlineOffset = '2px';
+  });
+  try { localStorage.setItem(LS_HI_COLOR, c); } catch(e) {}
+}
+document.querySelectorAll('.hi-dot').forEach(d => {
+  d.addEventListener('click', () => applyHiColor(d.dataset.hicolor));
+});
+
 function applyTheme(t) {
   if (!THEMES.includes(t)) t = 'sepia';
   document.body.className = 'theme-' + t;
@@ -457,6 +488,7 @@ function applyTheme(t) {
     d.style.outlineOffset = '2px';
   });
   try { localStorage.setItem(LS_THEME, t); } catch(e) {}
+  applyHiColor(currentHiColor);
 }
 document.querySelectorAll('.theme-dot').forEach(d => {
   d.addEventListener('click', () => applyTheme(d.dataset.theme));
