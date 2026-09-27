@@ -7,12 +7,35 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #F5EDD6; font-family: 'Georgia','Times New Roman',serif; overflow: hidden; }
-  #app { display: flex; flex-direction: column; height: 100vh; background: #F5EDD6; color: #2C1A0E; }
 
-  #toolbar { background: #EDE0C0; border-bottom: 1px solid #C9B98A; padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-  #toolbar label { font-size: 13px; color: #6B4C2A; }
-  select { font-family: Georgia,serif; font-size: 13px; background: #F5EDD6; border: 1px solid #C9B98A; color: #2C1A0E; border-radius: 6px; padding: 3px 7px; }
+  body.theme-sepia {
+    --rt-bg: #F5EDD6; --rt-text: #2C1A0E; --rt-text-muted: #6B4C2A; --rt-text-faint: #A08050;
+    --rt-toolbar-bg: #EDE0C0; --rt-border: #C9B98A; --rt-panel-bg: #E8D9B8;
+    --rt-progress-track: #DDD0A8; --rt-word-hover: #E8D8A0; --rt-fs-hint: rgba(44,26,14,0.4);
+  }
+  body.theme-white {
+    --rt-bg: #FFFFFF; --rt-text: #1A1A1A; --rt-text-muted: #6B6B6B; --rt-text-faint: #9A9A9A;
+    --rt-toolbar-bg: #F2F2F2; --rt-border: #E0E0E0; --rt-panel-bg: #ECECEC;
+    --rt-progress-track: #DDDDDD; --rt-word-hover: #EFEFEF; --rt-fs-hint: rgba(26,26,26,0.35);
+  }
+  body.theme-gray {
+    --rt-bg: #DADADA; --rt-text: #2A2A2A; --rt-text-muted: #5A5A5A; --rt-text-faint: #8A8A8A;
+    --rt-toolbar-bg: #C7C7C7; --rt-border: #B5B5B5; --rt-panel-bg: #CACACA;
+    --rt-progress-track: #C0C0C0; --rt-word-hover: #C7C7C7; --rt-fs-hint: rgba(42,42,42,0.4);
+  }
+  body.theme-dark {
+    --rt-bg: #121212; --rt-text: #E8E0D0; --rt-text-muted: #A89B85; --rt-text-faint: #7A7166;
+    --rt-toolbar-bg: #1E1E1E; --rt-border: #333333; --rt-panel-bg: #1A1A1A;
+    --rt-progress-track: #2A2A2A; --rt-word-hover: #2A2A2A; --rt-fs-hint: rgba(232,224,208,0.3);
+  }
+
+  html, body { height: 100%; background: var(--rt-bg); font-family: 'Georgia','Times New Roman',serif; overflow: hidden; }
+  #app { display: flex; flex-direction: column; height: 100vh; background: var(--rt-bg); color: var(--rt-text); }
+
+  #toolbar { background: var(--rt-toolbar-bg); border-bottom: 1px solid var(--rt-border); padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+  #toolbar label { font-size: 13px; color: var(--rt-text-muted); }
+  select { font-family: Georgia,serif; font-size: 13px; background: var(--rt-bg); border: 1px solid var(--rt-border); color: var(--rt-text); border-radius: 6px; padding: 3px 7px; }
+  .theme-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; display: inline-block; }
   .btn { font-family: Georgia,serif; font-size: 13px; background: #D4B483; border: 1px solid #B8965A; color: #2C1A0E; border-radius: 6px; padding: 4px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   .btn:hover { background: #C4A060; }
   #upload-btn { background: #8B5E3C; color: #F5EDD6; border-color: #6B4020; }
@@ -22,33 +45,33 @@
   #play-btn { background: #8B5E3C; color: #F5EDD6; border-color: #6B4020; padding: 4px 16px; }
   #play-btn:hover { background: #6B4020; }
   #file-input { display: none; }
-  #stats { font-size: 12px; color: #8B6A3A; }
+  #stats { font-size: 12px; color: var(--rt-text-muted); }
   #save-notice { font-size: 11px; color: #4A6741; background: #DFF0D8; border: 1px solid #A8D08A; border-radius: 5px; padding: 2px 8px; display: none; }
-  #file-name { font-size: 12px; color: #6B4C2A; font-style: italic; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #file-name { font-size: 12px; color: var(--rt-text-muted); font-style: italic; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  #progress-bar-wrap { padding: 4px 20px 3px; background: #F5EDD6; flex-shrink: 0; }
-  #progress-bar-bg { background: #DDD0A8; border-radius: 4px; height: 5px; overflow: hidden; }
+  #progress-bar-wrap { padding: 4px 20px 3px; background: var(--rt-bg); flex-shrink: 0; }
+  #progress-bar-bg { background: var(--rt-progress-track); border-radius: 4px; height: 5px; overflow: hidden; }
   #progress-bar-fill { background: #8B5E3C; height: 5px; border-radius: 4px; transition: width 0.2s; width: 0%; }
 
   #reader-area { flex: 1; padding: 24px 56px 0px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
   #columns-wrap { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 52px; overflow: hidden; min-height: 0; max-height: 100%; align-content: start; }
-  .col { font-size: 19px; line-height: 2; color: #2C1A0E; text-align: justify; word-spacing: 1px; overflow: hidden; }
+  .col { font-size: 19px; line-height: 2; color: var(--rt-text); text-align: justify; word-spacing: 1px; overflow: hidden; }
 
   .w { display: inline; padding: 1px 2px; border-radius: 3px; cursor: pointer; }
-  .w:hover { background: #E8D8A0; }
+  .w:hover { background: var(--rt-word-hover); }
   .w.hi { background: #C9A84C; color: #1A0E00; border-radius: 3px; }
-  #placeholder { color: #A08050; font-size: 18px; text-align: center; font-style: italic; padding: 60px 0; grid-column: 1/-1; }
+  #placeholder { color: var(--rt-text-faint); font-size: 18px; text-align: center; font-style: italic; padding: 60px 0; grid-column: 1/-1; }
 
-  #bottom { flex-shrink: 0; background: #EDE0C0; border-top: 1px solid #C9B98A; }
+  #bottom { flex-shrink: 0; background: var(--rt-toolbar-bg); border-top: 1px solid var(--rt-border); }
   #controls { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 16px 4px; flex-wrap: wrap; }
-  #hint { text-align: center; font-size: 11px; color: #B09060; padding: 2px 0 4px; }
+  #hint { text-align: center; font-size: 11px; color: var(--rt-text-faint); padding: 2px 0 4px; }
 
 
 
-  #books-panel { background: #E8D9B8; border-top: 1px solid #C9B98A; padding: 5px 16px; font-size: 12px; color: #6B4C2A; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .book-tag { background: #F5EDD6; border: 1px solid #C9B98A; border-radius: 5px; padding: 2px 8px; font-size: 12px; color: #2C1A0E; display: inline-flex; align-items: center; gap: 3px; }
+  #books-panel { background: var(--rt-panel-bg); border-top: 1px solid var(--rt-border); padding: 5px 16px; font-size: 12px; color: var(--rt-text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .book-tag { background: var(--rt-bg); border: 1px solid var(--rt-border); border-radius: 5px; padding: 2px 8px; font-size: 12px; color: var(--rt-text); display: inline-flex; align-items: center; gap: 3px; }
   .book-tag.clickable { cursor: pointer; }
-  .book-tag.clickable:hover { background: #DDD0A8; }
+  .book-tag.clickable:hover { background: var(--rt-progress-track); }
   .book-tag .del { color: #8B5E3C; cursor: pointer; margin-left: 2px; }
   .book-tag .del:hover { color: #500; }
 
@@ -72,11 +95,11 @@
     font-family: Georgia, serif;
     font-size: 15px;
     font-weight: bold;
-    color: #2C1A0E;
+    color: var(--rt-text);
     min-width: 52px;
     text-align: center;
-    background: #F5EDD6;
-    border: 1px solid #C9B98A;
+    background: var(--rt-bg);
+    border: 1px solid var(--rt-border);
     border-radius: 6px;
     padding: 2px 8px;
     letter-spacing: 1px;
@@ -85,9 +108,9 @@
   #timer-select {
     font-family: Georgia, serif;
     font-size: 13px;
-    background: #F5EDD6;
-    border: 1px solid #C9B98A;
-    color: #2C1A0E;
+    background: var(--rt-bg);
+    border: 1px solid var(--rt-border);
+    color: var(--rt-text);
     border-radius: 6px;
     padding: 3px 7px;
   }
@@ -137,7 +160,7 @@
   .heading-word {
     font-size: 1.18em;
     font-weight: bold;
-    color: #1A0800;
+    color: var(--rt-text);
   }
   .heading-word.hi {
     background: #C9A84C;
@@ -158,7 +181,7 @@
     top: 12px;
     right: 16px;
     font-size: 12px;
-    color: rgba(44,26,14,0.4);
+    color: var(--rt-fs-hint);
     font-family: Georgia, serif;
     z-index: 50;
     pointer-events: none;
@@ -215,12 +238,18 @@
   #dash-local-link:hover { color: #6B4020; }
 </style>
 </head>
-<body>
+<body class="theme-sepia">
 <div id="app" style="display:none;">
   <div id="toolbar">
     <button class="btn" id="upload-btn" onclick="document.getElementById('file-input').click()"><i class="ti ti-upload"></i> Файл жүктеу</button>
     <input type="file" id="file-input" accept=".txt,.pdf,.epub">
     <span id="file-name"></span>
+    <div id="theme-picker" style="display:flex;align-items:center;gap:4px;" title="Тема">
+      <span class="theme-dot" data-theme="white" title="Ақ" style="background:#FFFFFF;border:1px solid #C0C0C0;"></span>
+      <span class="theme-dot" data-theme="gray" title="Сұр" style="background:#DADADA;border:1px solid #B5B5B5;"></span>
+      <span class="theme-dot" data-theme="sepia" title="Сепия" style="background:#F5EDD6;border:1px solid #C9B98A;"></span>
+      <span class="theme-dot" data-theme="dark" title="Қара" style="background:#121212;border:1px solid #333333;"></span>
+    </div>
     <label>Жылдамдық:</label>
     <select id="wpm-select">
       <option value="100">100 WPM</option><option value="150">150 WPM</option>
@@ -267,10 +296,10 @@
       <button class="btn" id="play-btn" onclick="togglePlay()"><i class="ti ti-player-play"></i> Бастау</button>
       <button class="btn" onclick="jump(10)"><i class="ti ti-chevron-right"></i></button>
       <button class="btn" onclick="goPage(currentPage+1)" title="Келесі бет">Келесі бет <i class="ti ti-chevrons-right"></i></button>
-      <span id="page-counter" style="font-size:13px;color:#6B4C2A;font-family:Georgia,serif;font-weight:bold;min-width:110px;text-align:center;">—</span>
-      <span id="word-progress" style="font-size:12px;color:#8B6A3A;"></span>
+      <span id="page-counter" style="font-size:13px;color:var(--rt-text-muted);font-family:Georgia,serif;font-weight:bold;min-width:110px;text-align:center;">—</span>
+      <span id="word-progress" style="font-size:12px;color:var(--rt-text-muted);"></span>
       <input id="goto-page-input" type="number" min="1" placeholder="бет №"
-        style="width:72px;font-family:Georgia,serif;font-size:13px;background:#F5EDD6;border:1px solid #C9B98A;border-radius:6px;padding:4px 6px;color:#2C1A0E;"
+        style="width:72px;font-family:Georgia,serif;font-size:13px;background:var(--rt-bg);border:1px solid var(--rt-border);border-radius:6px;padding:4px 6px;color:var(--rt-text);"
         onkeydown="if(event.key==='Enter') gotoPageInput()">
       <button class="btn" onclick="gotoPageInput()" style="background:#8B5E3C;color:#F5EDD6;border-color:#6B4020;"><i class="ti ti-corner-down-left"></i> Өт</button>
     </div>
@@ -285,7 +314,7 @@
   <div id="books-panel">
     <strong>Сақталған кітаптар:</strong>
     <span id="books-list" style="display:flex;gap:6px;flex-wrap:wrap;"></span>
-    <span id="no-books" style="color:#A08050;font-style:italic;">—</span>
+    <span id="no-books" style="color:var(--rt-text-faint);font-style:italic;">—</span>
   </div>
 </div>
 
@@ -390,6 +419,22 @@ let pages = [], currentPage = 0, pageSpans = {};
 const LS      = 'sr5_prog_';
 const LS_TEXT = 'sr5_text_';
 const LS_SESSIONS = 'sr5_sessions';
+const LS_THEME = 'sr5_theme';
+
+const THEMES = ['white', 'gray', 'sepia', 'dark'];
+function applyTheme(t) {
+  if (!THEMES.includes(t)) t = 'sepia';
+  document.body.className = 'theme-' + t;
+  document.querySelectorAll('.theme-dot').forEach(d => {
+    d.style.outline = d.dataset.theme === t ? '2px solid #8B5E3C' : 'none';
+    d.style.outlineOffset = '2px';
+  });
+  try { localStorage.setItem(LS_THEME, t); } catch(e) {}
+}
+document.querySelectorAll('.theme-dot').forEach(d => {
+  d.addEventListener('click', () => applyTheme(d.dataset.theme));
+});
+applyTheme((() => { try { return localStorage.getItem(LS_THEME) || 'sepia'; } catch(e) { return 'sepia'; } })());
 
 const getWPM   = () => parseInt(document.getElementById('wpm-select').value);
 const getChunk = () => parseInt(document.getElementById('chunk-select').value);
