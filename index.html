@@ -1531,10 +1531,10 @@ async function uploadBookToCloud(filename, text) {
   } catch(e) {}
 }
 
-function syncPositionToCloud() {
+async function syncPositionToCloud() {
   if (!sb || !authUser || !currentBookId) return;
   try {
-    sb.from('reading_progress').upsert({
+    await sb.from('reading_progress').upsert({
       user_id: authUser.id,
       book_id: currentBookId,
       position: pos,
@@ -1547,14 +1547,14 @@ function syncPositionToCloud() {
 
 // Only counts toward reading stats (pages/minutes) while autoplay was actually running —
 // manual page/word navigation still saves position via lsSave, but must not inflate stats.
-function checkpointStats() {
+async function checkpointStats() {
   const delta = pos - statsBasePos;
   statsBasePos = pos;
   if (delta <= 0) return;
   logLocalSession(delta, getWPM());
   if (authUser && currentBookId) {
     try {
-      sb.from('reading_sessions').insert({
+      await sb.from('reading_sessions').insert({
         user_id: authUser.id,
         book_id: currentBookId,
         words_read: delta,
