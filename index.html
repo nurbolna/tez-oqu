@@ -413,7 +413,7 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let words = [], pos = 0, playing = false, timer = null;
-let currentFileName = '', autoSaveTimer = null;
+let currentFileName = '', autoSaveTimer = null, cloudSyncInterval = null;
 let pages = [], currentPage = 0, pageSpans = {};
 
 const LS      = 'sr5_prog_';
@@ -705,11 +705,14 @@ function start() {
   document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-pause"></i> Тоқтату';
   // Use setTimeout chain instead of setInterval for accurate per-chunk timing
   timer = setInterval(step, getIv());
+  clearInterval(cloudSyncInterval);
+  cloudSyncInterval = setInterval(lsSave, 20000);
 }
 function stop() {
   playing = false;
   document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-play"></i> Бастау';
   clearInterval(timer);
+  clearInterval(cloudSyncInterval);
   lsSave();
 }
 function jump(n) {
@@ -1272,7 +1275,7 @@ async function verifyOtpCode() {
 }
 
 function onAuthChipClick() {
-  if (authUser) { showDashboard(); } else { openAuthOverlay(); }
+  if (authUser) { if (playing) stop(); showDashboard(); } else { openAuthOverlay(); }
 }
 
 async function signOut() {
