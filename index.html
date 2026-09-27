@@ -594,6 +594,8 @@ function renderPage(pageIdx) {
         pos = lineChunks[chunkIndex] ? lineChunks[chunkIndex].start : ii;
         applyHighlight();
         if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(lsSave, 2000);
       };
       container.appendChild(s);
       container.appendChild(document.createTextNode(' '));
@@ -633,6 +635,8 @@ function goPage(p) {
   chunkIndex = 0;
   renderPage(p); // renderPage calls applyHighlight via rAF after buildLineChunks
   if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(lsSave, 2000);
 }
 
 function _doHighlight() {
@@ -1275,7 +1279,7 @@ async function verifyOtpCode() {
 }
 
 function onAuthChipClick() {
-  if (authUser) { if (playing) stop(); showDashboard(); } else { openAuthOverlay(); }
+  if (authUser) { stop(); showDashboard(); } else { openAuthOverlay(); }
 }
 
 async function signOut() {
