@@ -344,6 +344,7 @@
         <div class="dash-stat-tile">
           <div class="dash-stat-label">Орташа жылдамдық</div>
           <div class="dash-stat-value" id="dash-wpm">—</div>
+          <div class="dash-stat-sub" id="dash-ppm"></div>
         </div>
       </div>
       <div id="dash-chart-section">
@@ -398,6 +399,11 @@
         <div style="font-size:19px;font-weight:bold;color:#2C1A0E;" id="local-month-pages">—</div>
         <div style="font-size:11px;color:#A08050;margin-top:2px;" id="local-month-minutes"></div>
       </div>
+    </div>
+    <div style="background:#EDE0C0;border:1px solid #C9B98A;border-radius:8px;padding:10px 12px;margin-bottom:18px;">
+      <div style="font-size:12px;color:#8B6A3A;margin-bottom:4px;">Орташа жылдамдық</div>
+      <div style="font-size:19px;font-weight:bold;color:#2C1A0E;" id="local-wpm">—</div>
+      <div style="font-size:11px;color:#A08050;margin-top:2px;" id="local-ppm"></div>
     </div>
     <div style="font-size:12px;color:#8B6A3A;margin-bottom:6px;">Апталық белсенділік (сөз)</div>
     <div id="local-chart-bars" style="display:flex;align-items:flex-end;gap:8px;height:44px;"></div>
@@ -811,6 +817,9 @@ function openLocalStats() {
   document.getElementById('local-week-minutes').textContent = '~' + s.weekMinutes + ' мин · ' + s.weekWords.toLocaleString('kk-KZ') + ' сөз';
   document.getElementById('local-month-pages').textContent = s.monthPages + ' бет';
   document.getElementById('local-month-minutes').textContent = '~' + s.monthMinutes + ' мин · ' + s.monthWords.toLocaleString('kk-KZ') + ' сөз';
+  const rate = deriveRate(s.monthWords, s.monthMinutes);
+  document.getElementById('local-wpm').textContent = rate.avgWpm ? rate.avgWpm + ' сөз/мин' : '—';
+  document.getElementById('local-ppm').textContent = rate.avgPagesPerMin ? '~' + rate.avgPagesPerMin + ' бет/мин' : '';
   renderLocalChart(s.daily);
   document.getElementById('local-stats-overlay').style.display = 'flex';
 }
@@ -1339,6 +1348,17 @@ async function showDashboard() {
   document.getElementById('dashboard-content').style.display = 'block';
 }
 
+const WORDS_PER_PAGE = 300;
+
+// Average speed as an actual rate (total words ÷ total minutes actually spent
+// reading), not an average of WPM *settings* — meaningful across mixed
+// sessions and works the same for local-only and cloud-merged totals.
+function deriveRate(words, minutes) {
+  const avgWpm = minutes > 0 ? Math.round(words / minutes) : 0;
+  const avgPagesPerMin = avgWpm ? Math.round((avgWpm / WORDS_PER_PAGE) * 10) / 10 : 0;
+  return { avgWpm, avgPagesPerMin };
+}
+
 async function loadStats() {
   // Local-only books (never cloud-linked, e.g. opened from the bottom cache bar
   // without a matching cloud copy) are tracked purely in localStorage — start
@@ -1346,7 +1366,8 @@ async function loadStats() {
   // book was never uploaded. checkpointStats() guarantees no overlap: a book's
   // delta goes to exactly one of cloud reading_sessions or local sr5_sessions.
   const local = loadLocalStats();
-  const empty = { weekWords: local.weekWords, weekPages: local.weekPages, weekMinutes: local.weekMinutes, monthWords: local.monthWords, monthPages: local.monthPages, monthMinutes: local.monthMinutes, avgWpm: 0, daily: local.daily };
+  const localRate = deriveRate(local.monthWords, local.monthMinutes);
+  const empty = { weekWords: local.weekWords, weekPages: local.weekPages, weekMinutes: local.weekMinutes, monthWords: local.monthWords, monthPages: local.monthPages, monthMinutes: local.monthMinutes, avgWpm: localRate.avgWpm, avgPagesPerMin: localRate.avgPagesPerMin, daily: local.daily };
   if (!sb || !authUser) return empty;
   const since = new Date();
   since.setDate(since.getDate() - 30);
@@ -1362,7 +1383,7 @@ async function loadStats() {
   startOfWeek.setDate(startOfWeek.getDate() - dow);
   startOfWeek.setHours(0,0,0,0);
 
-  let weekWords = local.weekWords, monthWords = local.monthWords, wpmSum = 0, wpmCount = 0, weekMinutes = local.weekMinutes, monthMinutes = local.monthMinutes;
+  let weekWords = local.weekWords, monthWords = local.monthWords, weekMinutes = local.weekMinutes, monthMinutes = local.monthMinutes;
   const daily = local.daily.slice();
 
   data.forEach(r => {
@@ -1376,17 +1397,17 @@ async function loadStats() {
       const idx = (d.getDay() + 6) % 7;
       daily[idx] += r.words_read || 0;
     }
-    if (r.wpm) { wpmSum += r.wpm; wpmCount++; }
   });
 
-  const WORDS_PER_PAGE = 300;
+  const rate = deriveRate(monthWords, monthMinutes);
   return {
     weekWords, monthWords,
     weekPages: Math.round(weekWords / WORDS_PER_PAGE),
     monthPages: Math.round(monthWords / WORDS_PER_PAGE),
     weekMinutes: Math.round(weekMinutes),
     monthMinutes: Math.round(monthMinutes),
-    avgWpm: wpmCount ? Math.round(wpmSum / wpmCount) : 0,
+    avgWpm: rate.avgWpm,
+    avgPagesPerMin: rate.avgPagesPerMin,
     daily
   };
 }
@@ -1396,7 +1417,8 @@ function renderStats(s) {
   document.getElementById('dash-week-words').textContent = s.weekWords.toLocaleString('kk-KZ') + ' сөз' + (s.weekMinutes ? ' · ~' + s.weekMinutes + ' мин' : '');
   document.getElementById('dash-month-pages').textContent = s.monthPages + ' бет';
   document.getElementById('dash-month-words').textContent = s.monthWords.toLocaleString('kk-KZ') + ' сөз' + (s.monthMinutes ? ' · ~' + s.monthMinutes + ' мин' : '');
-  document.getElementById('dash-wpm').textContent = s.avgWpm ? s.avgWpm + ' WPM' : '—';
+  document.getElementById('dash-wpm').textContent = s.avgWpm ? s.avgWpm + ' сөз/мин' : '—';
+  document.getElementById('dash-ppm').textContent = s.avgPagesPerMin ? '~' + s.avgPagesPerMin + ' бет/мин' : '';
 }
 
 function renderChartBars(daily, barsWrap, labelWrap) {
