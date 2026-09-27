@@ -252,6 +252,10 @@
   <div id="toolbar">
     <button class="btn" id="upload-btn" onclick="document.getElementById('file-input').click()"><i class="ti ti-upload"></i> Файл жүктеу</button>
     <input type="file" id="file-input" accept=".txt,.pdf,.epub">
+    <label id="private-upload-label" style="display:flex;align-items:center;gap:3px;font-size:12px;color:var(--rt-text-muted);cursor:pointer;" title="Кітап бұлтқа жүктелмейді, тек осы құрылғыда сақталады — оқу уақытыңыз бәрібір есептеледі, бірақ кітаптың аты ешкімге көрінбейді.">
+      <input type="checkbox" id="private-upload-checkbox" style="cursor:pointer;">
+      <i class="ti ti-lock" style="font-size:13px;"></i> Жеке оқу <span id="private-count-label" style="color:var(--rt-text-faint);">(0/3)</span>
+    </label>
     <span id="file-name"></span>
     <div id="theme-picker" style="display:flex;align-items:center;gap:4px;" title="Тема">
       <span class="theme-dot" data-theme="white" title="Ақ" style="background:#FFFFFF;border:1px solid #C0C0C0;"></span>
@@ -448,6 +452,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 let words = [], pos = 0, playing = false, timer = null;
 let currentFileName = '', autoSaveTimer = null, cloudSyncInterval = null, statsBasePos = 0;
+let currentBookPrivate = false;
 let pages = [], currentPage = 0, pageSpans = {};
 
 const LS      = 'sr5_prog_';
@@ -831,6 +836,7 @@ function lsSave() {
   try {
     localStorage.setItem(LS + currentFileName, JSON.stringify({
       pos, total: words.length, wpm: getWPM(), chunk: 1,
+      private: currentBookPrivate,
       savedAt: new Date().toLocaleString('kk-KZ')
     }));
   } catch(e) {}
@@ -910,11 +916,85 @@ function closeLocalStats() {
   document.getElementById('local-stats-overlay').style.display = 'none';
 }
 
-function lsSaveText(fileName, text) {
-  try { localStorage.setItem(LS_TEXT + fileName, text.slice(0, 4000000)); } catch(e) {}
+/* Book TEXT lives in IndexedDB (large, per-device quota) — progress/bookmark
+   stay in localStorage (tiny, unchanged). This avoids the old 4M-char cap. */
+const IDB_NAME = 'sr5_books_db';
+const IDB_STORE = 'texts';
+let idbPromise = null;
+function idbDB() {
+  if (idbPromise) return idbPromise;
+  idbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return idbPromise;
 }
-function lsLoadText(fileName) {
-  try { return localStorage.getItem(LS_TEXT + fileName) || null; } catch(e) { return null; }
+async function idbSetText(fileName, text) {
+  try {
+    const db = await idbDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(text, fileName);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) {}
+}
+async function idbGetText(fileName) {
+  try {
+    const db = await idbDB();
+    return await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(fileName);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch(e) { return null; }
+}
+async function idbDeleteText(fileName) {
+  try {
+    const db = await idbDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(fileName);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) {}
+}
+async function idbAllTextKeys() {
+  try {
+    const db = await idbDB();
+    return await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAllKeys();
+      req.onsuccess = () => resolve(new Set(req.result));
+      req.onerror = () => reject(req.error);
+    });
+  } catch(e) { return new Set(); }
+}
+// One-time move of any pre-existing localStorage-cached texts into IndexedDB.
+async function migrateTextsToIndexedDB() {
+  const FLAG = 'sr5_idb_migrated';
+  try { if (localStorage.getItem(FLAG)) return; } catch(e) { return; }
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(LS_TEXT)) {
+        const text = localStorage.getItem(k);
+        if (text) await idbSetText(k.slice(LS_TEXT.length), text);
+        localStorage.removeItem(k);
+      }
+    }
+    localStorage.setItem(FLAG, '1');
+  } catch(e) {}
+}
+
+async function lsSaveText(fileName, text) {
+  await idbSetText(fileName, text);
+}
+async function lsLoadText(fileName) {
+  return await idbGetText(fileName);
 }
 function lsLoadProgress(fileName) {
   try { const r = localStorage.getItem(LS + fileName); return r ? JSON.parse(r) : null; } catch(e) { return null; }
@@ -927,21 +1007,29 @@ function lsAllBooks() {
   }
   return books;
 }
+function countPrivateBooks() {
+  return lsAllBooks().filter(name => { const p = lsLoadProgress(name); return p && p.private; }).length;
+}
+function updatePrivateCountLabel() {
+  const el = document.getElementById('private-count-label');
+  if (el) el.textContent = '(' + countPrivateBooks() + '/3)';
+}
 
-function renderBooksList() {
+async function renderBooksList() {
   const list = document.getElementById('books-list');
   const none = document.getElementById('no-books');
   list.innerHTML = '';
   const books = lsAllBooks();
   none.style.display = books.length ? 'none' : 'inline';
+  const textKeys = await idbAllTextKeys();
   books.forEach(name => {
     const d = lsLoadProgress(name) || {};
     const pct = d.total ? Math.round(d.pos / d.total * 100) : 0;
-    const hasText = !!lsLoadText(name);
+    const hasText = textKeys.has(name);
     const tag = document.createElement('span');
     tag.className = 'book-tag' + (hasText ? ' clickable' : '');
     tag.title = hasText ? 'Басыңыз — кітапты жүктемей ашасыз' : 'Файлды қайта жүктеңіз';
-    tag.innerHTML = name + ' <small>(' + pct + '%)</small>';
+    tag.innerHTML = (d.private ? '<i class="ti ti-lock" title="Жеке оқу — бұлтқа жүктелмеген" style="font-size:11px;"></i> ' : '') + name + ' <small>(' + pct + '%)</small>';
     if (hasText) tag.onclick = () => loadFromCache(name);
     const del = document.createElement('span');
     del.className = 'del'; del.textContent = ' ✕';
@@ -949,17 +1037,18 @@ function renderBooksList() {
       e.stopPropagation();
       if(confirm('"' + name + '" жоясыз ба?')) {
         localStorage.removeItem(LS + name);
-        localStorage.removeItem(LS_TEXT + name);
+        idbDeleteText(name);
         renderBooksList();
       }
     };
     tag.appendChild(del);
     list.appendChild(tag);
   });
+  updatePrivateCountLabel();
 }
 
-function loadFromCache(fileName) {
-  const text = lsLoadText(fileName);
+async function loadFromCache(fileName) {
+  const text = await lsLoadText(fileName);
   if (!text) { alert('Мәтін сақталмаған, файлды қайта жүктеңіз'); return; }
   loadWords(text, fileName, lsLoadProgress(fileName));
   if (authUser) reconnectCloudBook(fileName);
@@ -979,8 +1068,9 @@ async function reconnectCloudBook(fileName) {
 /* ══════════════════════════════════════════
    LOAD WORDS
    ══════════════════════════════════════════ */
-function loadWords(text, fileName, savedProgress) {
+function loadWords(text, fileName, savedProgress, forcePrivate) {
   currentBookId = null;
+  currentBookPrivate = forcePrivate !== undefined ? forcePrivate : !!(savedProgress && savedProgress.private);
   const cleaned = cleanKazakhText(text);
   words = cleaned.split(/\s+/).filter(w => w.length > 0);
   pos = 0; stop();
@@ -998,6 +1088,7 @@ function loadWords(text, fileName, savedProgress) {
       try {
         localStorage.setItem(LS + fileName, JSON.stringify({
           pos, total: words.length, wpm: savedProgress.wpm || 250, chunk: 1,
+          private: currentBookPrivate,
           savedAt: new Date().toLocaleString('kk-KZ')
         }));
       } catch(e) {}
@@ -1067,6 +1158,12 @@ async function parseEpub(arrayBuffer) {
 document.getElementById('file-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  const wantsPrivate = document.getElementById('private-upload-checkbox').checked;
+  if (wantsPrivate && countPrivateBooks() >= 3) {
+    alert('Жеке оқу режимінде бір мезгілде тек 3 кітап сақтауға болады. Жаңасын қосу үшін алдымен бірін өшіріңіз.');
+    e.target.value = '';
+    return;
+  }
   showReaderView();
   let rawText = '';
   if (file.name.endsWith('.txt')) {
@@ -1081,11 +1178,13 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
     rawText = await parseEpub(await file.arrayBuffer());
   }
   const cleanedText = cleanKazakhText(rawText);
-  lsSaveText(file.name, cleanedText);
-  loadWords(rawText, file.name, lsLoadProgress(file.name));
+  await lsSaveText(file.name, cleanedText);
+  loadWords(rawText, file.name, lsLoadProgress(file.name), wantsPrivate);
+  lsSave(); // persist the private flag right away, don't rely on the next autosave — also refreshes the book list/count
   e.target.value = '';
+  document.getElementById('private-upload-checkbox').checked = false;
 
-  if (authUser) uploadBookToCloud(file.name, cleanedText).catch(() => {});
+  if (authUser && !wantsPrivate) uploadBookToCloud(file.name, cleanedText).catch(() => {});
 });
 
 /* ══════════════════════════════════════════
@@ -1397,6 +1496,7 @@ function formatPhoneShort(p) {
 }
 
 async function initAuth() {
+  await migrateTextsToIndexedDB();
   renderBooksList();
   if (sb) {
     try {
@@ -1601,7 +1701,7 @@ async function openCloudBook(book) {
     const prog = Array.isArray(book.reading_progress) ? book.reading_progress[0] : book.reading_progress;
     const savedProgress = prog ? { pos: prog.position, total: book.total_words, wpm: prog.wpm, chunk: prog.chunk_setting } : null;
 
-    lsSaveText(book.filename, text);
+    await lsSaveText(book.filename, text);
     loadWords(text, book.filename, savedProgress);
     currentBookId = book.id;
   } catch(e) {
@@ -1669,6 +1769,17 @@ async function checkpointStats() {
       await sb.from('reading_sessions').insert({
         user_id: authUser.id,
         book_id: currentBookId,
+        words_read: delta,
+        wpm: getWPM()
+      });
+    } catch(e) {}
+  } else if (authUser && currentBookPrivate) {
+    // Private book: never uploaded, so there's no book_id to attach — the
+    // session still counts toward this user's cloud stats, just anonymously.
+    try {
+      await sb.from('reading_sessions').insert({
+        user_id: authUser.id,
+        book_id: null,
         words_read: delta,
         wpm: getWPM()
       });
