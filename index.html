@@ -64,7 +64,9 @@
 
   .w { display: inline; padding: 1px 2px; border-radius: 3px; cursor: pointer; }
   .w:hover { background: var(--rt-word-hover); }
-  .w.hi { background: #C9A84C; color: #1A0E00; border-radius: 3px; }
+  .w.hi { background: #FFE9A0; color: #1A0E00; border-radius: 0; }
+  .w.hi.hi-l { border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
+  .w.hi.hi-r { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
   #placeholder { color: var(--rt-text-faint); font-size: 18px; text-align: center; font-style: italic; padding: 60px 0; grid-column: 1/-1; }
 
   #bottom { flex-shrink: 0; background: var(--rt-toolbar-bg); border-top: 1px solid var(--rt-border); }
@@ -637,7 +639,7 @@ function renderPage(pageIdx) {
     for (let i = from; i < to && i < words.length; i++) {
       const s = document.createElement('span');
       s.className = 'w';
-      s.textContent = words[i];
+      s.textContent = words[i] + ' ';
       s.dataset.idx = i;  // store word index for buildLineChunks
       const ii = i;
       s.onclick = () => {
@@ -650,7 +652,6 @@ function renderPage(pageIdx) {
         autoSaveTimer = setTimeout(lsSave, 2000);
       };
       container.appendChild(s);
-      container.appendChild(document.createTextNode(' '));
       pageSpans[i] = s;
     }
   }
@@ -705,7 +706,10 @@ function _doHighlight() {
     (ii >= hiStart && ii < hiEnd)
       ? s.classList.add('hi')
       : s.classList.remove('hi');
+    s.classList.remove('hi-l', 'hi-r');
   });
+  if (pageSpans[hiStart])     pageSpans[hiStart].classList.add('hi-l');
+  if (pageSpans[hiEnd - 1])   pageSpans[hiEnd - 1].classList.add('hi-r');
   updateUI();
 }
 
