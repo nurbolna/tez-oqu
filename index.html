@@ -413,7 +413,7 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let words = [], pos = 0, playing = false, timer = null;
-let currentFileName = '', autoSaveTimer = null, cloudSyncInterval = null;
+let currentFileName = '', autoSaveTimer = null, cloudSyncInterval = null, statsBasePos = 0;
 let pages = [], currentPage = 0, pageSpans = {};
 
 const LS      = 'sr5_prog_';
@@ -683,7 +683,7 @@ function updateUI() {
 function step() {
   const advance = getChunk();
   if (chunkIndex + advance >= lineChunks.length) {
-    if (currentPage + 1 >= pages.length) { stop(); lsSave(); return; }
+    if (currentPage + 1 >= pages.length) { stop(); return; }
     const nextPage = currentPage + 1;
     pos = pages[nextPage].start;
     chunkIndex = 0;
@@ -704,19 +704,26 @@ function step() {
   autoSaveTimer = setTimeout(lsSave, 5000);
 }
 function togglePlay() { if (!words.length) return; playing ? stop() : start(); }
+function periodicCheckpoint() {
+  checkpointStats();
+  lsSave();
+}
 function start() {
   playing = true;
   document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-pause"></i> Тоқтату';
   // Use setTimeout chain instead of setInterval for accurate per-chunk timing
   timer = setInterval(step, getIv());
+  statsBasePos = pos;
   clearInterval(cloudSyncInterval);
-  cloudSyncInterval = setInterval(lsSave, 20000);
+  cloudSyncInterval = setInterval(periodicCheckpoint, 20000);
 }
 function stop() {
+  const wasPlaying = playing;
   playing = false;
   document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-play"></i> Бастау';
   clearInterval(timer);
   clearInterval(cloudSyncInterval);
+  if (wasPlaying) checkpointStats();
   lsSave();
 }
 function jump(n) {
@@ -734,11 +741,6 @@ function jump(n) {
 function lsSave() {
   if (!currentFileName || !words.length) return;
   try {
-    const prevRaw = localStorage.getItem(LS + currentFileName);
-    const prevPos = prevRaw ? (JSON.parse(prevRaw).pos || 0) : 0;
-    const delta = pos - prevPos;
-    if (delta > 0) logLocalSession(delta, getWPM());
-
     localStorage.setItem(LS + currentFileName, JSON.stringify({
       pos, total: words.length, wpm: getWPM(), chunk: 1,
       savedAt: new Date().toLocaleString('kk-KZ')
@@ -749,7 +751,7 @@ function lsSave() {
   setTimeout(() => el.style.display = 'none', 2000);
   renderBooksList();
 
-  if (authUser && currentBookId) syncProgressToCloud();
+  if (authUser && currentBookId) syncPositionToCloud();
 }
 
 function logLocalSession(wordsRead, wpm) {
@@ -876,14 +878,10 @@ async function reconnectCloudBook(fileName) {
   if (!sb || !authUser) return;
   try {
     const { data } = await sb.from('books')
-      .select('id, reading_progress(position)')
+      .select('id')
       .eq('filename', fileName)
       .maybeSingle();
-    if (data) {
-      currentBookId = data.id;
-      const prog = Array.isArray(data.reading_progress) ? data.reading_progress[0] : data.reading_progress;
-      lastSyncedPos = prog ? prog.position : 0;
-    }
+    if (data) currentBookId = data.id;
   } catch(e) {}
 }
 
@@ -1213,7 +1211,6 @@ try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
 let authUser = null;
 let authPhone = '';
 let currentBookId = null;
-let lastSyncedPos = 0;
 
 function normalizePhone(raw) {
   let digits = raw.replace(/\D/g, '');
@@ -1497,7 +1494,6 @@ async function openCloudBook(book) {
     lsSaveText(book.filename, text);
     loadWords(text, book.filename, savedProgress);
     currentBookId = book.id;
-    lastSyncedPos = prog ? prog.position : 0;
   } catch(e) {
     alert('Кітапты жүктеу кезінде қате шықты');
   }
@@ -1531,16 +1527,14 @@ async function uploadBookToCloud(filename, text) {
 
     if (!error && data) {
       currentBookId = data.id;
-      lastSyncedPos = 0;
     }
   } catch(e) {}
 }
 
-async function syncProgressToCloud() {
+function syncPositionToCloud() {
   if (!sb || !authUser || !currentBookId) return;
-  const delta = pos - lastSyncedPos;
   try {
-    await sb.from('reading_progress').upsert({
+    sb.from('reading_progress').upsert({
       user_id: authUser.id,
       book_id: currentBookId,
       position: pos,
@@ -1548,17 +1542,26 @@ async function syncProgressToCloud() {
       chunk_setting: getChunk(),
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,book_id' });
+  } catch(e) {}
+}
 
-    if (delta > 0) {
-      await sb.from('reading_sessions').insert({
+// Only counts toward reading stats (pages/minutes) while autoplay was actually running —
+// manual page/word navigation still saves position via lsSave, but must not inflate stats.
+function checkpointStats() {
+  const delta = pos - statsBasePos;
+  statsBasePos = pos;
+  if (delta <= 0) return;
+  logLocalSession(delta, getWPM());
+  if (authUser && currentBookId) {
+    try {
+      sb.from('reading_sessions').insert({
         user_id: authUser.id,
         book_id: currentBookId,
         words_read: delta,
         wpm: getWPM()
       });
-    }
-    lastSyncedPos = pos;
-  } catch(e) {}
+    } catch(e) {}
+  }
 }
 
 window.addEventListener('beforeunload', lsSave);
