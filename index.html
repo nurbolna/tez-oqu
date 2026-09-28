@@ -233,14 +233,14 @@
     font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   #dash-shell { display: flex; min-height: 100vh; }
-  #dash-rail { width: 60px; flex-shrink: 0; padding: 18px 0; display: flex; flex-direction: column; align-items: center; gap: 22px; background: var(--d-panel); border-right: 1px solid var(--d-border); }
-  .dash-rail-icon { font-size: 20px; color: var(--d-text-3); cursor: pointer; }
-  .dash-rail-icon:hover { color: var(--d-text-2); }
-  .dash-rail-icon.active { color: var(--d-accent); }
-  #dash-rail-bottom { margin-top: auto; }
   #dashboard-inner { flex: 1; min-width: 0; }
   #dash-header { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  #dash-header-left { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
   #dash-logo { font-size: 16px; font-weight: 600; }
+  #dash-topnav { display: flex; gap: 4px; }
+  .dash-nav-item { font-size: 13px; font-weight: 500; padding: 6px 12px; border-radius: 8px; color: var(--d-text-2); cursor: pointer; }
+  .dash-nav-item:hover { background: var(--d-tile); }
+  .dash-nav-item.active { background: var(--d-accent-bg); color: var(--d-accent); }
   #dash-user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--d-text-2); background: var(--d-tile); border: 1px solid var(--d-border); border-radius: 8px; padding: 5px 10px; }
   #dash-signout { cursor: pointer; color: var(--d-text-3); margin-left: 2px; font-size: 15px; }
   #dash-signout:hover { color: var(--d-danger); }
@@ -255,7 +255,7 @@
   #dash-cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: start; }
   #dash-col-left, #dash-col-right { min-width: 0; }
   #dash-chart-section { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 14px; padding: 20px 24px; margin-bottom: 24px; }
-  #dash-chart-bars { display: flex; align-items: flex-end; gap: 10px; height: 50px; }
+  #dash-chart-bars { display: flex; align-items: flex-end; gap: 10px; height: 68px; }
   #dash-chart-labels { display: flex; gap: 10px; margin-top: 5px; }
   .dash-section-title { font-size: 19px; font-weight: 600; margin: 0 0 16px; }
   #dash-trainers-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 0; }
@@ -281,7 +281,7 @@
   .dash-continue-btn:hover { background: var(--d-accent-hover); }
   .dash-book-delete { cursor: pointer; color: var(--d-text-3); font-size: 17px; margin-left: 4px; }
   .dash-book-delete:hover { color: var(--d-danger); }
-  @media (max-width: 640px) { #dash-rail { display: none; } #dashboard-content { padding: 20px 16px 36px; } #dash-stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } #dash-cols { grid-template-columns: 1fr; } #dash-trainers-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
+  @media (max-width: 640px) { #dash-topnav { display: none; } #dashboard-content { padding: 20px 16px 36px; } #dash-stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } #dash-cols { grid-template-columns: 1fr; } #dash-trainers-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
   @media (min-width: 641px) and (max-width: 1000px) { #dash-cols { grid-template-columns: 1fr; } }
   .save-choice-row:hover { background: #EDE0C0; }
 
@@ -468,17 +468,16 @@
 
 <div id="dashboard">
   <div id="dash-shell">
-    <nav id="dash-rail">
-      <i class="ti ti-home dash-rail-icon active" onclick="document.getElementById('dashboard').scrollTo({top:0,behavior:'smooth'})" title="Басты бет"></i>
-      <i class="ti ti-bolt dash-rail-icon" onclick="document.getElementById('dash-trainers-section').scrollIntoView({behavior:'smooth',block:'start'})" title="Тренажерлар"></i>
-      <i class="ti ti-books dash-rail-icon" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})" title="Кітаптарым"></i>
-      <div id="dash-rail-bottom">
-        <i class="ti ti-logout dash-rail-icon" onclick="signOut()" title="Шығу"></i>
-      </div>
-    </nav>
     <div id="dashboard-inner">
       <div id="dash-header">
-        <div id="dash-logo">Тез Оқу</div>
+        <div id="dash-header-left">
+          <div id="dash-logo">Тез Оқу</div>
+          <nav id="dash-topnav">
+            <span class="dash-nav-item active" onclick="document.getElementById('dashboard').scrollTo({top:0,behavior:'smooth'})">Басты бет</span>
+            <span class="dash-nav-item" onclick="document.getElementById('dash-trainers-section').scrollIntoView({behavior:'smooth',block:'start'})">Тренажерлар</span>
+            <span class="dash-nav-item" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})">Кітаптарым</span>
+          </nav>
+        </div>
         <div id="dash-user-chip">
           <i class="ti ti-brand-telegram" aria-hidden="true"></i> <span id="dash-phone"></span>
           <span id="dash-signout" onclick="signOut()" title="Шығу"><i class="ti ti-logout"></i></span>
@@ -507,7 +506,7 @@
         <div id="dash-cols">
           <div id="dash-col-left">
             <div id="dash-chart-section">
-              <div class="dash-stat-label">Апталық белсенділік (мин)</div>
+              <div class="dash-stat-label">Апталық белсенділік</div>
               <div id="dash-chart-bars"></div>
               <div id="dash-chart-labels"></div>
             </div>
@@ -666,8 +665,8 @@
       <div style="font-size:19px;font-weight:bold;color:#2C1A0E;" id="local-wpm">—</div>
       <div style="font-size:11px;color:#A08050;margin-top:2px;" id="local-ppm"></div>
     </div>
-    <div style="font-size:12px;color:#8B6A3A;margin-bottom:6px;">Апталық белсенділік (мин)</div>
-    <div id="local-chart-bars" style="display:flex;align-items:flex-end;gap:8px;height:44px;"></div>
+    <div style="font-size:12px;color:#8B6A3A;margin-bottom:6px;">Апталық белсенділік</div>
+    <div id="local-chart-bars" style="display:flex;align-items:flex-end;gap:8px;height:68px;"></div>
     <div id="local-chart-labels" style="display:flex;gap:8px;margin-top:5px;"></div>
     <p style="font-size:11px;color:#A08050;margin-top:16px;line-height:1.5;">Тек осы браузерде сақталады. Кез келген құрылғыдан көру үшін Telegram арқылы кіріңіз.</p>
   </div>
@@ -2342,12 +2341,21 @@ function renderChartBars(daily, barsWrap, labelWrap, colorToday, colorRest) {
   labelWrap.innerHTML = '';
   const todayIdx = (new Date().getDay() + 6) % 7;
   daily.forEach((v, i) => {
+    const color = i === todayIdx ? colorToday : colorRest;
+    const mins = Math.round(v);
     const h = Math.max(3, Math.round((v / max) * 50));
+    const col = document.createElement('div');
+    col.style.cssText = 'width:32px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px;';
+    const val = document.createElement('div');
+    val.style.cssText = 'font-size:10px;font-weight:' + (i === todayIdx ? '700' : '500') + ';color:' + color + ';line-height:1;';
+    val.textContent = mins > 0 ? mins : '';
     const bar = document.createElement('div');
-    bar.style.cssText = 'width:32px;height:' + h + 'px;background:' + (i === todayIdx ? colorToday : colorRest) + ';border-radius:3px 3px 0 0;';
-    barsWrap.appendChild(bar);
+    bar.style.cssText = 'width:32px;height:' + h + 'px;background:' + color + ';border-radius:3px 3px 0 0;';
+    col.appendChild(val);
+    col.appendChild(bar);
+    barsWrap.appendChild(col);
     const lab = document.createElement('div');
-    lab.style.cssText = 'width:32px;text-align:center;font-size:11px;color:' + (i === todayIdx ? colorToday : colorRest) + ';' + (i === todayIdx ? 'font-weight:bold;' : '');
+    lab.style.cssText = 'width:32px;text-align:center;font-size:11px;color:' + color + ';' + (i === todayIdx ? 'font-weight:bold;' : '');
     lab.textContent = labels[i];
     labelWrap.appendChild(lab);
   });
