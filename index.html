@@ -507,7 +507,7 @@
         <div id="dash-cols">
           <div id="dash-col-left">
             <div id="dash-chart-section">
-              <div class="dash-stat-label">Апталық белсенділік (сөз)</div>
+              <div class="dash-stat-label">Апталық белсенділік (мин)</div>
               <div id="dash-chart-bars"></div>
               <div id="dash-chart-labels"></div>
             </div>
@@ -666,7 +666,7 @@
       <div style="font-size:19px;font-weight:bold;color:#2C1A0E;" id="local-wpm">—</div>
       <div style="font-size:11px;color:#A08050;margin-top:2px;" id="local-ppm"></div>
     </div>
-    <div style="font-size:12px;color:#8B6A3A;margin-bottom:6px;">Апталық белсенділік (сөз)</div>
+    <div style="font-size:12px;color:#8B6A3A;margin-bottom:6px;">Апталық белсенділік (мин)</div>
     <div id="local-chart-bars" style="display:flex;align-items:flex-end;gap:8px;height:44px;"></div>
     <div id="local-chart-labels" style="display:flex;gap:8px;margin-top:5px;"></div>
     <p style="font-size:11px;color:#A08050;margin-top:16px;line-height:1.5;">Тек осы браузерде сақталады. Кез келген құрылғыдан көру үшін Telegram арқылы кіріңіз.</p>
@@ -1212,7 +1212,7 @@ function loadLocalStats() {
       weekWords += v.words || 0;
       weekMinutes += v.minutes || 0;
       const idx = (d.getDay() + 6) % 7;
-      daily[idx] += v.words || 0;
+      daily[idx] += v.minutes || 0;
     }
   });
 
@@ -2307,7 +2307,7 @@ async function loadStats() {
       weekWords += r.words_read || 0;
       weekMinutes += mins;
       const idx = (d.getDay() + 6) % 7;
-      daily[idx] += r.words_read || 0;
+      daily[idx] += mins;
     }
   });
 
