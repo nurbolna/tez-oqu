@@ -243,6 +243,7 @@
   #dash-books-list { display: flex; flex-direction: column; gap: 10px; }
   .dash-book-card { background: #F0E6C8; border: 1px solid #C9B98A; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 14px; }
   .dash-book-card:hover { background: #EDE0C0; }
+  .save-choice-row:hover { background: #EDE0C0; }
   #dash-local-link { margin-top: 18px; text-align: center; font-size: 12px; color: #8B6A3A; cursor: pointer; text-decoration: underline; }
   #dash-local-link:hover { color: #6B4020; }
 </style>
@@ -392,15 +393,11 @@
       </div>
       <div id="dash-books-header">
         <div id="dash-books-title">Кітаптарың</div>
-        <label id="private-upload-label" style="display:flex;align-items:center;gap:3px;font-size:12px;color:#8B6A3A;cursor:pointer;" title="Кітап бұлтқа жүктелмейді, тек осы құрылғыда сақталады — оқу уақытыңыз бәрібір есептеледі, бірақ кітаптың аты ешкімге көрінбейді.">
-          <input type="checkbox" id="private-upload-checkbox" style="cursor:pointer;">
-          <i class="ti ti-lock" style="font-size:13px;"></i> Жеке оқу <span id="private-count-label" style="color:#A08050;">(0/3)</span>
-        </label>
         <button class="btn" id="dash-upload-btn" style="background:#8B5E3C;color:#F5EDD6;border-color:#6B4020;"><i class="ti ti-plus"></i> Жаңа кітап</button>
       </div>
       <div id="dash-books-list"></div>
       <div id="dash-private-section" style="display:none;margin-top:18px;">
-        <div style="font-size:17px;font-weight:bold;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ti ti-lock" style="font-size:14px;"></i> Жеке оқу кітаптарым</div>
+        <div style="font-size:17px;font-weight:bold;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ti ti-lock" style="font-size:14px;"></i> Жеке оқу кітаптарым <span id="private-count-label" style="font-size:13px;font-weight:normal;color:#A08050;">(0/3)</span></div>
         <div id="dash-private-list" style="display:flex;flex-direction:column;gap:10px;"></div>
       </div>
       <div id="dash-local-link" onclick="showReaderView()">Немесе жергілікті кітапты аш →</div>
@@ -454,6 +451,27 @@
     <div id="local-chart-bars" style="display:flex;align-items:flex-end;gap:8px;height:44px;"></div>
     <div id="local-chart-labels" style="display:flex;gap:8px;margin-top:5px;"></div>
     <p style="font-size:11px;color:#A08050;margin-top:16px;line-height:1.5;">Тек осы браузерде сақталады. Кез келген құрылғыдан көру үшін Telegram арқылы кіріңіз.</p>
+  </div>
+</div>
+
+<div id="save-choice-overlay" style="display:none;position:fixed;inset:0;background:rgba(44,26,14,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="position:relative;background:#F5EDD6;border:2px solid #C9B98A;border-radius:16px;padding:26px 28px;font-family:Georgia,serif;width:340px;max-width:90vw;">
+    <span onclick="cancelSaveChoice()" style="position:absolute;top:10px;right:14px;cursor:pointer;color:#8B6A3A;font-size:18px;line-height:1;"><i class="ti ti-x"></i></span>
+    <h2 style="font-size:17px;color:#2C1A0E;margin-bottom:16px;">Бұл кітапты қалай сақтаймыз?</h2>
+    <div id="save-choice-cloud" class="save-choice-row" onclick="confirmSaveChoice(false)" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #C9B98A;border-radius:8px;margin-bottom:10px;cursor:pointer;">
+      <i class="ti ti-cloud" style="font-size:20px;color:#4A6741;"></i>
+      <div>
+        <div style="font-size:14px;color:#2C1A0E;">Бұлтқа жүктеу</div>
+        <div style="font-size:11px;color:#8B6A3A;">Кез келген құрылғыдан жалғастыра аласыз</div>
+      </div>
+    </div>
+    <div id="save-choice-private" class="save-choice-row" onclick="confirmSaveChoice(true)" style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #C9B98A;border-radius:8px;cursor:pointer;">
+      <i class="ti ti-lock" style="font-size:20px;color:#8B5E3C;"></i>
+      <div>
+        <div style="font-size:14px;color:#2C1A0E;">Жеке оқу (тек осы құрылғыда)</div>
+        <div id="save-choice-private-sub" style="font-size:11px;color:#8B6A3A;">Кітап аты ешкімге көрінбейді, серверге жүктелмейді</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1222,15 +1240,44 @@ async function parseEpub(arrayBuffer) {
 /* ══════════════════════════════════════════
    FILE INPUT
    ══════════════════════════════════════════ */
-document.getElementById('file-input').addEventListener('change', async (e) => {
+document.getElementById('file-input').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const wantsPrivate = document.getElementById('private-upload-checkbox').checked;
+  openSaveChoice(file);
+});
+
+let pendingUploadFile = null;
+
+function openSaveChoice(file) {
+  pendingUploadFile = file;
+  const atCap = countPrivateBooks() >= 3;
+  const privRow = document.getElementById('save-choice-private');
+  const privSub = document.getElementById('save-choice-private-sub');
+  privRow.style.opacity = atCap ? '0.5' : '1';
+  privSub.textContent = atCap
+    ? 'Бір мезгілде тек 3 кітап — алдымен бірін өшіріңіз'
+    : 'Кітап аты ешкімге көрінбейді, серверге жүктелмейді';
+  document.getElementById('save-choice-overlay').style.display = 'flex';
+}
+
+function cancelSaveChoice() {
+  document.getElementById('save-choice-overlay').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  pendingUploadFile = null;
+}
+
+async function confirmSaveChoice(wantsPrivate) {
   if (wantsPrivate && countPrivateBooks() >= 3) {
     alert('Жеке оқу режимінде бір мезгілде тек 3 кітап сақтауға болады. Жаңасын қосу үшін алдымен бірін өшіріңіз.');
-    e.target.value = '';
     return;
   }
+  const file = pendingUploadFile;
+  document.getElementById('save-choice-overlay').style.display = 'none';
+  pendingUploadFile = null;
+  await processUpload(file, wantsPrivate);
+}
+
+async function processUpload(file, wantsPrivate) {
   showReaderView();
   let rawText = '';
   if (file.name.endsWith('.txt')) {
@@ -1248,11 +1295,10 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
   await lsSaveText(file.name, cleanedText);
   loadWords(rawText, file.name, lsLoadProgress(file.name), wantsPrivate);
   lsSave(); // persist the private flag right away, don't rely on the next autosave
-  e.target.value = '';
-  document.getElementById('private-upload-checkbox').checked = false;
+  document.getElementById('file-input').value = '';
 
   if (authUser && !wantsPrivate) uploadBookToCloud(file.name, cleanedText).catch(() => {});
-});
+}
 
 /* ══════════════════════════════════════════
    FULLSCREEN / KEYBOARD / RESIZE
@@ -1825,7 +1871,6 @@ function renderBooksGrid(books) {
 }
 
 document.getElementById('dash-upload-btn').addEventListener('click', () => {
-  showReaderView();
   document.getElementById('file-input').click();
 });
 
