@@ -221,30 +221,64 @@
   #auth-close { position: absolute; top: 10px; right: 14px; cursor: pointer; color: #8B6A3A; font-size: 18px; line-height: 1; }
   #auth-close:hover { color: #2C1A0E; }
 
-  /* ══ dashboard ══ */
-  #dashboard { display: none; height: 100vh; overflow-y: auto; background: #F5EDD6; color: #2C1A0E; }
-  #dashboard-inner { max-width: 720px; margin: 0 auto; }
-  #dash-header { background: #EDE0C0; border-bottom: 1px solid #C9B98A; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-  #dash-logo { font-size: 19px; font-weight: bold; }
-  #dash-user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4A6741; background: #F5EDD6; border: 1px solid #A8D08A; border-radius: 6px; padding: 5px 10px; }
-  #dash-signout { cursor: pointer; color: #8B6A3A; margin-left: 2px; font-size: 15px; }
-  #dash-signout:hover { color: #8B2000; }
-  #dashboard-loading { text-align: center; padding: 70px 0; color: #A08050; font-style: italic; }
-  #dashboard-content { display: none; padding: 20px; }
-  #dash-greeting { font-size: 15px; color: #6B4C2A; margin-bottom: 18px; }
-  #dash-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 22px; }
-  .dash-stat-tile { background: #EDE0C0; border: 1px solid #C9B98A; border-radius: 8px; padding: 12px 14px; }
-  .dash-stat-label { font-size: 12px; color: #8B6A3A; margin-bottom: 4px; }
-  .dash-stat-value { font-size: 21px; font-weight: bold; }
-  .dash-stat-sub { font-size: 11px; color: #A08050; margin-top: 2px; }
-  #dash-chart-section { margin-bottom: 24px; }
+  /* ══ dashboard (modern) ══ */
+  #dashboard {
+    display: none; height: 100vh; overflow-y: auto; background: var(--d-bg); color: var(--d-text);
+    --d-bg:#F7F7F5; --d-panel:#FFFFFF; --d-tile:#F1F1EE; --d-tile-strong:#E3E2DC;
+    --d-border:#E4E3DD; --d-border-strong:#D3D2C9;
+    --d-text:#1F1E1B; --d-text-2:#57564F; --d-text-3:#8A8980;
+    --d-accent:#2A78D6; --d-accent-hover:#1F63B8; --d-accent-bg:#E6F1FB;
+    --d-pro:#6250D6; --d-pro-bg:#EEEDFE; --d-danger:#C0392B;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  #dash-shell { display: flex; min-height: 100vh; }
+  #dash-rail { width: 60px; flex-shrink: 0; padding: 18px 0; display: flex; flex-direction: column; align-items: center; gap: 22px; background: var(--d-panel); border-right: 1px solid var(--d-border); }
+  .dash-rail-icon { font-size: 20px; color: var(--d-text-3); cursor: pointer; }
+  .dash-rail-icon:hover { color: var(--d-text-2); }
+  .dash-rail-icon.active { color: var(--d-accent); }
+  #dash-rail-bottom { margin-top: auto; }
+  #dashboard-inner { flex: 1; min-width: 0; }
+  #dash-header { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  #dash-logo { font-size: 16px; font-weight: 600; }
+  #dash-user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--d-text-2); background: var(--d-tile); border: 1px solid var(--d-border); border-radius: 8px; padding: 5px 10px; }
+  #dash-signout { cursor: pointer; color: var(--d-text-3); margin-left: 2px; font-size: 15px; }
+  #dash-signout:hover { color: var(--d-danger); }
+  #dashboard-loading { text-align: center; padding: 70px 0; color: var(--d-text-3); }
+  #dashboard-content { display: none; padding: 24px 28px 40px; max-width: 760px; }
+  #dash-greeting { font-size: 16px; font-weight: 500; margin-bottom: 20px; }
+  #dash-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 26px; }
+  .dash-stat-tile { background: var(--d-tile); border-radius: 10px; padding: 13px 15px; }
+  .dash-stat-label { font-size: 12px; color: var(--d-text-2); margin-bottom: 4px; }
+  .dash-stat-value { font-size: 21px; font-weight: 600; }
+  .dash-stat-sub { font-size: 11px; color: var(--d-text-3); margin-top: 2px; }
+  #dash-chart-section { margin-bottom: 30px; }
   #dash-chart-bars { display: flex; align-items: flex-end; gap: 10px; height: 50px; }
   #dash-chart-labels { display: flex; gap: 10px; margin-top: 5px; }
+  .dash-section-title { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
+  #dash-trainers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 30px; }
+  .dash-trainer-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 12px; padding: 14px; cursor: pointer; }
+  .dash-trainer-card:hover { border-color: var(--d-border-strong); }
+  .dash-trainer-card.soon { opacity: .55; cursor: default; }
+  .dash-trainer-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--d-pro-bg); color: var(--d-pro); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .dash-trainer-name { font-size: 13px; font-weight: 500; margin-top: 9px; }
+  .dash-trainer-sub { font-size: 11px; color: var(--d-text-3); margin-top: 2px; }
+  .dash-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 6px; background: var(--d-accent-bg); color: var(--d-accent); margin-top: 9px; }
   #dash-books-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
-  #dash-books-title { font-size: 17px; font-weight: bold; }
+  #dash-books-title { font-size: 15px; font-weight: 600; }
+  .dash-btn-primary { font-family: inherit; background: var(--d-accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .dash-btn-primary:hover { background: var(--d-accent-hover); }
   #dash-books-list { display: flex; flex-direction: column; gap: 10px; }
-  .dash-book-card { background: #F0E6C8; border: 1px solid #C9B98A; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 14px; }
-  .dash-book-card:hover { background: #EDE0C0; }
+  .dash-book-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 12px; padding: 13px 15px; display: flex; align-items: center; gap: 14px; }
+  .dash-book-card:hover { border-color: var(--d-border-strong); }
+  .dash-book-title { font-size: 14px; font-weight: 500; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-book-progress-track { background: var(--d-tile); border-radius: 4px; height: 5px; overflow: hidden; margin-bottom: 6px; }
+  .dash-book-progress-fill { background: var(--d-accent); height: 5px; }
+  .dash-book-meta { font-size: 11px; color: var(--d-text-3); }
+  .dash-continue-btn { font-family: inherit; background: var(--d-accent); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .dash-continue-btn:hover { background: var(--d-accent-hover); }
+  .dash-book-delete { cursor: pointer; color: var(--d-text-3); font-size: 17px; margin-left: 4px; }
+  .dash-book-delete:hover { color: var(--d-danger); }
+  @media (max-width: 640px) { #dash-rail { display: none; } #dashboard-content { padding: 20px 16px 36px; } }
   .save-choice-row:hover { background: #EDE0C0; }
 </style>
 </head>
@@ -358,47 +392,72 @@
 </div>
 
 <div id="dashboard">
-  <div id="dashboard-inner">
-    <div id="dash-header">
-      <div id="dash-logo">Тез Оқу</div>
-      <div id="dash-user-chip">
-        <i class="ti ti-brand-telegram" aria-hidden="true"></i> <span id="dash-phone"></span>
-        <span id="dash-signout" onclick="signOut()" title="Шығу"><i class="ti ti-logout"></i></span>
+  <div id="dash-shell">
+    <nav id="dash-rail">
+      <i class="ti ti-home dash-rail-icon active" onclick="document.getElementById('dashboard').scrollTo({top:0,behavior:'smooth'})" title="Басты бет"></i>
+      <i class="ti ti-bolt dash-rail-icon" onclick="document.getElementById('dash-trainers-section').scrollIntoView({behavior:'smooth',block:'start'})" title="Тренажерлар"></i>
+      <i class="ti ti-books dash-rail-icon" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})" title="Кітаптарың"></i>
+      <div id="dash-rail-bottom">
+        <i class="ti ti-logout dash-rail-icon" onclick="signOut()" title="Шығу"></i>
       </div>
-    </div>
-    <div id="dashboard-loading">Жүктелуде...</div>
-    <div id="dashboard-content">
-      <div id="dash-greeting">Қайта келдіңіз!</div>
-      <div id="dash-stats-grid">
-        <div class="dash-stat-tile">
-          <div class="dash-stat-label">Бұл апта</div>
-          <div class="dash-stat-value" id="dash-week-pages">—</div>
-          <div class="dash-stat-sub" id="dash-week-words"></div>
-        </div>
-        <div class="dash-stat-tile">
-          <div class="dash-stat-label">Бұл ай</div>
-          <div class="dash-stat-value" id="dash-month-pages">—</div>
-          <div class="dash-stat-sub" id="dash-month-words"></div>
-        </div>
-        <div class="dash-stat-tile">
-          <div class="dash-stat-label">Орташа жылдамдық</div>
-          <div class="dash-stat-value" id="dash-wpm">—</div>
-          <div class="dash-stat-sub" id="dash-ppm"></div>
+    </nav>
+    <div id="dashboard-inner">
+      <div id="dash-header">
+        <div id="dash-logo">Тез Оқу</div>
+        <div id="dash-user-chip">
+          <i class="ti ti-brand-telegram" aria-hidden="true"></i> <span id="dash-phone"></span>
+          <span id="dash-signout" onclick="signOut()" title="Шығу"><i class="ti ti-logout"></i></span>
         </div>
       </div>
-      <div id="dash-chart-section">
-        <div class="dash-stat-label">Апталық белсенділік (сөз)</div>
-        <div id="dash-chart-bars"></div>
-        <div id="dash-chart-labels"></div>
-      </div>
-      <div id="dash-books-header">
-        <div id="dash-books-title">Кітаптарың</div>
-        <button class="btn" id="dash-upload-btn" style="background:#8B5E3C;color:#F5EDD6;border-color:#6B4020;"><i class="ti ti-plus"></i> Жаңа кітап</button>
-      </div>
-      <div id="dash-books-list"></div>
-      <div id="dash-private-section" style="display:none;margin-top:18px;">
-        <div style="font-size:17px;font-weight:bold;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ti ti-lock" style="font-size:14px;"></i> Жеке оқу кітаптарым <span id="private-count-label" style="font-size:13px;font-weight:normal;color:#A08050;">(0/3)</span></div>
-        <div id="dash-private-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <div id="dashboard-loading">Жүктелуде...</div>
+      <div id="dashboard-content">
+        <div id="dash-greeting">Қайта келдіңіз!</div>
+        <div id="dash-stats-grid">
+          <div class="dash-stat-tile">
+            <div class="dash-stat-label">Бұл апта</div>
+            <div class="dash-stat-value" id="dash-week-pages">—</div>
+            <div class="dash-stat-sub" id="dash-week-words"></div>
+          </div>
+          <div class="dash-stat-tile">
+            <div class="dash-stat-label">Бұл ай</div>
+            <div class="dash-stat-value" id="dash-month-pages">—</div>
+            <div class="dash-stat-sub" id="dash-month-words"></div>
+          </div>
+          <div class="dash-stat-tile">
+            <div class="dash-stat-label">Орташа жылдамдық</div>
+            <div class="dash-stat-value" id="dash-wpm">—</div>
+            <div class="dash-stat-sub" id="dash-ppm"></div>
+          </div>
+        </div>
+        <div id="dash-chart-section">
+          <div class="dash-stat-label">Апталық белсенділік (сөз)</div>
+          <div id="dash-chart-bars"></div>
+          <div id="dash-chart-labels"></div>
+        </div>
+        <div id="dash-trainers-section">
+          <div class="dash-section-title">Тренажерлар</div>
+          <div id="dash-trainers-grid">
+            <div class="dash-trainer-card" id="trainer-rsvp" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})">
+              <div class="dash-trainer-icon"><i class="ti ti-player-play"></i></div>
+              <div class="dash-trainer-name">RSVP-ридер</div>
+              <div class="dash-trainer-sub">Кітап таңдап баста</div>
+            </div>
+            <div class="dash-trainer-card soon" id="trainer-schulte">
+              <div class="dash-trainer-icon"><i class="ti ti-grid-dots"></i></div>
+              <div class="dash-trainer-name">Шульте кестесі</div>
+              <span class="dash-badge">Жақында</span>
+            </div>
+          </div>
+        </div>
+        <div id="dash-books-header">
+          <div id="dash-books-title">Кітаптарың</div>
+          <button class="dash-btn-primary" id="dash-upload-btn"><i class="ti ti-plus"></i> Жаңа кітап</button>
+        </div>
+        <div id="dash-books-list"></div>
+        <div id="dash-private-section" style="display:none;margin-top:18px;">
+          <div class="dash-section-title" style="display:flex;align-items:center;gap:6px;"><i class="ti ti-lock" style="font-size:14px;"></i> Жеке оқу кітаптарым <span id="private-count-label" style="font-size:12px;font-weight:400;color:var(--d-text-3);">(0/3)</span></div>
+          <div id="dash-private-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1132,12 +1191,11 @@ async function renderPrivateBooksList() {
     const card = document.createElement('div');
     card.className = 'dash-book-card';
     card.innerHTML = '<div style="flex:1;min-width:0;">' +
-      '<div style="font-size:14px;font-weight:bold;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(name) + '</div>' +
-      '<div style="background:#DDD0A8;border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px;">' +
-      '<div style="background:#8B5E3C;height:5px;width:' + pct + '%;"></div></div>' +
-      '<div style="font-size:11px;color:#A08050;">' + pct + '% оқылды' + (hasText ? '' : ' · файл табылмады, қайта жүктеңіз') + '</div></div>' +
-      (hasText ? '<button class="btn dash-continue-btn" style="background:#4A6741;color:#F5EDD6;border-color:#2E4A26;">Жалғастыру <i class="ti ti-arrow-right"></i></button>' : '') +
-      '<i class="ti ti-trash" style="cursor:pointer;color:#A08050;font-size:17px;margin-left:12px;" title="Жою"></i>';
+      '<div class="dash-book-title">' + escapeHtml(name) + '</div>' +
+      '<div class="dash-book-progress-track"><div class="dash-book-progress-fill" style="width:' + pct + '%;"></div></div>' +
+      '<div class="dash-book-meta">' + pct + '% оқылды' + (hasText ? '' : ' · файл табылмады, қайта жүктеңіз') + '</div></div>' +
+      (hasText ? '<button class="dash-continue-btn">Жалғастыру <i class="ti ti-arrow-right"></i></button>' : '') +
+      '<i class="ti ti-trash dash-book-delete" title="Жою"></i>';
     if (hasText) card.querySelector('.dash-continue-btn').onclick = () => loadFromCache(name);
     card.querySelector('.ti-trash').onclick = (e) => {
       e.stopPropagation();
@@ -1905,7 +1963,9 @@ function renderStats(s) {
   document.getElementById('dash-ppm').textContent = s.avgPagesPerMin ? '~' + s.avgPagesPerMin + ' бет/мин' : '';
 }
 
-function renderChartBars(daily, barsWrap, labelWrap) {
+function renderChartBars(daily, barsWrap, labelWrap, colorToday, colorRest) {
+  colorToday = colorToday || '#8B5E3C';
+  colorRest = colorRest || '#C9A84C';
   const labels = ['Дс','Сс','Ср','Бс','Жм','Сб','Жс'];
   const max = Math.max(1, ...daily);
   barsWrap.innerHTML = '';
@@ -1914,17 +1974,17 @@ function renderChartBars(daily, barsWrap, labelWrap) {
   daily.forEach((v, i) => {
     const h = Math.max(3, Math.round((v / max) * 50));
     const bar = document.createElement('div');
-    bar.style.cssText = 'width:32px;height:' + h + 'px;background:' + (i === todayIdx ? '#8B5E3C' : '#C9A84C') + ';border-radius:3px 3px 0 0;';
+    bar.style.cssText = 'width:32px;height:' + h + 'px;background:' + (i === todayIdx ? colorToday : colorRest) + ';border-radius:3px 3px 0 0;';
     barsWrap.appendChild(bar);
     const lab = document.createElement('div');
-    lab.style.cssText = 'width:32px;text-align:center;font-size:11px;color:' + (i === todayIdx ? '#8B5E3C' : '#A08050') + ';' + (i === todayIdx ? 'font-weight:bold;' : '');
+    lab.style.cssText = 'width:32px;text-align:center;font-size:11px;color:' + (i === todayIdx ? colorToday : colorRest) + ';' + (i === todayIdx ? 'font-weight:bold;' : '');
     lab.textContent = labels[i];
     labelWrap.appendChild(lab);
   });
 }
 
 function renderWeekChart(daily) {
-  renderChartBars(daily, document.getElementById('dash-chart-bars'), document.getElementById('dash-chart-labels'));
+  renderChartBars(daily, document.getElementById('dash-chart-bars'), document.getElementById('dash-chart-labels'), '#2A78D6', '#E3E2DC');
 }
 
 function renderLocalChart(daily) {
@@ -1959,7 +2019,7 @@ function renderBooksGrid(books) {
   const wrap = document.getElementById('dash-books-list');
   wrap.innerHTML = '';
   if (!books.length) {
-    wrap.innerHTML = '<div style="color:#A08050;font-style:italic;padding:16px 0;">Әлі кітап жоқ — жаңасын жүктеңіз</div>';
+    wrap.innerHTML = '<div style="color:var(--d-text-3);padding:16px 0;">Әлі кітап жоқ — жаңасын жүктеңіз</div>';
     return;
   }
   books.forEach(b => {
@@ -1968,11 +2028,10 @@ function renderBooksGrid(books) {
     const card = document.createElement('div');
     card.className = 'dash-book-card';
     card.innerHTML = '<div style="flex:1;min-width:0;">' +
-      '<div style="font-size:14px;font-weight:bold;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(b.filename) + '</div>' +
-      '<div style="background:#DDD0A8;border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px;">' +
-      '<div style="background:#8B5E3C;height:5px;width:' + pct + '%;"></div></div>' +
-      '<div style="font-size:11px;color:#A08050;">' + pct + '% оқылды' + (prog ? ' · ' + timeAgoKk(prog.updated_at) : '') + '</div></div>' +
-      '<button class="btn dash-continue-btn" style="background:#4A6741;color:#F5EDD6;border-color:#2E4A26;">Жалғастыру <i class="ti ti-arrow-right"></i></button>';
+      '<div class="dash-book-title">' + escapeHtml(b.filename) + '</div>' +
+      '<div class="dash-book-progress-track"><div class="dash-book-progress-fill" style="width:' + pct + '%;"></div></div>' +
+      '<div class="dash-book-meta">' + pct + '% оқылды' + (prog ? ' · ' + timeAgoKk(prog.updated_at) : '') + '</div></div>' +
+      '<button class="dash-continue-btn">Жалғастыру <i class="ti ti-arrow-right"></i></button>';
     card.querySelector('.dash-continue-btn').onclick = () => openCloudBook(b);
     wrap.appendChild(card);
   });
