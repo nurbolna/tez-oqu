@@ -209,7 +209,7 @@
   .auth-hint { font-size: 13px; color: #6B4C2A; margin: 14px 0 8px; text-align: left; }
   #auth-bot-link { display: inline-flex; align-items: center; gap: 6px; background: #4A6741; color: #F5EDD6; border: 1px solid #2E4A26; border-radius: 8px; padding: 8px 16px; text-decoration: none; font-size: 14px; }
   #auth-bot-link:hover { background: #2E4A26; }
-  #auth-phone-input, #auth-otp-input { width: 100%; font-family: Georgia, serif; font-size: 16px; background: #FFFDF6; border: 1px solid #C9B98A; border-radius: 8px; padding: 10px 12px; color: #2C1A0E; margin-bottom: 14px; text-align: center; }
+  #auth-name-input, #auth-phone-input, #auth-otp-input { width: 100%; font-family: Georgia, serif; font-size: 16px; background: #FFFDF6; border: 1px solid #C9B98A; border-radius: 8px; padding: 10px 12px; color: #2C1A0E; margin-bottom: 14px; text-align: center; }
   #auth-send-btn, #auth-verify-btn { width: 100%; font-family: Georgia, serif; font-size: 14px; background: #8B5E3C; color: #F5EDD6; border: none; border-radius: 8px; padding: 10px 24px; cursor: pointer; }
   #auth-send-btn:hover, #auth-verify-btn:hover { background: #6B4020; }
   #auth-send-btn:disabled, #auth-verify-btn:disabled { opacity: 0.6; cursor: default; }
@@ -408,7 +408,8 @@
       <h2>Telegram арқылы кіру</h2>
       <p class="auth-hint">1. Алдымен ботпен байланысыңыз:</p>
       <a href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener" id="auth-bot-link"><i class="ti ti-brand-telegram"></i> @TezOqu_Bot ашу</a>
-      <p class="auth-hint">2. Телефон нөміріңізді енгізіңіз:</p>
+      <p class="auth-hint">2. Атыңызды және телефон нөміріңізді енгізіңіз:</p>
+      <input type="text" id="auth-name-input" placeholder="Атыңыз">
       <input type="tel" id="auth-phone-input" placeholder="+7 707 123 45 67">
       <button id="auth-send-btn" onclick="requestOtp()">Кодты жіберу</button>
     </div>
@@ -1626,6 +1627,7 @@ try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
 
 let authUser = null;
 let authPhone = '';
+let authName = '';
 let currentBookId = null;
 
 function normalizePhone(raw) {
@@ -1660,9 +1662,12 @@ function authShowError(msg) {
 
 async function requestOtp() {
   if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
+  const name = document.getElementById('auth-name-input').value.trim();
+  if (!name) { authShowError('Атыңызды енгізіңіз'); return; }
   const raw = document.getElementById('auth-phone-input').value;
   const phone = normalizePhone(raw);
   if (phone.length < 11) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
+  authName = name;
   authPhone = phone;
   const btn = document.getElementById('auth-send-btn');
   btn.disabled = true; btn.textContent = 'Жіберілуде...';
@@ -1685,6 +1690,9 @@ async function verifyOtpCode() {
   btn.disabled = false; btn.textContent = 'Растау';
   if (error) { authShowError('Код қате немесе мерзімі өткен'); return; }
   authUser = data.user;
+  authUser.user_metadata = authUser.user_metadata || {};
+  authUser.user_metadata.full_name = authName;
+  sb.auth.updateUser({ data: { full_name: authName } }).catch(() => {});
   document.getElementById('auth-otp-input').value = '';
   closeAuthOverlay();
   updateAuthChip();
@@ -1735,7 +1743,9 @@ async function showDashboard() {
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('dashboard-loading').style.display = 'block';
   document.getElementById('dashboard-content').style.display = 'none';
-  document.getElementById('dash-phone').textContent = authUser.phone ? formatPhoneShort(authUser.phone) : '';
+  const displayName = authUser.user_metadata && authUser.user_metadata.full_name || '';
+  document.getElementById('dash-phone').textContent = displayName || (authUser.phone ? formatPhoneShort(authUser.phone) : '');
+  document.getElementById('dash-greeting').textContent = displayName ? ('Қош келдіңіз, ' + displayName + '!') : 'Қайта келдіңіз!';
 
   const [statsData, booksData] = await Promise.all([loadStats(), loadCloudBooks()]);
   renderStats(statsData);
