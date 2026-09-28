@@ -309,6 +309,46 @@
   .schulte-cell.done { background: var(--d-accent-bg); color: var(--d-accent); border-color: var(--d-accent-bg); cursor: default; }
   .schulte-cell.wrong { background: #FBEAEA; border-color: var(--d-danger); }
   @media (max-width: 640px) { #schulte-sizes { flex-wrap: wrap; } #schulte-body { padding: 24px 16px 32px; } }
+
+  /* ══ eye warmup ══ */
+  #eyewarmup {
+    display: none; height: 100vh; overflow-y: auto; background: var(--d-bg); color: var(--d-text);
+    --d-bg:#F7F7F5; --d-panel:#FFFFFF; --d-border:#E4E3DD; --d-border-strong:#D3D2C9;
+    --d-text:#1F1E1B; --d-text-2:#57564F; --d-text-3:#8A8980; --d-accent:#2A78D6; --d-accent-hover:#1F63B8;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  #ew-header { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+  #ew-title { font-size: 16px; font-weight: 600; flex: 1; }
+  #ew-body { max-width: 480px; margin: 0 auto; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+  #ew-stage { width: 100%; height: 260px; background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 16px; position: relative; overflow: hidden; margin-bottom: 24px; display: flex; align-items: center; justify-content: center; }
+  #ew-target { width: 22px; height: 22px; border-radius: 50%; background: var(--d-accent); }
+  .ew-target.phase-h { animation: ew-horiz 3s ease-in-out infinite; }
+  .ew-target.phase-v { animation: ew-vert 3s ease-in-out infinite; }
+  .ew-target.phase-d { animation: ew-pulse 3s ease-in-out infinite; }
+  .ew-target.phase-b { animation: ew-blink 4s ease-in-out infinite; }
+  @keyframes ew-horiz { 0%,100% { transform: translateX(-110px); } 50% { transform: translateX(110px); } }
+  @keyframes ew-vert { 0%,100% { transform: translateY(-85px); } 50% { transform: translateY(85px); } }
+  @keyframes ew-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(2.4); } }
+  @keyframes ew-blink { 0%,100% { opacity: 1; } 50% { opacity: .15; } }
+  #ew-label { font-size: 15px; color: var(--d-text-2); margin-bottom: 6px; text-align: center; min-height: 20px; }
+  #ew-timer { font-size: 28px; font-weight: 600; margin-bottom: 20px; }
+  #ew-done { text-align: center; }
+  #ew-done-text { font-size: 17px; font-weight: 600; margin-bottom: 14px; }
+  @media (max-width: 640px) { #ew-stage { height: 220px; } }
+
+  /* ══ pyramid text ══ */
+  #pyramid {
+    display: none; height: 100vh; overflow-y: auto; background: var(--d-bg); color: var(--d-text);
+    --d-bg:#F7F7F5; --d-panel:#FFFFFF; --d-border:#E4E3DD; --d-border-strong:#D3D2C9;
+    --d-text:#1F1E1B; --d-text-2:#57564F; --d-text-3:#8A8980; --d-accent:#2A78D6; --d-accent-hover:#1F63B8;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  #pyramid-header { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+  #pyramid-title { font-size: 16px; font-weight: 600; flex: 1; }
+  #pyramid-body { max-width: 560px; margin: 0 auto; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+  #pyramid-lines { text-align: center; margin-bottom: 32px; }
+  .pyramid-line { font-size: 19px; line-height: 2.1; }
+  @media (max-width: 640px) { .pyramid-line { font-size: 15px; } }
 </style>
 </head>
 <body class="theme-sepia">
@@ -476,6 +516,16 @@
               <div class="dash-trainer-name">Шульте кестесі</div>
               <div class="dash-trainer-sub">Перифериялық көру жаттығуы</div>
             </div>
+            <div class="dash-trainer-card" id="trainer-eyewarmup" onclick="showEyeWarmup()">
+              <div class="dash-trainer-icon"><i class="ti ti-eye"></i></div>
+              <div class="dash-trainer-name">Көз жаттығулары</div>
+              <div class="dash-trainer-sub">60–90 сек демалыс</div>
+            </div>
+            <div class="dash-trainer-card" id="trainer-pyramid" onclick="showPyramid()">
+              <div class="dash-trainer-icon"><i class="ti ti-triangle"></i></div>
+              <div class="dash-trainer-name">Пирамидалы мәтін</div>
+              <div class="dash-trainer-sub">Перифериялық ену жаттығуы</div>
+            </div>
           </div>
         </div>
         <div id="dash-books-header">
@@ -510,6 +560,34 @@
     </div>
     <div id="schulte-grid"></div>
     <button id="schulte-restart" class="dash-btn-primary" onclick="schulteNewGame()"><i class="ti ti-refresh"></i> Қайта бастау</button>
+  </div>
+</div>
+
+<div id="eyewarmup">
+  <div id="ew-header">
+    <i class="ti ti-arrow-left schulte-back" onclick="eyeWarmupSkip()" title="Dashboard-қа оралу"></i>
+    <span id="ew-title">Көз жаттығулары</span>
+    <button id="ew-skip" class="schulte-size-btn" onclick="eyeWarmupSkip()">Өткізіп жіберу</button>
+  </div>
+  <div id="ew-body">
+    <div id="ew-stage"><div id="ew-target"></div></div>
+    <div id="ew-label">Дайындалыңыз...</div>
+    <div id="ew-timer">75с</div>
+    <div id="ew-done" style="display:none;">
+      <div id="ew-done-text">Дайын!</div>
+      <button class="dash-btn-primary" onclick="showDashboard()"><i class="ti ti-arrow-right"></i> Дашбордқа оралу</button>
+    </div>
+  </div>
+</div>
+
+<div id="pyramid">
+  <div id="pyramid-header">
+    <i class="ti ti-arrow-left schulte-back" onclick="showDashboard()" title="Dashboard-қа оралу"></i>
+    <span id="pyramid-title">Пирамидалы мәтін</span>
+  </div>
+  <div id="pyramid-body">
+    <div id="pyramid-lines"></div>
+    <button class="dash-btn-primary" onclick="showDashboard()"><i class="ti ti-check"></i> Аяқтадым</button>
   </div>
 </div>
 
@@ -1781,9 +1859,16 @@ function normalizePhone(raw) {
   return '+' + digits;
 }
 
-function showReaderView() {
+function hideAllViews() {
+  document.getElementById('app').style.display = 'none';
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('schulte').style.display = 'none';
+  document.getElementById('eyewarmup').style.display = 'none';
+  document.getElementById('pyramid').style.display = 'none';
+}
+
+function showReaderView() {
+  hideAllViews();
   document.getElementById('app').style.display = 'block';
 }
 
@@ -1794,10 +1879,114 @@ let schulteStartTime = null;
 let schulteTimerInterval = null;
 
 function showSchulte() {
-  document.getElementById('dashboard').style.display = 'none';
-  document.getElementById('app').style.display = 'none';
+  hideAllViews();
   document.getElementById('schulte').style.display = 'block';
   schultePickSize(schulteSize);
+}
+
+/* ── eye warmup ── */
+const EYE_PHASES = [
+  { cls: 'phase-h', label: 'Нүктені көзбен қуалаңыз — солдан оңға', dur: 20 },
+  { cls: 'phase-v', label: 'Нүктені көзбен қуалаңыз — жоғары-төмен', dur: 20 },
+  { cls: 'phase-d', label: 'Алыс-жақынға фокустаныңыз', dur: 20 },
+  { cls: 'phase-b', label: 'Жайлап жыпылықтатыңыз', dur: 15 }
+];
+let eyeTimeouts = [];
+let eyeStart = null;
+let eyeCountdownInterval = null;
+
+function showEyeWarmup() {
+  hideAllViews();
+  document.getElementById('eyewarmup').style.display = 'block';
+  eyeWarmupStart();
+}
+
+function eyeWarmupClearTimers() {
+  eyeTimeouts.forEach(t => clearTimeout(t));
+  eyeTimeouts = [];
+  clearInterval(eyeCountdownInterval);
+}
+
+function eyeWarmupStart() {
+  eyeWarmupClearTimers();
+  const target = document.getElementById('ew-target');
+  target.className = '';
+  target.id = 'ew-target';
+  document.getElementById('ew-done').style.display = 'none';
+  document.getElementById('ew-skip').style.display = 'inline-flex';
+  document.getElementById('ew-label').textContent = 'Дайындалыңыз...';
+  let elapsedBefore = 0;
+  EYE_PHASES.forEach(p => {
+    const t = setTimeout(() => {
+      target.className = p.cls;
+      document.getElementById('ew-label').textContent = p.label;
+    }, elapsedBefore * 1000);
+    eyeTimeouts.push(t);
+    elapsedBefore += p.dur;
+  });
+  const total = elapsedBefore;
+  document.getElementById('ew-timer').textContent = total + 'с';
+  eyeStart = performance.now();
+  eyeCountdownInterval = setInterval(() => {
+    const left = Math.max(0, total - (performance.now() - eyeStart) / 1000);
+    document.getElementById('ew-timer').textContent = Math.ceil(left) + 'с';
+  }, 250);
+  eyeTimeouts.push(setTimeout(eyeWarmupFinish, total * 1000));
+}
+
+function eyeWarmupFinish() {
+  eyeWarmupClearTimers();
+  document.getElementById('ew-target').className = '';
+  document.getElementById('ew-label').textContent = 'Дайын!';
+  document.getElementById('ew-timer').textContent = '0с';
+  document.getElementById('ew-done').style.display = 'block';
+  document.getElementById('ew-skip').style.display = 'none';
+}
+
+function eyeWarmupSkip() {
+  eyeWarmupClearTimers();
+  showDashboard();
+}
+
+/* ── pyramid text ── */
+const PYRAMID_TEXTS = [
+  'Кітап оқу — ойды дамытатын, дүниетанымды кеңейтетін, сөздік қорды байытатын үздіксіз жаттығу. Әр жаңа кітап жаңа әлем, жаңа тәжірибе, жаңа ой әкеледі. Тез әрі саналы оқу дағдысы адамға уақытты үнемдеп, көбірек біліммен қаруланғанға көмектеседі. Көзді бір нүктеге бекітіп, айналасындағы сөздерді де қатар қабылдауды үйрену жылдам оқудың негізгі құпияларының бірі саналады.'
+];
+
+function buildPyramidLines(text, maxLines, step) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let wi = 0;
+  for (let i = 1; i <= maxLines && wi < words.length; i++) {
+    const targetLen = i * step;
+    let line = '';
+    while (wi < words.length && (line.length + words[wi].length + (line ? 1 : 0)) <= targetLen) {
+      line += (line ? ' ' : '') + words[wi];
+      wi++;
+    }
+    if (!line) { line = words[wi]; wi++; }
+    lines.push(line);
+  }
+  return lines;
+}
+
+function pyramidNew() {
+  const text = PYRAMID_TEXTS[Math.floor(Math.random() * PYRAMID_TEXTS.length)];
+  const lines = buildPyramidLines(text, 11, 4);
+  const wrap = document.getElementById('pyramid-lines');
+  wrap.innerHTML = '';
+  lines.forEach(l => {
+    const div = document.createElement('div');
+    div.className = 'pyramid-line';
+    div.textContent = l;
+    wrap.appendChild(div);
+  });
+}
+
+function showPyramid() {
+  hideAllViews();
+  document.getElementById('pyramid').style.display = 'block';
+  pyramidNew();
 }
 
 function schultePickSize(n) {
@@ -2000,8 +2189,7 @@ async function initAuth() {
 
 /* ── dashboard ── */
 async function showDashboard() {
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('schulte').style.display = 'none';
+  hideAllViews();
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('dashboard-loading').style.display = 'block';
   document.getElementById('dashboard-content').style.display = 'none';
