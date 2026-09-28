@@ -343,9 +343,9 @@
   <div id="chrome-bottom">
     <div id="scrub-label">— · — / — бет</div>
     <div id="scrub-row">
-      <button class="jump-btn" onclick="jump(-10)" aria-label="Артқа"><i class="ti ti-chevron-left"></i></button>
+      <button class="jump-btn" onclick="goPage(currentPage - 1)" aria-label="Артқы бет"><i class="ti ti-chevron-left"></i></button>
       <div id="play-btn" onclick="togglePlay()" aria-label="Бастау"><i class="ti ti-player-play"></i></div>
-      <button class="jump-btn" onclick="jump(10)" aria-label="Алға"><i class="ti ti-chevron-right"></i></button>
+      <button class="jump-btn" onclick="goPage(currentPage + 1)" aria-label="Келесі бет"><i class="ti ti-chevron-right"></i></button>
       <div id="scrub-track">
         <div id="scrub-fill"></div>
         <div id="scrub-thumb"></div>
@@ -749,8 +749,8 @@ function renderPage(pageIdx) {
 
   // Synchronous: reading getBoundingClientRect() inside buildLineChunks()
   // already forces the layout the just-appended spans need. Deferring this to
-  // requestAnimationFrame let a fast second jump()/goPage() call read a
-  // still-stale lineChunks array from the previous page and land on the wrong word.
+  // requestAnimationFrame let a fast second goPage() call read a still-stale
+  // lineChunks array from the previous page and land on the wrong word.
   buildLineChunks();
   let ci = lineChunks.findIndex(c => pos >= c.start && pos < c.end);
   if (ci < 0) ci = 0;
@@ -909,24 +909,6 @@ function stop() {
   clearInterval(cloudSyncInterval);
   if (wasPlaying) checkpointStats();
   lsSave();
-}
-function jump(n) {
-  if (!lineChunks.length) return;
-  const target = chunkIndex + n;
-  if (target < 0 && currentPage > 0) {
-    // Crossing back a page: land near its end, not its start.
-    pos = pages[currentPage - 1].end - 1;
-    renderPage(currentPage - 1);
-  } else if (target > lineChunks.length - 1 && currentPage < pages.length - 1) {
-    goPage(currentPage + 1);
-  } else {
-    chunkIndex = Math.max(0, Math.min(lineChunks.length - 1, target));
-    if (lineChunks[chunkIndex]) pos = lineChunks[chunkIndex].start;
-    applyHighlight();
-  }
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(lsSave, 2000);
-  if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
 }
 
 /* ══════════════════════════════════════════
@@ -1413,8 +1395,8 @@ document.addEventListener('click', () => closeAllPops());
 
 document.addEventListener('keydown', e => {
   if (e.code === 'Space')      { e.preventDefault(); togglePlay(); }
-  if (e.code === 'ArrowLeft')  jump(-10);
-  if (e.code === 'ArrowRight') jump(10);
+  if (e.code === 'ArrowLeft')  goPage(currentPage - 1);
+  if (e.code === 'ArrowRight') goPage(currentPage + 1);
   if (e.code === 'KeyF')       toggleFS();
   if (e.code === 'Escape' && document.getElementById('app').classList.contains('fs-mode')) toggleFS();
 });
