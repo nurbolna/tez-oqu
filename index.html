@@ -36,31 +36,38 @@
   }
 
   html, body { height: 100%; background: var(--rt-bg); font-family: 'Georgia','Times New Roman',serif; overflow: hidden; }
-  #app { display: flex; flex-direction: column; height: 100vh; background: var(--rt-bg); color: var(--rt-text); }
+  #app { position: relative; height: 100vh; background: var(--rt-bg); color: var(--rt-text); overflow: hidden; }
 
-  #toolbar { background: var(--rt-toolbar-bg); border-bottom: 1px solid var(--rt-border); padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-  #toolbar label { font-size: 13px; color: var(--rt-text-muted); }
   select { font-family: Georgia,serif; font-size: 13px; background: var(--rt-bg); border: 1px solid var(--rt-border); color: var(--rt-text); border-radius: 6px; padding: 3px 7px; }
   .theme-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; display: inline-block; }
   .hi-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; display: inline-block; }
   .btn { font-family: Georgia,serif; font-size: 13px; background: #D4B483; border: 1px solid #B8965A; color: #2C1A0E; border-radius: 6px; padding: 4px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   .btn:hover { background: #C4A060; }
-  #upload-btn { background: #8B5E3C; color: #F5EDD6; border-color: #6B4020; }
-  #upload-btn:hover { background: #6B4020; }
-  #fs-btn { background: #4A6741; color: #F5EDD6; border-color: #2E4A26; margin-left: auto; }
-  #fs-btn:hover { background: #2E4A26; }
-  #play-btn { background: #8B5E3C; color: #F5EDD6; border-color: #6B4020; padding: 4px 16px; }
-  #play-btn:hover { background: #6B4020; }
   #file-input { display: none; }
-  #stats { font-size: 12px; color: var(--rt-text-muted); }
-  #save-notice { font-size: 11px; color: #4A6741; background: #DFF0D8; border: 1px solid #A8D08A; border-radius: 5px; padding: 2px 8px; display: none; }
-  #file-name { font-size: 12px; color: var(--rt-text-muted); font-style: italic; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  #progress-bar-wrap { padding: 4px 20px 3px; background: var(--rt-bg); flex-shrink: 0; }
-  #progress-bar-bg { background: var(--rt-progress-track); border-radius: 4px; height: 5px; overflow: hidden; }
-  #progress-bar-fill { background: #8B5E3C; height: 5px; border-radius: 4px; transition: width 0.2s; width: 0%; }
+  #chrome-top { position: absolute; top: 0; left: 0; right: 0; background: var(--rt-toolbar-bg); border-bottom: 1px solid var(--rt-border); padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; z-index: 20; transition: transform .2s, opacity .2s; }
+  #back-to-dash { cursor: pointer; font-size: 19px; color: var(--rt-text-muted); flex-shrink: 0; }
+  #back-to-dash:hover { color: var(--rt-text); }
+  #reader-filename { font-size: 12px; color: var(--rt-text-muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0 12px; }
+  #chrome-top-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .chrome-icon-btn { background: none; border: none; cursor: pointer; color: var(--rt-text); font-size: 18px; padding: 2px; font-family: Georgia,serif; line-height: 1; }
+  .chrome-icon-btn:hover { color: #8B5E3C; }
+  #aa-btn { font-weight: bold; font-size: 15px; }
+  #bookmark-toggle-btn.active { color: #4A6741; }
+  #save-notice { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #4A6741; background: #DFF0D8; border: 1px solid #A8D08A; border-radius: 5px; padding: 2px 8px; display: none; z-index: 21; }
 
-  #reader-area { flex: 1; padding: 24px 56px 0px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
+  #chrome-bottom { position: absolute; bottom: 0; left: 0; right: 0; background: var(--rt-toolbar-bg); border-top: 1px solid var(--rt-border); padding: 8px 20px 12px; z-index: 20; transition: transform .2s, opacity .2s; }
+  #scrub-label { text-align: center; font-size: 12px; color: var(--rt-text-muted); margin-bottom: 8px; }
+  #scrub-row { display: flex; align-items: center; gap: 12px; }
+  .jump-btn { background: none; border: none; cursor: pointer; color: var(--rt-text-muted); font-size: 18px; padding: 4px; flex-shrink: 0; }
+  .jump-btn:hover { color: var(--rt-text); }
+  #play-btn { background: #8B5E3C; color: #F5EDD6; border: none; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+  #play-btn:hover { background: #6B4020; }
+  #scrub-track { position: relative; flex: 1; height: 5px; background: var(--rt-progress-track); border-radius: 3px; cursor: pointer; }
+  #scrub-fill { position: absolute; left: 0; top: 0; height: 5px; background: #8B5E3C; border-radius: 3px; pointer-events: none; }
+  #scrub-thumb { position: absolute; top: 50%; width: 16px; height: 16px; background: #8B5E3C; border: 2px solid var(--rt-bg); border-radius: 50%; transform: translate(-50%,-50%); cursor: grab; }
+
+  #reader-area { position: absolute; inset: 0; padding: 60px 56px 88px; overflow: hidden; display: flex; flex-direction: column; }
   #columns-wrap { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 52px; overflow: hidden; min-height: 0; max-height: 100%; align-content: start; }
   .col { font-family: var(--rt-font-family); font-size: var(--rt-font-size); line-height: 2; color: var(--rt-text); text-align: justify; word-spacing: 1px; overflow: hidden; }
 
@@ -71,26 +78,20 @@
   .w.hi.hi-r { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
   #placeholder { color: var(--rt-text-faint); font-size: 18px; text-align: center; font-style: italic; padding: 60px 0; grid-column: 1/-1; }
 
-  #bottom { flex-shrink: 0; background: var(--rt-toolbar-bg); border-top: 1px solid var(--rt-border); }
-  #controls { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 16px 4px; flex-wrap: wrap; }
-  #hint { text-align: center; font-size: 11px; color: var(--rt-text-faint); padding: 2px 0 4px; }
-
-
-
-  #books-panel { background: var(--rt-panel-bg); border-top: 1px solid var(--rt-border); padding: 5px 16px; font-size: 12px; color: var(--rt-text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #books-panel { position: absolute; left: 0; right: 0; bottom: 76px; background: var(--rt-panel-bg); border-top: 1px solid var(--rt-border); padding: 5px 16px; font-size: 12px; color: var(--rt-text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; z-index: 19; transition: transform .2s, opacity .2s; }
   .book-tag { background: var(--rt-bg); border: 1px solid var(--rt-border); border-radius: 5px; padding: 2px 8px; font-size: 12px; color: var(--rt-text); display: inline-flex; align-items: center; gap: 3px; }
   .book-tag.clickable { cursor: pointer; }
   .book-tag.clickable:hover { background: var(--rt-progress-track); }
   .book-tag .del { color: #8B5E3C; cursor: pointer; margin-left: 2px; }
   .book-tag .del:hover { color: #500; }
 
-  /* bookmark */
-  #bookmark-bar { display: flex; align-items: center; gap: 8px; padding: 0 16px 5px; justify-content: center; }
-  #bookmark-btn { background: #4A6741; color: #F5EDD6; border: 1px solid #2E4A26; border-radius: 6px; padding: 3px 12px; font-family: Georgia,serif; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
-  #bookmark-btn:hover { background: #2E4A26; }
-  #bookmark-goto { background: #D4B483; border: 1px solid #B8965A; color: #2C1A0E; border-radius: 6px; padding: 3px 10px; font-family: Georgia,serif; font-size: 12px; cursor: pointer; display: none; align-items: center; gap: 4px; }
-  #bookmark-goto:hover { background: #C4A060; }
-  #bookmark-info { font-size: 12px; color: #4A6741; font-style: italic; display: none; }
+  .chrome-pop { display: none; position: absolute; top: 46px; right: 16px; background: var(--rt-bg); border: 1px solid var(--rt-border); border-radius: 10px; padding: 12px; width: 230px; z-index: 25; font-size: 12px; box-shadow: 0 4px 14px rgba(44,26,14,0.2); }
+  .chrome-pop.show { display: block; }
+  .chrome-pop-label { color: var(--rt-text-muted); margin: 10px 0 5px; }
+  .chrome-pop-label:first-child { margin-top: 0; }
+  .chrome-pop select { width: 100%; margin-bottom: 2px; }
+  #pop-more .chrome-pop-item { padding: 8px 6px; cursor: pointer; color: var(--rt-text); border-radius: 6px; }
+  #pop-more .chrome-pop-item:hover { background: var(--rt-word-hover); }
   .w.bookmark-hi { background: #7BC67A !important; color: #0A2E0A !important; }
 
   /* ── timer ── */
@@ -176,14 +177,12 @@
     color: #1A0E00;
   }
 
-  /* fullscreen mode — hide toolbar and bottom */
-  #app.fs-mode #toolbar { display: none; }
-  #app.fs-mode #progress-bar-wrap { display: none; }
-  #app.fs-mode #bottom { display: none; }
-  #app.fs-mode #books-panel { display: none; }
-  #app.fs-mode #reader-area { padding: 40px 56px; }
+  /* chrome-hidden (immersive) reading mode — tap the text, F key, or the fs-mode toggle */
+  #app.fs-mode #chrome-top { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+  #app.fs-mode #chrome-bottom { transform: translateY(100%); opacity: 0; pointer-events: none; }
+  #app.fs-mode #books-panel { transform: translateY(100%); opacity: 0; pointer-events: none; }
 
-  /* exit hint in fullscreen */
+  /* hint shown while chrome is hidden */
   #fs-hint {
     display: none;
     position: fixed;
@@ -196,10 +195,6 @@
     pointer-events: none;
   }
   #app.fs-mode #fs-hint { display: block; }
-
-  /* ══ auth chip ══ */
-  #auth-chip { background: #4A6741; color: #F5EDD6; border-color: #2E4A26; }
-  #auth-chip:hover { background: #2E4A26; }
 
   /* ══ auth overlay ══ */
   #auth-overlay { display: none; position: fixed; inset: 0; background: rgba(44,26,14,0.7); z-index: 1000; align-items: center; justify-content: center; }
@@ -249,26 +244,42 @@
 </head>
 <body class="theme-sepia">
 <div id="app" style="display:none;">
-  <div id="toolbar">
-    <button class="btn" id="upload-btn" onclick="document.getElementById('file-input').click()"><i class="ti ti-upload"></i> Файл жүктеу</button>
-    <input type="file" id="file-input" accept=".txt,.pdf,.epub">
-    <label id="private-upload-label" style="display:flex;align-items:center;gap:3px;font-size:12px;color:var(--rt-text-muted);cursor:pointer;" title="Кітап бұлтқа жүктелмейді, тек осы құрылғыда сақталады — оқу уақытыңыз бәрібір есептеледі, бірақ кітаптың аты ешкімге көрінбейді.">
-      <input type="checkbox" id="private-upload-checkbox" style="cursor:pointer;">
-      <i class="ti ti-lock" style="font-size:13px;"></i> Жеке оқу <span id="private-count-label" style="color:var(--rt-text-faint);">(0/3)</span>
-    </label>
-    <span id="file-name"></span>
-    <div id="theme-picker" style="display:flex;align-items:center;gap:4px;" title="Тема">
+  <input type="file" id="file-input" accept=".txt,.pdf,.epub">
+
+  <div id="chrome-top">
+    <i class="ti ti-arrow-left" id="back-to-dash" onclick="stop(); if(authUser){showDashboard();}else{openAuthOverlay();}" title="Dashboard-қа оралу"></i>
+    <span id="reader-filename"></span>
+    <div id="chrome-top-actions">
+      <button class="chrome-icon-btn" id="aa-btn" aria-label="Мәтін көрінісі">Аа</button>
+      <button class="chrome-icon-btn" id="speed-btn" aria-label="Жылдам оқу параметрлері"><i class="ti ti-bolt"></i></button>
+      <button class="chrome-icon-btn" id="bookmark-toggle-btn" onclick="toggleBookmark()" aria-label="Бетбелгі"><i class="ti ti-bookmark"></i></button>
+      <button class="chrome-icon-btn" id="more-btn" aria-label="Тағы"><i class="ti ti-dots"></i></button>
+    </div>
+  </div>
+  <span id="save-notice">✓ Сақталды</span>
+
+  <div id="pop-aa" class="chrome-pop">
+    <div class="chrome-pop-label">Тема</div>
+    <div id="theme-picker" style="display:flex;align-items:center;gap:5px;" title="Тема">
       <span class="theme-dot" data-theme="white" title="Ақ" style="background:#FFFFFF;border:1px solid #C0C0C0;"></span>
       <span class="theme-dot" data-theme="gray" title="Сұр" style="background:#DADADA;border:1px solid #B5B5B5;"></span>
       <span class="theme-dot" data-theme="sepia" title="Сепия" style="background:#F5EDD6;border:1px solid #C9B98A;"></span>
       <span class="theme-dot" data-theme="dark" title="Қара" style="background:#121212;border:1px solid #333333;"></span>
     </div>
-    <div id="hi-color-picker" style="display:flex;align-items:center;gap:4px;" title="Белгілеу түсі">
+    <div class="chrome-pop-label">Белгілеу түсі</div>
+    <div id="hi-color-picker" style="display:flex;align-items:center;gap:5px;" title="Белгілеу түсі">
       <span class="hi-dot" data-hicolor="yellow" title="Сары" style="background:#FFE9A0;border:1px solid #D8B96A;"></span>
       <span class="hi-dot" data-hicolor="green" title="Жасыл" style="background:#C8EAB0;border:1px solid #9CBF6E;"></span>
       <span class="hi-dot" data-hicolor="blue" title="Көгілдір" style="background:#B8E4F0;border:1px solid #7FB8C9;"></span>
     </div>
-    <label>Қаріп:</label>
+    <div class="chrome-pop-label">Қаріп өлшемі</div>
+    <select id="font-size-select">
+      <option value="16">Кіші</option>
+      <option value="19" selected>Орташа</option>
+      <option value="22">Үлкен</option>
+      <option value="26">Өте үлкен</option>
+    </select>
+    <div class="chrome-pop-label">Қаріп түрі</div>
     <select id="font-family-select">
       <option value="Georgia, 'Times New Roman', serif" selected>Georgia</option>
       <option value="'Times New Roman', Times, serif">Times New Roman</option>
@@ -276,26 +287,22 @@
       <option value="Verdana, Geneva, sans-serif">Verdana</option>
       <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
     </select>
-    <select id="font-size-select">
-      <option value="16">Кіші</option>
-      <option value="19" selected>Орташа</option>
-      <option value="22">Үлкен</option>
-      <option value="26">Өте үлкен</option>
-    </select>
-    <label>Жылдамдық:</label>
+  </div>
+
+  <div id="pop-speed" class="chrome-pop">
+    <div class="chrome-pop-label">Жылдамдық</div>
     <select id="wpm-select">
       <option value="100">100 WPM</option><option value="150">150 WPM</option>
       <option value="200">200 WPM</option><option value="250" selected>250 WPM</option>
       <option value="300">300 WPM</option><option value="400">400 WPM</option><option value="500">500 WPM</option>
     </select>
-    <label>Бөлік:</label>
+    <div class="chrome-pop-label">Бөлік</div>
     <select id="chunk-select">
       <option value="1">1/3 жол</option>
       <option value="2" selected>2/3 жол</option>
       <option value="3">3/3 жол</option>
     </select>
-    <span id="stats">—</span>
-    <span id="save-notice">✓ Сақталды</span>
+    <div class="chrome-pop-label">Таймер</div>
     <div id="timer-wrap">
       <select id="timer-select">
         <option value="10" selected>10 мин</option>
@@ -306,11 +313,13 @@
       <button id="timer-start-btn" onclick="toggleTimer()"><i class="ti ti-clock"></i> Таймер</button>
       <span id="timer-display" style="display:none;">10:00</span>
     </div>
-    <button class="btn" id="fs-btn" onclick="toggleFS()"><i class="ti ti-arrows-maximize"></i> Толық экран</button>
-    <span class="btn" id="local-stats-chip" onclick="openLocalStats()" style="display:none;"><i class="ti ti-chart-bar"></i> Статистикам</span>
-    <span class="btn" id="auth-chip" onclick="onAuthChipClick()"><i class="ti ti-brand-telegram"></i> <span id="auth-chip-text">Кіру</span></span>
   </div>
-  <div id="progress-bar-wrap"><div id="progress-bar-bg"><div id="progress-bar-fill"></div></div></div>
+
+  <div id="pop-more" class="chrome-pop">
+    <div class="chrome-pop-item" onclick="toggleFS()"><i class="ti ti-arrows-maximize"></i> Толық экран</div>
+    <div class="chrome-pop-item" id="pop-goto-bookmark" onclick="gotoBookmark()" style="display:none;"><i class="ti ti-bookmark-filled"></i> Белгіге өту</div>
+    <div class="chrome-pop-item" id="pop-local-stats" onclick="openLocalStats()" style="display:none;"><i class="ti ti-chart-bar"></i> Статистикам</div>
+  </div>
 
   <div id="reader-area">
     <div id="columns-wrap">
@@ -319,27 +328,18 @@
     </div>
   </div>
 
-  <div id="fs-hint">Esc — шығу &nbsp;·&nbsp; Space — ойнату/тоқтату</div>
+  <div id="fs-hint">Space — ойнату/тоқтату &nbsp;·&nbsp; ← → — бет</div>
 
-  <div id="bottom">
-    <div id="controls">
-      <button class="btn" onclick="goPage(currentPage-1)" title="Артқы бет"><i class="ti ti-chevrons-left"></i> Артқы бет</button>
-      <button class="btn" onclick="jump(-10)"><i class="ti ti-chevron-left"></i></button>
-      <button class="btn" id="play-btn" onclick="togglePlay()"><i class="ti ti-player-play"></i> Бастау</button>
-      <button class="btn" onclick="jump(10)"><i class="ti ti-chevron-right"></i></button>
-      <button class="btn" onclick="goPage(currentPage+1)" title="Келесі бет">Келесі бет <i class="ti ti-chevrons-right"></i></button>
-      <span id="page-counter" style="font-size:13px;color:var(--rt-text-muted);font-family:Georgia,serif;font-weight:bold;min-width:110px;text-align:center;">—</span>
-      <span id="word-progress" style="font-size:12px;color:var(--rt-text-muted);"></span>
-      <input id="goto-page-input" type="number" min="1" placeholder="бет №"
-        style="width:72px;font-family:Georgia,serif;font-size:13px;background:var(--rt-bg);border:1px solid var(--rt-border);border-radius:6px;padding:4px 6px;color:var(--rt-text);"
-        onkeydown="if(event.key==='Enter') gotoPageInput()">
-      <button class="btn" onclick="gotoPageInput()" style="background:#8B5E3C;color:#F5EDD6;border-color:#6B4020;"><i class="ti ti-corner-down-left"></i> Өт</button>
-    </div>
-    <div id="hint">Space — ойнату/тоқтату &nbsp;·&nbsp; ← → — 10 сөз &nbsp;·&nbsp; F — толық экран</div>
-    <div id="bookmark-bar">
-      <button id="bookmark-btn" onclick="setBookmark()"><i class="ti ti-bookmark"></i> Бет белгі қой</button>
-      <button id="bookmark-goto" onclick="gotoBookmark()"><i class="ti ti-bookmark-filled"></i> Белгіге өт</button>
-      <span id="bookmark-info"></span>
+  <div id="chrome-bottom">
+    <div id="scrub-label">— · — / — бет</div>
+    <div id="scrub-row">
+      <button class="jump-btn" onclick="jump(-10)" aria-label="Артқа"><i class="ti ti-chevron-left"></i></button>
+      <div id="play-btn" onclick="togglePlay()" aria-label="Бастау"><i class="ti ti-player-play"></i></div>
+      <button class="jump-btn" onclick="jump(10)" aria-label="Алға"><i class="ti ti-chevron-right"></i></button>
+      <div id="scrub-track">
+        <div id="scrub-fill"></div>
+        <div id="scrub-thumb"></div>
+      </div>
     </div>
   </div>
 
@@ -386,6 +386,10 @@
       </div>
       <div id="dash-books-header">
         <div id="dash-books-title">Кітаптарың</div>
+        <label id="private-upload-label" style="display:flex;align-items:center;gap:3px;font-size:12px;color:#8B6A3A;cursor:pointer;" title="Кітап бұлтқа жүктелмейді, тек осы құрылғыда сақталады — оқу уақытыңыз бәрібір есептеледі, бірақ кітаптың аты ешкімге көрінбейді.">
+          <input type="checkbox" id="private-upload-checkbox" style="cursor:pointer;">
+          <i class="ti ti-lock" style="font-size:13px;"></i> Жеке оқу <span id="private-count-label" style="color:#A08050;">(0/3)</span>
+        </label>
         <button class="btn" id="dash-upload-btn" style="background:#8B5E3C;color:#F5EDD6;border-color:#6B4020;"><i class="ti ti-plus"></i> Жаңа кітап</button>
       </div>
       <div id="dash-books-list"></div>
@@ -396,7 +400,6 @@
 
 <div id="auth-overlay">
   <div id="auth-box">
-    <span id="auth-close" onclick="closeAuthOverlay()"><i class="ti ti-x"></i></span>
     <div id="auth-step-phone">
       <h2>Telegram арқылы кіру</h2>
       <p class="auth-hint">1. Алдымен ботпен байланысыңыз:</p>
@@ -729,6 +732,45 @@ function goPage(p) {
   autoSaveTimer = setTimeout(lsSave, 2000);
 }
 
+/* ── draggable progress scrubber ── */
+let scrubDragging = false;
+function scrubPercentAt(clientX) {
+  const r = document.getElementById('scrub-track').getBoundingClientRect();
+  if (!r.width) return 0;
+  return Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+}
+function scrubPreview(pct) {
+  document.getElementById('scrub-fill').style.width = (pct * 100).toFixed(1) + '%';
+  document.getElementById('scrub-thumb').style.left = (pct * 100).toFixed(1) + '%';
+  if (words.length && pages.length) {
+    const p = pageOf(Math.round(pct * (words.length - 1)));
+    document.getElementById('scrub-label').textContent = Math.round(pct * 100) + '% · ' + (p + 1) + ' / ' + pages.length + ' бет';
+  }
+}
+function scrubCommit(pct) {
+  if (!words.length || !pages.length) return;
+  const targetWord = Math.max(0, Math.min(words.length - 1, Math.round(pct * (words.length - 1))));
+  goPage(pageOf(targetWord));
+}
+document.getElementById('scrub-thumb').addEventListener('pointerdown', (e) => {
+  scrubDragging = true;
+  e.stopPropagation();
+  e.target.setPointerCapture(e.pointerId);
+});
+window.addEventListener('pointermove', (e) => {
+  if (!scrubDragging) return;
+  scrubPreview(scrubPercentAt(e.clientX));
+});
+window.addEventListener('pointerup', (e) => {
+  if (!scrubDragging) return;
+  scrubDragging = false;
+  scrubCommit(scrubPercentAt(e.clientX));
+});
+document.getElementById('scrub-track').addEventListener('click', (e) => {
+  e.stopPropagation();
+  scrubCommit(scrubPercentAt(e.clientX));
+});
+
 function _doHighlight() {
   if (!lineChunks.length) return;
   const chunkCount = getChunk(); // how many thirds to highlight
@@ -762,12 +804,14 @@ function applyHighlight() {
 function updateUI() {
   const pct  = words.length > 1 ? (pos / (words.length - 1)) * 100 : 0;
   const mins = Math.round(Math.max(0, words.length - pos) / getWPM());
-  document.getElementById('progress-bar-fill').style.width = Math.min(100, pct).toFixed(1) + '%';
-  document.getElementById('stats').textContent = (pos + 1) + ' / ' + words.length + ' · ~' + mins + ' мин';
-  document.getElementById('page-counter').textContent = pages.length
-    ? 'Бет ' + (currentPage + 1) + ' / ' + pages.length : '—';
-  document.getElementById('word-progress').textContent = pages.length
-    ? '(' + (currentPage + 1) + ' бет оқылды)' : '';
+  const clamped = Math.min(100, Math.max(0, pct));
+  if (!scrubDragging) {
+    document.getElementById('scrub-fill').style.width = clamped.toFixed(1) + '%';
+    document.getElementById('scrub-thumb').style.left = clamped.toFixed(1) + '%';
+  }
+  document.getElementById('scrub-label').textContent = pages.length
+    ? Math.round(clamped) + '% · ' + (currentPage + 1) + ' / ' + pages.length + ' бет · ~' + mins + ' мин'
+    : '—';
 }
 
 /* ══════════════════════════════════════════
@@ -820,9 +864,19 @@ function stop() {
   lsSave();
 }
 function jump(n) {
-  chunkIndex = Math.max(0, Math.min(lineChunks.length - 1, chunkIndex + n));
-  if (lineChunks[chunkIndex]) pos = lineChunks[chunkIndex].start;
-  applyHighlight();
+  if (!lineChunks.length) return;
+  const target = chunkIndex + n;
+  if (target < 0 && currentPage > 0) {
+    // Crossing back a page: land near its end, not its start.
+    pos = pages[currentPage - 1].end - 1;
+    renderPage(currentPage - 1);
+  } else if (target > lineChunks.length - 1 && currentPage < pages.length - 1) {
+    goPage(currentPage + 1);
+  } else {
+    chunkIndex = Math.max(0, Math.min(lineChunks.length - 1, target));
+    if (lineChunks[chunkIndex]) pos = lineChunks[chunkIndex].start;
+    applyHighlight();
+  }
   clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(lsSave, 2000);
   if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
@@ -1075,7 +1129,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   words = cleaned.split(/\s+/).filter(w => w.length > 0);
   pos = 0; stop();
   currentFileName = fileName;
-  document.getElementById('file-name').textContent = fileName;
+  document.getElementById('reader-filename').textContent = fileName;
   document.getElementById('col1').innerHTML = '';
   document.getElementById('col2').innerHTML = '';
 
@@ -1191,17 +1245,46 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
    FULLSCREEN / KEYBOARD / RESIZE
    ══════════════════════════════════════════ */
 function toggleFS() {
-  const app = document.getElementById('app');
-  const btn = document.getElementById('fs-btn');
-  if (app.classList.contains('fs-mode')) {
-    app.classList.remove('fs-mode');
-    btn.innerHTML = '<i class="ti ti-arrows-maximize"></i> Толық экран';
-  } else {
-    app.classList.add('fs-mode');
-    btn.innerHTML = '<i class="ti ti-arrows-minimize"></i> Кішірейту';
-  }
+  document.getElementById('app').classList.toggle('fs-mode');
+  closeAllPops();
   // No page recalculation — pages stay the same
 }
+function setChrome(visible) {
+  const app = document.getElementById('app');
+  if (visible) app.classList.remove('fs-mode'); else app.classList.add('fs-mode');
+  closeAllPops();
+}
+function closeAllPops() {
+  document.querySelectorAll('.chrome-pop').forEach(p => p.classList.remove('show'));
+}
+document.getElementById('reader-area').addEventListener('click', (e) => {
+  if (!words.length || e.target.closest('.w')) return;
+  toggleFS();
+});
+document.getElementById('aa-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const pop = document.getElementById('pop-aa');
+  const wasOpen = pop.classList.contains('show');
+  closeAllPops();
+  if (!wasOpen) pop.classList.add('show');
+});
+document.getElementById('speed-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const pop = document.getElementById('pop-speed');
+  const wasOpen = pop.classList.contains('show');
+  closeAllPops();
+  if (!wasOpen) pop.classList.add('show');
+});
+document.getElementById('more-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const pop = document.getElementById('pop-more');
+  const wasOpen = pop.classList.contains('show');
+  closeAllPops();
+  if (!wasOpen) pop.classList.add('show');
+});
+document.querySelectorAll('.chrome-pop').forEach(p => p.addEventListener('click', e => e.stopPropagation()));
+document.getElementById('chrome-top-actions').addEventListener('click', e => e.stopPropagation());
+document.addEventListener('click', () => closeAllPops());
 
 document.addEventListener('keydown', e => {
   if (e.code === 'Space')      { e.preventDefault(); togglePlay(); }
@@ -1234,8 +1317,7 @@ let bookmarkPos = -1;
 
 function setBookmark() {
   bookmarkPos = pos;
-  const pct = words.length > 1 ? Math.round(pos / (words.length-1) * 100) : 0;
-  try { localStorage.setItem(LS + currentFileName + '_bm', JSON.stringify({ pos: bookmarkPos, pct })); } catch(e) {}
+  try { localStorage.setItem(LS + currentFileName + '_bm', JSON.stringify({ pos: bookmarkPos })); } catch(e) {}
   updateBookmarkUI();
   // flash green on current highlighted words
   const chunk = 1;
@@ -1247,6 +1329,17 @@ function setBookmark() {
   }
 }
 
+function clearBookmark() {
+  bookmarkPos = -1;
+  try { localStorage.removeItem(LS + currentFileName + '_bm'); } catch(e) {}
+  updateBookmarkUI();
+}
+
+function toggleBookmark() {
+  if (!currentFileName) return;
+  if (bookmarkPos >= 0) clearBookmark(); else setBookmark();
+}
+
 function gotoBookmark() {
   if (bookmarkPos < 0) return;
   pos = bookmarkPos;
@@ -1255,29 +1348,22 @@ function gotoBookmark() {
 }
 
 function loadBookmark(fileName) {
+  bookmarkPos = -1;
   try {
     const raw = localStorage.getItem(LS + fileName + '_bm');
-    if (!raw) return;
-    const d = JSON.parse(raw);
-    bookmarkPos = d.pos || -1;
-    updateBookmarkUI();
+    if (raw) { const d = JSON.parse(raw); bookmarkPos = d.pos != null ? d.pos : -1; }
   } catch(e) {}
+  updateBookmarkUI();
 }
 
 function updateBookmarkUI() {
-  const btn  = document.getElementById('bookmark-goto');
-  const info = document.getElementById('bookmark-info');
-  if (bookmarkPos >= 0 && words.length > 0) {
-    const pct = Math.round(bookmarkPos / (words.length-1) * 100);
-    btn.style.display = 'inline-flex';
-    info.style.display = 'inline';
-    info.textContent = '📍 ' + (bookmarkPos+1) + '-сөз (' + pct + '%)';
-    // mark the bookmark word on current page
-    refreshBookmarkSpan();
-  } else {
-    btn.style.display = 'none';
-    info.style.display = 'none';
-  }
+  const btn = document.getElementById('bookmark-toggle-btn');
+  const menuItem = document.getElementById('pop-goto-bookmark');
+  const hasBookmark = bookmarkPos >= 0;
+  btn.classList.toggle('active', hasBookmark);
+  btn.innerHTML = hasBookmark ? '<i class="ti ti-bookmark-filled"></i>' : '<i class="ti ti-bookmark"></i>';
+  menuItem.style.display = hasBookmark ? 'block' : 'none';
+  refreshBookmarkSpan();
 }
 
 function refreshBookmarkSpan() {
@@ -1381,14 +1467,6 @@ function closeTimerOverlay() {
 }
 
 
-function gotoPageInput() {
-  const input = document.getElementById('goto-page-input');
-  const p = parseInt(input.value) - 1; // convert to 0-based
-  if (isNaN(p)) return;
-  goPage(Math.max(0, Math.min(pages.length - 1, p)));
-  input.value = '';
-}
-
 /* ══════════════════════════════════════════
    CLOUD (Supabase) — auth, dashboard, sync
    ══════════════════════════════════════════ */
@@ -1411,7 +1489,7 @@ function normalizePhone(raw) {
 
 function showReaderView() {
   document.getElementById('dashboard').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.display = 'block';
 }
 
 function openAuthOverlay() {
@@ -1465,28 +1543,19 @@ async function verifyOtpCode() {
   await showDashboard();
 }
 
-function onAuthChipClick() {
-  if (authUser) { stop(); showDashboard(); } else { openAuthOverlay(); }
-}
-
 async function signOut() {
   if (sb) { try { await sb.auth.signOut(); } catch(e) {} }
   authUser = null;
   currentBookId = null;
   updateAuthChip();
-  showReaderView();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'none';
+  openAuthOverlay();
 }
 
 function updateAuthChip() {
-  const textEl = document.getElementById('auth-chip-text');
-  const localStatsChip = document.getElementById('local-stats-chip');
-  if (authUser) {
-    textEl.textContent = authUser.phone ? formatPhoneShort(authUser.phone) : 'Кабинет';
-    localStatsChip.style.display = 'none';
-  } else {
-    textEl.textContent = 'Кіру';
-    localStatsChip.style.display = 'inline-flex';
-  }
+  const localStatsChip = document.getElementById('pop-local-stats');
+  localStatsChip.style.display = authUser ? 'none' : 'block';
 }
 
 function formatPhoneShort(p) {
@@ -1510,7 +1579,7 @@ async function initAuth() {
     } catch(e) {}
   }
   updateAuthChip();
-  document.getElementById('app').style.display = 'flex';
+  openAuthOverlay();
 }
 
 /* ── dashboard ── */
