@@ -86,6 +86,7 @@
   .chrome-pop select { width: 100%; margin-bottom: 2px; }
   #pop-more .chrome-pop-item { padding: 8px 6px; cursor: pointer; color: var(--rt-text); border-radius: 6px; }
   #pop-more .chrome-pop-item:hover { background: var(--rt-word-hover); }
+  .rr-row { display: flex; align-items: center; gap: 7px; color: var(--rt-text); cursor: pointer; padding: 2px 0; }
 
   #bookmark-ribbon { display: none; position: absolute; top: 46px; right: 64px; width: 20px; height: 30px; background: #8B5E3C; border-radius: 0 0 3px 3px; z-index: 19; clip-path: polygon(0 0,100% 0,100% 100%,50% 78%,0 100%); pointer-events: none; }
   #pop-bookmarks { max-height: 320px; overflow-y: auto; }
@@ -424,6 +425,8 @@
       <button id="timer-start-btn" onclick="toggleTimer()"><i class="ti ti-clock"></i> Таймер</button>
       <span id="timer-display" style="display:none;">10:00</span>
     </div>
+    <div class="chrome-pop-label">Кері оқу</div>
+    <label class="rr-row"><input type="checkbox" id="rr-toggle" onchange="setRegressionRescue(this.checked)"> Кері оқуды болдырмау</label>
   </div>
 
   <div id="pop-more" class="chrome-pop">
@@ -735,6 +738,20 @@ document.querySelectorAll('.theme-dot').forEach(d => {
 });
 applyTheme((() => { try { return localStorage.getItem(LS_THEME) || 'sepia'; } catch(e) { return 'sepia'; } })());
 
+const LS_REGRESSION = 'sr5_regression_rescue';
+const RR_GRACE = 4;   // words right before the reading position stay fully normal
+const RR_SPAN  = 12;  // words over which the fade ramps up to its max
+let regressionRescue = (() => { try { return localStorage.getItem(LS_REGRESSION) === '1'; } catch(e) { return false; } })();
+function setRegressionRescue(v) {
+  regressionRescue = v;
+  try { localStorage.setItem(LS_REGRESSION, v ? '1' : '0'); } catch(e) {}
+  _doHighlight();
+}
+function rrProgress(dist) {
+  return Math.max(0, Math.min(1, (dist - RR_GRACE) / RR_SPAN));
+}
+document.getElementById('rr-toggle').checked = regressionRescue;
+
 const LS_FONT_FAMILY = 'sr5_font_family';
 const LS_FONT_SIZE   = 'sr5_font_size';
 async function applyFont(family, size) {
@@ -1033,12 +1050,21 @@ function _doHighlight() {
   if (!firstChunk || !lastChunk) return;
   const hiStart = firstChunk.start;
   const hiEnd   = lastChunk.end;
+  const rrActive = regressionRescue && playing;
   Object.entries(pageSpans).forEach(([i, s]) => {
     const ii = parseInt(i);
     (ii >= hiStart && ii < hiEnd)
       ? s.classList.add('hi')
       : s.classList.remove('hi');
     s.classList.remove('hi-l', 'hi-r');
+    if (rrActive && ii < hiStart) {
+      const t = rrProgress(hiStart - ii);
+      s.style.filter = t > 0 ? 'blur(' + (t * 5).toFixed(1) + 'px)' : '';
+      s.style.opacity = t > 0 ? (1 - t * 0.6).toFixed(2) : '';
+    } else if (s.style.filter || s.style.opacity) {
+      s.style.filter = '';
+      s.style.opacity = '';
+    }
   });
   if (pageSpans[hiStart])     pageSpans[hiStart].classList.add('hi-l');
   if (pageSpans[hiEnd - 1])   pageSpans[hiEnd - 1].classList.add('hi-r');
@@ -1106,6 +1132,7 @@ function start() {
   statsBasePos = pos;
   clearInterval(cloudSyncInterval);
   cloudSyncInterval = setInterval(periodicCheckpoint, 20000);
+  if (regressionRescue) _doHighlight();
 }
 function stop() {
   const wasPlaying = playing;
@@ -1115,6 +1142,7 @@ function stop() {
   clearInterval(cloudSyncInterval);
   if (wasPlaying) checkpointStats();
   lsSave();
+  if (regressionRescue) _doHighlight();
 }
 
 /* ══════════════════════════════════════════
