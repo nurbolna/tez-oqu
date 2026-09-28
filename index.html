@@ -92,6 +92,18 @@
   .chrome-pop select { width: 100%; margin-bottom: 2px; }
   #pop-more .chrome-pop-item { padding: 8px 6px; cursor: pointer; color: var(--rt-text); border-radius: 6px; }
   #pop-more .chrome-pop-item:hover { background: var(--rt-word-hover); }
+
+  #bookmark-ribbon { display: none; position: absolute; top: 0; right: 64px; width: 20px; height: 30px; background: #8B5E3C; border-radius: 0 0 3px 3px; z-index: 21; clip-path: polygon(0 0,100% 0,100% 100%,50% 78%,0 100%); pointer-events: none; }
+  #pop-bookmarks { max-height: 320px; overflow-y: auto; }
+  .bm-row { display: flex; gap: 8px; align-items: flex-start; padding: 8px 4px; border-bottom: 1px solid var(--rt-border); }
+  .bm-row:last-child { border-bottom: none; }
+  .bm-row i.ti-bookmark-filled { color: #8B5E3C; font-size: 15px; margin-top: 2px; flex-shrink: 0; }
+  .bm-row-info { flex: 1; min-width: 0; }
+  .bm-snippet { font-size: 12px; color: var(--rt-text); line-height: 1.4; }
+  .bm-meta { font-size: 11px; color: var(--rt-text-faint); margin-top: 3px; }
+  .bm-goto { background: #D4B483; border: 1px solid #B8965A; border-radius: 5px; padding: 3px 8px; font-size: 11px; color: #2C1A0E; cursor: pointer; flex-shrink: 0; font-family: Georgia,serif; }
+  .bm-del { color: var(--rt-text-faint); font-size: 15px; cursor: pointer; margin-top: 2px; flex-shrink: 0; }
+  .bm-del:hover { color: #8B2000; }
   .w.bookmark-hi { background: #7BC67A !important; color: #0A2E0A !important; }
 
   /* ── timer ── */
@@ -250,12 +262,14 @@
     <i class="ti ti-arrow-left" id="back-to-dash" onclick="stop(); if(authUser){showDashboard();}else{openAuthOverlay();}" title="Dashboard-қа оралу"></i>
     <span id="reader-filename"></span>
     <div id="chrome-top-actions">
+      <button class="chrome-icon-btn" id="toc-btn" aria-label="Бетбелгілер"><i class="ti ti-list"></i></button>
       <button class="chrome-icon-btn" id="aa-btn" aria-label="Мәтін көрінісі">Аа</button>
       <button class="chrome-icon-btn" id="speed-btn" aria-label="Жылдам оқу параметрлері"><i class="ti ti-bolt"></i></button>
       <button class="chrome-icon-btn" id="bookmark-toggle-btn" onclick="toggleBookmark()" aria-label="Бетбелгі"><i class="ti ti-bookmark"></i></button>
       <button class="chrome-icon-btn" id="more-btn" aria-label="Тағы"><i class="ti ti-dots"></i></button>
     </div>
   </div>
+  <div id="bookmark-ribbon"></div>
   <span id="save-notice">✓ Сақталды</span>
 
   <div id="pop-aa" class="chrome-pop">
@@ -317,8 +331,12 @@
 
   <div id="pop-more" class="chrome-pop">
     <div class="chrome-pop-item" onclick="toggleFS()"><i class="ti ti-arrows-maximize"></i> Толық экран</div>
-    <div class="chrome-pop-item" id="pop-goto-bookmark" onclick="gotoBookmark()" style="display:none;"><i class="ti ti-bookmark-filled"></i> Белгіге өту</div>
     <div class="chrome-pop-item" id="pop-local-stats" onclick="openLocalStats()" style="display:none;"><i class="ti ti-chart-bar"></i> Статистикам</div>
+  </div>
+
+  <div id="pop-bookmarks" class="chrome-pop" style="width:270px;">
+    <div class="chrome-pop-label" style="margin:0 0 6px;">Бетбелгілер · <span id="bookmarks-count">0</span></div>
+    <div id="bookmarks-list"></div>
   </div>
 
   <div id="reader-area">
@@ -1283,6 +1301,13 @@ document.getElementById('more-btn').addEventListener('click', (e) => {
   closeAllPops();
   if (!wasOpen) pop.classList.add('show');
 });
+document.getElementById('toc-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const pop = document.getElementById('pop-bookmarks');
+  const wasOpen = pop.classList.contains('show');
+  closeAllPops();
+  if (!wasOpen) { renderBookmarksPanel(); pop.classList.add('show'); }
+});
 document.querySelectorAll('.chrome-pop').forEach(p => p.addEventListener('click', e => e.stopPropagation()));
 document.getElementById('chrome-top-actions').addEventListener('click', e => e.stopPropagation());
 document.addEventListener('click', () => closeAllPops());
@@ -1312,15 +1337,25 @@ window.addEventListener('resize', () => {
 
 
 /* ══════════════════════════════════════════
-   BOOKMARK
+   BOOKMARKS (multiple per book)
    ══════════════════════════════════════════ */
-let bookmarkPos = -1;
+let bookmarks = []; // [{pos, createdAt, snippet}]
 
-function setBookmark() {
-  bookmarkPos = pos;
-  try { localStorage.setItem(LS + currentFileName + '_bm', JSON.stringify({ pos: bookmarkPos })); } catch(e) {}
-  updateBookmarkUI();
-  // flash green on current highlighted words
+function saveBookmarks() {
+  try { localStorage.setItem(LS + currentFileName + '_bm', JSON.stringify(bookmarks)); } catch(e) {}
+}
+
+function currentPageBookmarks() {
+  const pg = pages[currentPage];
+  if (!pg) return [];
+  return bookmarks.filter(b => b.pos >= pg.start && b.pos < pg.end);
+}
+
+function addBookmarkHere() {
+  const snippet = words.slice(pos, pos + 8).join(' ');
+  bookmarks.push({ pos, createdAt: Date.now(), snippet });
+  bookmarks.sort((a, b) => a.pos - b.pos);
+  saveBookmarks();
   const chunk = 1;
   for (let i = pos; i < pos + chunk && i < words.length; i++) {
     if (pageSpans[i]) {
@@ -1328,51 +1363,100 @@ function setBookmark() {
       setTimeout(() => { if(pageSpans[i]) pageSpans[i].classList.remove('bookmark-hi'); }, 1500);
     }
   }
+  updateBookmarkUI();
 }
 
-function clearBookmark() {
-  bookmarkPos = -1;
-  try { localStorage.removeItem(LS + currentFileName + '_bm'); } catch(e) {}
+function deleteBookmarkAt(p) {
+  bookmarks = bookmarks.filter(b => b.pos !== p);
+  saveBookmarks();
   updateBookmarkUI();
 }
 
 function toggleBookmark() {
-  if (!currentFileName) return;
-  if (bookmarkPos >= 0) clearBookmark(); else setBookmark();
+  if (!currentFileName || !words.length) return;
+  const onPage = currentPageBookmarks();
+  if (onPage.length) {
+    let closest = onPage[0];
+    for (const b of onPage) if (Math.abs(b.pos - pos) < Math.abs(closest.pos - pos)) closest = b;
+    deleteBookmarkAt(closest.pos);
+  } else {
+    addBookmarkHere();
+  }
 }
 
-function gotoBookmark() {
-  if (bookmarkPos < 0) return;
-  pos = bookmarkPos;
+function gotoBookmarkAt(p) {
+  pos = Math.max(0, Math.min(words.length - 1, p));
   applyHighlight();
   if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+  closeAllPops();
 }
 
 function loadBookmark(fileName) {
-  bookmarkPos = -1;
+  bookmarks = [];
   try {
     const raw = localStorage.getItem(LS + fileName + '_bm');
-    if (raw) { const d = JSON.parse(raw); bookmarkPos = d.pos != null ? d.pos : -1; }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) bookmarks = parsed;
+      else if (parsed && typeof parsed.pos === 'number') bookmarks = [{ pos: parsed.pos, createdAt: Date.now(), snippet: '' }];
+    }
   } catch(e) {}
   updateBookmarkUI();
 }
 
+function timeAgoShort(ts) {
+  const mins = Math.round((Date.now() - ts) / 60000);
+  if (mins < 1) return 'дәл қазір';
+  if (mins < 60) return mins + ' мин бұрын';
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return hrs + ' сағат бұрын';
+  const days = Math.round(hrs / 24);
+  return days === 1 ? 'кеше' : days + ' күн бұрын';
+}
+
+function renderBookmarksPanel() {
+  const list = document.getElementById('bookmarks-list');
+  const count = document.getElementById('bookmarks-count');
+  if (!list) return;
+  count.textContent = bookmarks.length;
+  if (!bookmarks.length) {
+    list.innerHTML = '<div style="padding:14px 6px;color:var(--rt-text-faint);font-size:12px;font-style:italic;">Бетбелгі жоқ</div>';
+    return;
+  }
+  list.innerHTML = bookmarks.map(b => {
+    const pct = words.length > 1 ? Math.round(b.pos / (words.length - 1) * 100) : 0;
+    const pg = pages.length ? pageOf(b.pos) + 1 : '—';
+    return '<div class="bm-row">' +
+      '<i class="ti ti-bookmark-filled" aria-hidden="true"></i>' +
+      '<div class="bm-row-info"><div class="bm-snippet">“' + escapeHtml(b.snippet || '') + '…”</div>' +
+      '<div class="bm-meta">' + pg + ' бет · ' + pct + '% · ' + timeAgoShort(b.createdAt) + '</div></div>' +
+      '<button class="bm-goto" data-pos="' + b.pos + '">Көрсету</button>' +
+      '<i class="ti ti-trash bm-del" data-pos="' + b.pos + '" aria-hidden="true"></i>' +
+      '</div>';
+  }).join('');
+}
+
+document.getElementById('bookmarks-list').addEventListener('click', (e) => {
+  const goto = e.target.closest('.bm-goto');
+  const del = e.target.closest('.bm-del');
+  if (goto) gotoBookmarkAt(parseInt(goto.dataset.pos));
+  else if (del) deleteBookmarkAt(parseInt(del.dataset.pos));
+});
+
 function updateBookmarkUI() {
   const btn = document.getElementById('bookmark-toggle-btn');
-  const menuItem = document.getElementById('pop-goto-bookmark');
-  const hasBookmark = bookmarkPos >= 0;
-  btn.classList.toggle('active', hasBookmark);
-  btn.innerHTML = hasBookmark ? '<i class="ti ti-bookmark-filled"></i>' : '<i class="ti ti-bookmark"></i>';
-  menuItem.style.display = hasBookmark ? 'block' : 'none';
+  const ribbon = document.getElementById('bookmark-ribbon');
+  const hasOnPage = currentPageBookmarks().length > 0;
+  btn.classList.toggle('active', hasOnPage);
+  btn.innerHTML = hasOnPage ? '<i class="ti ti-bookmark-filled"></i>' : '<i class="ti ti-bookmark"></i>';
+  ribbon.style.display = hasOnPage ? 'block' : 'none';
   refreshBookmarkSpan();
+  renderBookmarksPanel();
 }
 
 function refreshBookmarkSpan() {
-  // remove old bookmark highlights
   document.querySelectorAll('.bookmark-hi').forEach(el => el.classList.remove('bookmark-hi'));
-  if (bookmarkPos >= 0 && pageSpans[bookmarkPos]) {
-    pageSpans[bookmarkPos].classList.add('bookmark-hi');
-  }
+  bookmarks.forEach(b => { if (pageSpans[b.pos]) pageSpans[b.pos].classList.add('bookmark-hi'); });
 }
 
 
