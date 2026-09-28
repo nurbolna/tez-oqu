@@ -602,13 +602,16 @@
       <input type="tel" id="login-phone-input" placeholder="+7 707 123 45 67">
       <input type="password" id="login-password-input" placeholder="Құпия сөз">
       <button id="login-btn" onclick="signInPassword()">Кіру</button>
-      <div class="auth-link" onclick="showAuthStep('phone')">Telegram арқылы кіру / тіркелу →</div>
+      <div class="auth-link" onclick="showAuthStep('phone','recover')">Құпия сөзді ұмыттыңыз ба? / Telegram арқылы кіру →</div>
+      <div class="auth-link" onclick="showAuthStep('phone','register')">Бұрын тіркелмегенсіз бе? Тіркелу →</div>
     </div>
     <div id="auth-step-phone" style="display:none;">
       <h2>Telegram арқылы кіру</h2>
-      <p class="auth-hint">1. Алдымен ботпен байланысыңыз:</p>
-      <a href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener" id="auth-bot-link"><i class="ti ti-brand-telegram"></i> @TezOqu_Bot ашу</a>
-      <p class="auth-hint">2. Атыңызды және телефон нөміріңізді енгізіңіз:</p>
+      <div id="auth-phone-botstep">
+        <p class="auth-hint">1. Алдымен ботпен байланысыңыз:</p>
+        <a href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener" id="auth-bot-link"><i class="ti ti-brand-telegram"></i> @TezOqu_Bot ашу</a>
+      </div>
+      <p class="auth-hint" id="auth-phone-hint">2. Атыңызды және телефон нөміріңізді енгізіңіз:</p>
       <input type="text" id="auth-name-input" placeholder="Атыңыз">
       <input type="tel" id="auth-phone-input" placeholder="+7 707 123 45 67">
       <button id="auth-send-btn" onclick="requestOtp()">Кодты жіберу</button>
@@ -1878,6 +1881,7 @@ try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
 let authUser = null;
 let authPhone = '';
 let authName = '';
+let authPhoneMode = 'register';
 let currentBookId = null;
 
 function normalizePhone(raw) {
@@ -2088,11 +2092,18 @@ function openAuthOverlay() {
 function closeAuthOverlay() {
   document.getElementById('auth-overlay').classList.remove('show');
 }
-function showAuthStep(step) {
+function showAuthStep(step, phoneMode) {
+  if (step === 'phone' && phoneMode) authPhoneMode = phoneMode;
   document.getElementById('auth-step-login').style.display = step === 'login' ? 'block' : 'none';
   document.getElementById('auth-step-phone').style.display = step === 'phone' ? 'block' : 'none';
   document.getElementById('auth-step-otp').style.display = step === 'otp' ? 'block' : 'none';
   document.getElementById('auth-step-setpass').style.display = step === 'setpass' ? 'block' : 'none';
+  if (step === 'phone') {
+    const isRecover = authPhoneMode === 'recover';
+    document.getElementById('auth-phone-botstep').style.display = isRecover ? 'none' : 'block';
+    document.getElementById('auth-name-input').style.display = isRecover ? 'none' : 'block';
+    document.getElementById('auth-phone-hint').textContent = isRecover ? 'Телефон нөміріңізді енгізіңіз:' : '2. Атыңызды және телефон нөміріңізді енгізіңіз:';
+  }
   document.getElementById('auth-error').style.display = 'none';
 }
 function authShowError(msg) {
@@ -2103,8 +2114,11 @@ function authShowError(msg) {
 
 async function requestOtp() {
   if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
-  const name = document.getElementById('auth-name-input').value.trim();
-  if (!name) { authShowError('Атыңызды енгізіңіз'); return; }
+  let name = '';
+  if (authPhoneMode !== 'recover') {
+    name = document.getElementById('auth-name-input').value.trim();
+    if (!name) { authShowError('Атыңызды енгізіңіз'); return; }
+  }
   const raw = document.getElementById('auth-phone-input').value;
   const phone = normalizePhone(raw);
   if (phone.length < 11) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
@@ -2131,9 +2145,11 @@ async function verifyOtpCode() {
   btn.disabled = false; btn.textContent = 'Растау';
   if (error) { authShowError('Код қате немесе мерзімі өткен'); return; }
   authUser = data.user;
-  authUser.user_metadata = authUser.user_metadata || {};
-  authUser.user_metadata.full_name = authName;
-  sb.auth.updateUser({ data: { full_name: authName } }).catch(() => {});
+  if (authName) {
+    authUser.user_metadata = authUser.user_metadata || {};
+    authUser.user_metadata.full_name = authName;
+    sb.auth.updateUser({ data: { full_name: authName } }).catch(() => {});
+  }
   document.getElementById('auth-otp-input').value = '';
   showAuthStep('setpass');
 }
@@ -2150,7 +2166,7 @@ async function signInPassword() {
   const { data, error } = await sb.auth.signInWithPassword({ phone, password });
   btn.disabled = false; btn.textContent = 'Кіру';
   if (error) {
-    authShowError('Телефон немесе құпия сөз қате. Тіркелмеген болсаңыз немесе құпия сөзді ұмытсаңыз, жоғарыдағы Telegram сілтемесін басыңыз.');
+    authShowError('Телефон немесе құпия сөз қате. Құпия сөзді ұмытсаңыз — жоғарыдағы "Құпия сөзді ұмыттыңыз ба?" сілтемесін, тіркелмеген болсаңыз — "Тіркелу" сілтемесін басыңыз.');
     return;
   }
   authUser = data.user;
