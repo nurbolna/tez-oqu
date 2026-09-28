@@ -245,41 +245,44 @@
   #dash-signout { cursor: pointer; color: var(--d-text-3); margin-left: 2px; font-size: 15px; }
   #dash-signout:hover { color: var(--d-danger); }
   #dashboard-loading { text-align: center; padding: 70px 0; color: var(--d-text-3); }
-  #dashboard-content { display: none; padding: 24px 28px 40px; max-width: 760px; }
-  #dash-greeting { font-size: 16px; font-weight: 500; margin-bottom: 20px; }
-  #dash-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 26px; }
-  .dash-stat-tile { background: var(--d-tile); border-radius: 10px; padding: 13px 15px; }
-  .dash-stat-label { font-size: 12px; color: var(--d-text-2); margin-bottom: 4px; }
-  .dash-stat-value { font-size: 21px; font-weight: 600; }
-  .dash-stat-sub { font-size: 11px; color: var(--d-text-3); margin-top: 2px; }
-  #dash-chart-section { margin-bottom: 30px; }
+  #dashboard-content { display: none; padding: 32px 40px 48px; max-width: 1500px; }
+  #dash-greeting { font-size: 16px; font-weight: 500; margin-bottom: 24px; }
+  #dash-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+  .dash-stat-tile { background: var(--d-tile); border-radius: 12px; padding: 22px 26px; }
+  .dash-stat-label { font-size: 15px; color: var(--d-text-2); margin-bottom: 8px; }
+  .dash-stat-value { font-size: 36px; font-weight: 600; }
+  .dash-stat-sub { font-size: 13px; color: var(--d-text-3); margin-top: 4px; }
+  #dash-cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: start; }
+  #dash-col-left, #dash-col-right { min-width: 0; }
+  #dash-chart-section { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 14px; padding: 20px 24px; margin-bottom: 24px; }
   #dash-chart-bars { display: flex; align-items: flex-end; gap: 10px; height: 50px; }
   #dash-chart-labels { display: flex; gap: 10px; margin-top: 5px; }
-  .dash-section-title { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
-  #dash-trainers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 30px; }
-  .dash-trainer-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 12px; padding: 14px; cursor: pointer; }
+  .dash-section-title { font-size: 19px; font-weight: 600; margin: 0 0 16px; }
+  #dash-trainers-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 0; }
+  .dash-trainer-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 14px; padding: 20px; cursor: pointer; }
   .dash-trainer-card:hover { border-color: var(--d-border-strong); }
   .dash-trainer-card.soon { opacity: .55; cursor: default; }
-  .dash-trainer-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--d-pro-bg); color: var(--d-pro); display: flex; align-items: center; justify-content: center; font-size: 18px; }
-  .dash-trainer-name { font-size: 13px; font-weight: 500; margin-top: 9px; }
-  .dash-trainer-sub { font-size: 11px; color: var(--d-text-3); margin-top: 2px; }
+  .dash-trainer-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--d-pro-bg); color: var(--d-pro); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .dash-trainer-name { font-size: 15px; font-weight: 500; margin-top: 12px; }
+  .dash-trainer-sub { font-size: 12px; color: var(--d-text-3); margin-top: 3px; }
   .dash-badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 6px; background: var(--d-accent-bg); color: var(--d-accent); margin-top: 9px; }
-  #dash-books-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
-  #dash-books-title { font-size: 15px; font-weight: 600; }
+  #dash-books-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+  #dash-books-title { font-size: 19px; font-weight: 600; }
   .dash-btn-primary { font-family: inherit; background: var(--d-accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
   .dash-btn-primary:hover { background: var(--d-accent-hover); }
-  #dash-books-list { display: flex; flex-direction: column; gap: 10px; }
-  .dash-book-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 12px; padding: 13px 15px; display: flex; align-items: center; gap: 14px; }
+  #dash-books-list { display: flex; flex-direction: column; gap: 12px; }
+  .dash-book-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; }
   .dash-book-card:hover { border-color: var(--d-border-strong); }
-  .dash-book-title { font-size: 14px; font-weight: 500; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-book-title { font-size: 14px; font-weight: 500; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dash-book-progress-track { background: var(--d-tile); border-radius: 4px; height: 5px; overflow: hidden; margin-bottom: 6px; }
   .dash-book-progress-fill { background: var(--d-accent); height: 5px; }
   .dash-book-meta { font-size: 11px; color: var(--d-text-3); }
-  .dash-continue-btn { font-family: inherit; background: var(--d-accent); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .dash-continue-btn { font-family: inherit; background: var(--d-accent); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   .dash-continue-btn:hover { background: var(--d-accent-hover); }
   .dash-book-delete { cursor: pointer; color: var(--d-text-3); font-size: 17px; margin-left: 4px; }
   .dash-book-delete:hover { color: var(--d-danger); }
-  @media (max-width: 640px) { #dash-rail { display: none; } #dashboard-content { padding: 20px 16px 36px; } }
+  @media (max-width: 640px) { #dash-rail { display: none; } #dashboard-content { padding: 20px 16px 36px; } #dash-stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } #dash-cols { grid-template-columns: 1fr; } #dash-trainers-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
+  @media (min-width: 641px) and (max-width: 1000px) { #dash-cols { grid-template-columns: 1fr; } }
   .save-choice-row:hover { background: #EDE0C0; }
 
   /* ══ schulte trainer ══ */
@@ -501,44 +504,50 @@
             <div class="dash-stat-sub" id="dash-ppm"></div>
           </div>
         </div>
-        <div id="dash-chart-section">
-          <div class="dash-stat-label">Апталық белсенділік (сөз)</div>
-          <div id="dash-chart-bars"></div>
-          <div id="dash-chart-labels"></div>
-        </div>
-        <div id="dash-trainers-section">
-          <div class="dash-section-title">Тренажерлар</div>
-          <div id="dash-trainers-grid">
-            <div class="dash-trainer-card" id="trainer-rsvp" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})">
-              <div class="dash-trainer-icon"><i class="ti ti-player-play"></i></div>
-              <div class="dash-trainer-name">RSVP-ридер</div>
-              <div class="dash-trainer-sub">Кітап таңдап баста</div>
+        <div id="dash-cols">
+          <div id="dash-col-left">
+            <div id="dash-chart-section">
+              <div class="dash-stat-label">Апталық белсенділік (сөз)</div>
+              <div id="dash-chart-bars"></div>
+              <div id="dash-chart-labels"></div>
             </div>
-            <div class="dash-trainer-card" id="trainer-schulte" onclick="showSchulte()">
-              <div class="dash-trainer-icon"><i class="ti ti-grid-dots"></i></div>
-              <div class="dash-trainer-name">Шульте кестесі</div>
-              <div class="dash-trainer-sub">Перифериялық көру жаттығуы</div>
-            </div>
-            <div class="dash-trainer-card" id="trainer-eyewarmup" onclick="showEyeWarmup()">
-              <div class="dash-trainer-icon"><i class="ti ti-eye"></i></div>
-              <div class="dash-trainer-name">Көз жаттығулары</div>
-              <div class="dash-trainer-sub">60–90 сек демалыс</div>
-            </div>
-            <div class="dash-trainer-card" id="trainer-pyramid" onclick="showPyramid()">
-              <div class="dash-trainer-icon"><i class="ti ti-triangle"></i></div>
-              <div class="dash-trainer-name">Пирамидалы мәтін</div>
-              <div class="dash-trainer-sub">Перифериялық ену жаттығуы</div>
+            <div id="dash-trainers-section">
+              <div class="dash-section-title">Тренажерлар</div>
+              <div id="dash-trainers-grid">
+                <div class="dash-trainer-card" id="trainer-rsvp" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})">
+                  <div class="dash-trainer-icon"><i class="ti ti-player-play"></i></div>
+                  <div class="dash-trainer-name">RSVP-ридер</div>
+                  <div class="dash-trainer-sub">Кітап таңдап баста</div>
+                </div>
+                <div class="dash-trainer-card" id="trainer-schulte" onclick="showSchulte()">
+                  <div class="dash-trainer-icon"><i class="ti ti-grid-dots"></i></div>
+                  <div class="dash-trainer-name">Шульте кестесі</div>
+                  <div class="dash-trainer-sub">Перифериялық көру жаттығуы</div>
+                </div>
+                <div class="dash-trainer-card" id="trainer-eyewarmup" onclick="showEyeWarmup()">
+                  <div class="dash-trainer-icon"><i class="ti ti-eye"></i></div>
+                  <div class="dash-trainer-name">Көз жаттығулары</div>
+                  <div class="dash-trainer-sub">60–90 сек демалыс</div>
+                </div>
+                <div class="dash-trainer-card" id="trainer-pyramid" onclick="showPyramid()">
+                  <div class="dash-trainer-icon"><i class="ti ti-triangle"></i></div>
+                  <div class="dash-trainer-name">Пирамидалы мәтін</div>
+                  <div class="dash-trainer-sub">Перифериялық ену жаттығуы</div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div id="dash-books-header">
-          <div id="dash-books-title">Кітаптарым</div>
-          <button class="dash-btn-primary" id="dash-upload-btn"><i class="ti ti-plus"></i> Жаңа кітап</button>
-        </div>
-        <div id="dash-books-list"></div>
-        <div id="dash-private-section" style="display:none;margin-top:18px;">
-          <div class="dash-section-title" style="display:flex;align-items:center;gap:6px;"><i class="ti ti-lock" style="font-size:14px;"></i> Жеке оқу кітаптарым <span id="private-count-label" style="font-size:12px;font-weight:400;color:var(--d-text-3);">(0/3)</span></div>
-          <div id="dash-private-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <div id="dash-col-right">
+            <div id="dash-books-header">
+              <div id="dash-books-title">Кітаптарым</div>
+              <button class="dash-btn-primary" id="dash-upload-btn"><i class="ti ti-plus"></i> Жаңа кітап</button>
+            </div>
+            <div id="dash-books-list"></div>
+            <div id="dash-private-section" style="display:none;margin-top:18px;">
+              <div class="dash-section-title" style="display:flex;align-items:center;gap:6px;"><i class="ti ti-lock" style="font-size:14px;"></i> Жеке оқу кітаптарым <span id="private-count-label" style="font-size:12px;font-weight:400;color:var(--d-text-3);">(0/3)</span></div>
+              <div id="dash-private-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
