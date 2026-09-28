@@ -1130,6 +1130,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   pos = 0; stop();
   currentFileName = fileName;
   document.getElementById('reader-filename').textContent = fileName;
+  renderBooksList();
   document.getElementById('col1').innerHTML = '';
   document.getElementById('col2').innerHTML = '';
 
