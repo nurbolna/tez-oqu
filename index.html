@@ -847,7 +847,7 @@ function periodicCheckpoint() {
 }
 function start() {
   playing = true;
-  document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-pause"></i> Тоқтату';
+  document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-pause"></i>';
   // Use setTimeout chain instead of setInterval for accurate per-chunk timing
   timer = setInterval(step, getIv());
   statsBasePos = pos;
@@ -857,7 +857,7 @@ function start() {
 function stop() {
   const wasPlaying = playing;
   playing = false;
-  document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-play"></i> Бастау';
+  document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-play"></i>';
   clearInterval(timer);
   clearInterval(cloudSyncInterval);
   if (wasPlaying) checkpointStats();
@@ -1057,7 +1057,7 @@ function lsAllBooks() {
   const books = [];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.startsWith(LS) && !k.startsWith(LS_TEXT)) books.push(k.slice(LS.length));
+    if (k && k.startsWith(LS) && !k.startsWith(LS_TEXT) && !k.endsWith('_bm')) books.push(k.slice(LS.length));
   }
   return books;
 }
@@ -1073,7 +1073,7 @@ async function renderBooksList() {
   const list = document.getElementById('books-list');
   const none = document.getElementById('no-books');
   list.innerHTML = '';
-  const books = lsAllBooks();
+  const books = lsAllBooks().filter(name => name !== currentFileName);
   none.style.display = books.length ? 'none' : 'inline';
   const textKeys = await idbAllTextKeys();
   books.forEach(name => {
