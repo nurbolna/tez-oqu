@@ -468,7 +468,7 @@
     <nav id="dash-rail">
       <i class="ti ti-home dash-rail-icon active" onclick="document.getElementById('dashboard').scrollTo({top:0,behavior:'smooth'})" title="Басты бет"></i>
       <i class="ti ti-bolt dash-rail-icon" onclick="document.getElementById('dash-trainers-section').scrollIntoView({behavior:'smooth',block:'start'})" title="Тренажерлар"></i>
-      <i class="ti ti-books dash-rail-icon" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})" title="Кітаптарың"></i>
+      <i class="ti ti-books dash-rail-icon" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})" title="Кітаптарым"></i>
       <div id="dash-rail-bottom">
         <i class="ti ti-logout dash-rail-icon" onclick="signOut()" title="Шығу"></i>
       </div>
@@ -532,7 +532,7 @@
           </div>
         </div>
         <div id="dash-books-header">
-          <div id="dash-books-title">Кітаптарың</div>
+          <div id="dash-books-title">Кітаптарым</div>
           <button class="dash-btn-primary" id="dash-upload-btn"><i class="ti ti-plus"></i> Жаңа кітап</button>
         </div>
         <div id="dash-books-list"></div>
@@ -983,7 +983,7 @@ function renderPage(pageIdx) {
   chunkIndex = ci;
   if (lineChunks[chunkIndex]) pos = lineChunks[chunkIndex].start;
   _doHighlight();
-  refreshBookmarkSpan();
+  updateBookmarkUI();
   if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
 }
 
