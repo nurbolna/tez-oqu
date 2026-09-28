@@ -280,6 +280,35 @@
   .dash-book-delete:hover { color: var(--d-danger); }
   @media (max-width: 640px) { #dash-rail { display: none; } #dashboard-content { padding: 20px 16px 36px; } }
   .save-choice-row:hover { background: #EDE0C0; }
+
+  /* ══ schulte trainer ══ */
+  #schulte {
+    display: none; height: 100vh; overflow-y: auto; background: var(--d-bg); color: var(--d-text);
+    --d-bg:#F7F7F5; --d-panel:#FFFFFF; --d-tile:#F1F1EE; --d-tile-strong:#E3E2DC;
+    --d-border:#E4E3DD; --d-border-strong:#D3D2C9;
+    --d-text:#1F1E1B; --d-text-2:#57564F; --d-text-3:#8A8980;
+    --d-accent:#2A78D6; --d-accent-hover:#1F63B8; --d-accent-bg:#E6F1FB;
+    --d-danger:#C0392B;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  #schulte-header { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+  .schulte-back { font-size: 18px; color: var(--d-text-3); cursor: pointer; }
+  .schulte-back:hover { color: var(--d-text-2); }
+  #schulte-title { font-size: 16px; font-weight: 600; flex: 1; }
+  #schulte-sizes { display: flex; gap: 6px; }
+  .schulte-size-btn { font-family: inherit; background: var(--d-tile); border: 1px solid var(--d-border); color: var(--d-text-2); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .schulte-size-btn.active { background: var(--d-accent); border-color: var(--d-accent); color: #fff; }
+  #schulte-body { max-width: 520px; margin: 0 auto; padding: 32px 20px 40px; display: flex; flex-direction: column; align-items: center; }
+  #schulte-stats { display: flex; gap: 28px; margin-bottom: 22px; }
+  .schulte-stat { text-align: center; }
+  .schulte-stat-label { font-size: 12px; color: var(--d-text-3); margin-bottom: 3px; }
+  .schulte-stat-value { font-size: 22px; font-weight: 600; }
+  #schulte-grid { display: grid; gap: 6px; width: 100%; aspect-ratio: 1; margin-bottom: 24px; }
+  .schulte-cell { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: var(--cell-font, 22px); font-weight: 500; cursor: pointer; user-select: none; }
+  .schulte-cell:hover { border-color: var(--d-border-strong); }
+  .schulte-cell.done { background: var(--d-accent-bg); color: var(--d-accent); border-color: var(--d-accent-bg); cursor: default; }
+  .schulte-cell.wrong { background: #FBEAEA; border-color: var(--d-danger); }
+  @media (max-width: 640px) { #schulte-sizes { flex-wrap: wrap; } #schulte-body { padding: 24px 16px 32px; } }
 </style>
 </head>
 <body class="theme-sepia">
@@ -442,10 +471,10 @@
               <div class="dash-trainer-name">RSVP-ридер</div>
               <div class="dash-trainer-sub">Кітап таңдап баста</div>
             </div>
-            <div class="dash-trainer-card soon" id="trainer-schulte">
+            <div class="dash-trainer-card" id="trainer-schulte" onclick="showSchulte()">
               <div class="dash-trainer-icon"><i class="ti ti-grid-dots"></i></div>
               <div class="dash-trainer-name">Шульте кестесі</div>
-              <span class="dash-badge">Жақында</span>
+              <div class="dash-trainer-sub">Перифериялық көру жаттығуы</div>
             </div>
           </div>
         </div>
@@ -460,6 +489,27 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="schulte">
+  <div id="schulte-header">
+    <i class="ti ti-arrow-left schulte-back" onclick="showDashboard()" title="Dashboard-қа оралу"></i>
+    <span id="schulte-title">Шульте кестесі</span>
+    <div id="schulte-sizes">
+      <button class="schulte-size-btn" data-size="3" onclick="schultePickSize(3)">3×3</button>
+      <button class="schulte-size-btn" data-size="4" onclick="schultePickSize(4)">4×4</button>
+      <button class="schulte-size-btn active" data-size="5" onclick="schultePickSize(5)">5×5</button>
+    </div>
+  </div>
+  <div id="schulte-body">
+    <div id="schulte-stats">
+      <div class="schulte-stat"><div class="schulte-stat-label">Уақыт</div><div class="schulte-stat-value" id="schulte-timer">0.0с</div></div>
+      <div class="schulte-stat"><div class="schulte-stat-label">Рекорд</div><div class="schulte-stat-value" id="schulte-best">—</div></div>
+      <div class="schulte-stat"><div class="schulte-stat-label">Нәтиже</div><div class="schulte-stat-value" id="schulte-status" style="font-size:15px;">—</div></div>
+    </div>
+    <div id="schulte-grid"></div>
+    <button id="schulte-restart" class="dash-btn-primary" onclick="schulteNewGame()"><i class="ti ti-refresh"></i> Қайта бастау</button>
   </div>
 </div>
 
@@ -1733,7 +1783,85 @@ function normalizePhone(raw) {
 
 function showReaderView() {
   document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('schulte').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+}
+
+/* ── schulte trainer ── */
+let schulteSize = 5;
+let schulteNext = 1;
+let schulteStartTime = null;
+let schulteTimerInterval = null;
+
+function showSchulte() {
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('schulte').style.display = 'block';
+  schultePickSize(schulteSize);
+}
+
+function schultePickSize(n) {
+  schulteSize = n;
+  document.querySelectorAll('.schulte-size-btn').forEach(b => b.classList.toggle('active', +b.dataset.size === n));
+  schulteNewGame();
+}
+
+function schulteNewGame() {
+  clearInterval(schulteTimerInterval);
+  schulteNext = 1;
+  schulteStartTime = null;
+  document.getElementById('schulte-timer').textContent = '0.0с';
+  document.getElementById('schulte-status').textContent = '—';
+  const total = schulteSize * schulteSize;
+  const nums = Array.from({ length: total }, (_, i) => i + 1);
+  for (let i = nums.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [nums[i], nums[j]] = [nums[j], nums[i]];
+  }
+  const grid = document.getElementById('schulte-grid');
+  grid.style.gridTemplateColumns = 'repeat(' + schulteSize + ', 1fr)';
+  grid.style.setProperty('--cell-font', schulteSize <= 3 ? '36px' : schulteSize === 4 ? '28px' : '22px');
+  grid.innerHTML = '';
+  nums.forEach(n => {
+    const cell = document.createElement('div');
+    cell.className = 'schulte-cell';
+    cell.textContent = n;
+    cell.onclick = () => schulteClick(n, cell);
+    grid.appendChild(cell);
+  });
+  const best = localStorage.getItem('sr5_schulte_best_' + schulteSize);
+  document.getElementById('schulte-best').textContent = best ? (parseFloat(best).toFixed(1) + 'с') : '—';
+}
+
+function schulteClick(n, cell) {
+  if (n !== schulteNext) {
+    cell.classList.add('wrong');
+    setTimeout(() => cell.classList.remove('wrong'), 250);
+    return;
+  }
+  if (schulteStartTime === null) {
+    schulteStartTime = performance.now();
+    schulteTimerInterval = setInterval(() => {
+      document.getElementById('schulte-timer').textContent = ((performance.now() - schulteStartTime) / 1000).toFixed(1) + 'с';
+    }, 100);
+  }
+  cell.classList.add('done');
+  schulteNext++;
+  const total = schulteSize * schulteSize;
+  if (schulteNext > total) {
+    clearInterval(schulteTimerInterval);
+    const elapsed = (performance.now() - schulteStartTime) / 1000;
+    document.getElementById('schulte-timer').textContent = elapsed.toFixed(1) + 'с';
+    const bestKey = 'sr5_schulte_best_' + schulteSize;
+    const prevBest = parseFloat(localStorage.getItem(bestKey));
+    if (!prevBest || elapsed < prevBest) {
+      localStorage.setItem(bestKey, elapsed);
+      document.getElementById('schulte-best').textContent = elapsed.toFixed(1) + 'с';
+      document.getElementById('schulte-status').textContent = 'Жаңа рекорд!';
+    } else {
+      document.getElementById('schulte-status').textContent = 'Дайын!';
+    }
+  }
 }
 
 function openAuthOverlay() {
@@ -1873,6 +2001,7 @@ async function initAuth() {
 /* ── dashboard ── */
 async function showDashboard() {
   document.getElementById('app').style.display = 'none';
+  document.getElementById('schulte').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('dashboard-loading').style.display = 'block';
   document.getElementById('dashboard-content').style.display = 'none';
