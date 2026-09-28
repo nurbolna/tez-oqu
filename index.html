@@ -209,12 +209,14 @@
   .auth-hint { font-size: 13px; color: #6B4C2A; margin: 14px 0 8px; text-align: left; }
   #auth-bot-link { display: inline-flex; align-items: center; gap: 6px; background: #4A6741; color: #F5EDD6; border: 1px solid #2E4A26; border-radius: 8px; padding: 8px 16px; text-decoration: none; font-size: 14px; }
   #auth-bot-link:hover { background: #2E4A26; }
-  #auth-name-input, #auth-phone-input, #auth-otp-input { width: 100%; font-family: Georgia, serif; font-size: 16px; background: #FFFDF6; border: 1px solid #C9B98A; border-radius: 8px; padding: 10px 12px; color: #2C1A0E; margin-bottom: 14px; text-align: center; }
-  #auth-send-btn, #auth-verify-btn { width: 100%; font-family: Georgia, serif; font-size: 14px; background: #8B5E3C; color: #F5EDD6; border: none; border-radius: 8px; padding: 10px 24px; cursor: pointer; }
-  #auth-send-btn:hover, #auth-verify-btn:hover { background: #6B4020; }
-  #auth-send-btn:disabled, #auth-verify-btn:disabled { opacity: 0.6; cursor: default; }
-  #auth-back-link { margin-top: 12px; font-size: 12px; color: #8B6A3A; cursor: pointer; text-decoration: underline; }
-  #auth-back-link:hover { color: #6B4020; }
+  #auth-name-input, #auth-phone-input, #auth-otp-input,
+  #login-phone-input, #login-password-input,
+  #setpass-password-input, #setpass-confirm-input { width: 100%; font-family: Georgia, serif; font-size: 16px; background: #FFFDF6; border: 1px solid #C9B98A; border-radius: 8px; padding: 10px 12px; color: #2C1A0E; margin-bottom: 14px; text-align: center; }
+  #auth-send-btn, #auth-verify-btn, #login-btn, #setpass-btn { width: 100%; font-family: Georgia, serif; font-size: 14px; background: #8B5E3C; color: #F5EDD6; border: none; border-radius: 8px; padding: 10px 24px; cursor: pointer; }
+  #auth-send-btn:hover, #auth-verify-btn:hover, #login-btn:hover, #setpass-btn:hover { background: #6B4020; }
+  #auth-send-btn:disabled, #auth-verify-btn:disabled, #login-btn:disabled, #setpass-btn:disabled { opacity: 0.6; cursor: default; }
+  .auth-link { margin-top: 12px; font-size: 12px; color: #8B6A3A; cursor: pointer; text-decoration: underline; }
+  .auth-link:hover { color: #6B4020; }
   #auth-error { display: none; margin-top: 14px; font-size: 12px; color: #8B2000; background: #FFE8E0; border: 1px solid #D4806A; border-radius: 6px; padding: 8px 10px; text-align: left; }
   #auth-close { position: absolute; top: 10px; right: 14px; cursor: pointer; color: #8B6A3A; font-size: 18px; line-height: 1; }
   #auth-close:hover { color: #2C1A0E; }
@@ -404,7 +406,15 @@
 
 <div id="auth-overlay">
   <div id="auth-box">
-    <div id="auth-step-phone">
+    <div id="auth-step-login">
+      <h2>Кіру</h2>
+      <p class="auth-hint">Телефон нөміріңіз бен құпия сөзіңізді енгізіңіз:</p>
+      <input type="tel" id="login-phone-input" placeholder="+7 707 123 45 67">
+      <input type="password" id="login-password-input" placeholder="Құпия сөз">
+      <button id="login-btn" onclick="signInPassword()">Кіру</button>
+      <div class="auth-link" onclick="showAuthStep('phone')">Telegram арқылы кіру / тіркелу →</div>
+    </div>
+    <div id="auth-step-phone" style="display:none;">
       <h2>Telegram арқылы кіру</h2>
       <p class="auth-hint">1. Алдымен ботпен байланысыңыз:</p>
       <a href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener" id="auth-bot-link"><i class="ti ti-brand-telegram"></i> @TezOqu_Bot ашу</a>
@@ -412,13 +422,22 @@
       <input type="text" id="auth-name-input" placeholder="Атыңыз">
       <input type="tel" id="auth-phone-input" placeholder="+7 707 123 45 67">
       <button id="auth-send-btn" onclick="requestOtp()">Кодты жіберу</button>
+      <div class="auth-link" onclick="showAuthStep('login')">← Артқа</div>
     </div>
     <div id="auth-step-otp" style="display:none;">
       <h2>Кодты енгізіңіз</h2>
       <p class="auth-hint">Telegram-дағы боттан келген 6 таңбалы код</p>
       <input type="text" id="auth-otp-input" inputmode="numeric" maxlength="6" placeholder="000000">
       <button id="auth-verify-btn" onclick="verifyOtpCode()">Растау</button>
-      <div id="auth-back-link" onclick="showAuthStep('phone')">← Артқа</div>
+      <div class="auth-link" onclick="showAuthStep('phone')">← Артқа</div>
+    </div>
+    <div id="auth-step-setpass" style="display:none;">
+      <h2>Құпия сөз орнатыңыз</h2>
+      <p class="auth-hint">Келесі жолы жылдам кіру үшін құпия сөз қойыңыз:</p>
+      <p class="auth-hint" style="margin:0 0 4px;font-size:11px;">Кемінде 6 таңба</p>
+      <input type="password" id="setpass-password-input" placeholder="Жаңа құпия сөз">
+      <input type="password" id="setpass-confirm-input" placeholder="Құпия сөзді қайталаңыз">
+      <button id="setpass-btn" onclick="submitSetPassword()">Сақтау</button>
     </div>
     <div id="auth-error"></div>
   </div>
@@ -1661,14 +1680,16 @@ function showReaderView() {
 
 function openAuthOverlay() {
   document.getElementById('auth-overlay').classList.add('show');
-  showAuthStep('phone');
+  showAuthStep('login');
 }
 function closeAuthOverlay() {
   document.getElementById('auth-overlay').classList.remove('show');
 }
 function showAuthStep(step) {
+  document.getElementById('auth-step-login').style.display = step === 'login' ? 'block' : 'none';
   document.getElementById('auth-step-phone').style.display = step === 'phone' ? 'block' : 'none';
   document.getElementById('auth-step-otp').style.display = step === 'otp' ? 'block' : 'none';
+  document.getElementById('auth-step-setpass').style.display = step === 'setpass' ? 'block' : 'none';
   document.getElementById('auth-error').style.display = 'none';
 }
 function authShowError(msg) {
@@ -1711,6 +1732,43 @@ async function verifyOtpCode() {
   authUser.user_metadata.full_name = authName;
   sb.auth.updateUser({ data: { full_name: authName } }).catch(() => {});
   document.getElementById('auth-otp-input').value = '';
+  showAuthStep('setpass');
+}
+
+async function signInPassword() {
+  if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
+  const raw = document.getElementById('login-phone-input').value;
+  const phone = normalizePhone(raw);
+  if (phone.length < 11) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
+  const password = document.getElementById('login-password-input').value;
+  if (!password) { authShowError('Құпия сөзді енгізіңіз'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Кіру...';
+  const { data, error } = await sb.auth.signInWithPassword({ phone, password });
+  btn.disabled = false; btn.textContent = 'Кіру';
+  if (error) {
+    authShowError('Телефон немесе құпия сөз қате. Тіркелмеген болсаңыз немесе құпия сөзді ұмытсаңыз, жоғарыдағы Telegram сілтемесін басыңыз.');
+    return;
+  }
+  authUser = data.user;
+  document.getElementById('login-password-input').value = '';
+  closeAuthOverlay();
+  updateAuthChip();
+  await showDashboard();
+}
+
+async function submitSetPassword() {
+  const p1 = document.getElementById('setpass-password-input').value;
+  const p2 = document.getElementById('setpass-confirm-input').value;
+  if (p1.length < 6) { authShowError('Құпия сөз кемінде 6 таңбадан тұруы керек'); return; }
+  if (p1 !== p2) { authShowError('Құпия сөздер сәйкес келмейді'); return; }
+  const btn = document.getElementById('setpass-btn');
+  btn.disabled = true; btn.textContent = 'Сақталуда...';
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  btn.disabled = false; btn.textContent = 'Сақтау';
+  if (error) { authShowError('Құпия сөзді сақтау мүмкін болмады, қайталап көріңіз'); return; }
+  document.getElementById('setpass-password-input').value = '';
+  document.getElementById('setpass-confirm-input').value = '';
   closeAuthOverlay();
   updateAuthChip();
   await showDashboard();
