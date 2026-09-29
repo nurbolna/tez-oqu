@@ -301,7 +301,8 @@
   #schulte-title { font-size: 16px; font-weight: 600; flex: 1; }
   #schulte-energy { font-size: 14px; font-weight: 600; color: var(--d-text-2); }
   #schulte-sizes { display: flex; gap: 6px; }
-  #schulte-subheader { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 10px 24px; display: flex; }
+  #schulte-subheader { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 10px 24px; display: flex; justify-content: flex-end; }
+  #schulte-start-btn:disabled { opacity: .5; cursor: not-allowed; background: var(--d-tile-strong); color: var(--d-text-3); }
   .schulte-size-btn { font-family: inherit; background: var(--d-tile); border: 1px solid var(--d-border); color: var(--d-text-2); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
   .schulte-size-btn.active { background: var(--d-accent); border-color: var(--d-accent); color: #fff; }
   .schulte-size-btn:disabled { opacity: .5; cursor: default; }
@@ -623,7 +624,7 @@
       <ul>
         <li>Ортадағы қызыл нүктеге қараңыз</li>
         <li>Сандарды/әріптерді өсу ретімен басыңыз</li>
-        <li>Телефонды көзден кемінде 30 см қашықтықта ұстаңыз</li>
+        <li>Экранды көзден кемінде 40 см қашықтықта ұстаңыз</li>
       </ul>
       <button class="dash-btn-primary" onclick="schulteIntroClose()">Түсінікті</button>
     </div>
