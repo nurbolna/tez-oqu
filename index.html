@@ -335,22 +335,22 @@
   }
   #ew-header { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
   #ew-title { font-size: 16px; font-weight: 600; flex: 1; }
-  #ew-body { max-width: 700px; margin: 0 auto; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
-  #ew-stage { width: 100%; height: 380px; background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 16px; position: relative; overflow: hidden; margin-bottom: 24px; display: flex; align-items: center; justify-content: center; --ew-h: 170px; --ew-v: 130px; }
-  #ew-target { width: 22px; height: 22px; border-radius: 50%; background: var(--d-accent); }
+  #ew-body { max-width: 100%; margin: 0 auto; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
+  #ew-stage { width: 100%; height: 380px; background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 16px; position: relative; overflow: hidden; margin-bottom: 24px; }
+  #ew-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; background: var(--d-accent); }
   #ew-target.phase-h { animation: ew-horiz 3s ease-in-out infinite; }
   #ew-target.phase-v { animation: ew-vert 3s ease-in-out infinite; }
   #ew-target.phase-d { animation: ew-pulse 3s ease-in-out infinite; }
   #ew-target.phase-b { animation: ew-blink 4s ease-in-out infinite; }
-  @keyframes ew-horiz { 0%,100% { transform: translateX(calc(-1 * var(--ew-h))); } 50% { transform: translateX(var(--ew-h)); } }
-  @keyframes ew-vert { 0%,100% { transform: translateY(calc(-1 * var(--ew-v))); } 50% { transform: translateY(var(--ew-v)); } }
-  @keyframes ew-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(2.4); } }
+  @keyframes ew-horiz { 0%,100% { left: 5%; top: 50%; } 50% { left: 95%; top: 50%; } }
+  @keyframes ew-vert { 0%,100% { left: 50%; top: 8%; } 50% { left: 50%; top: 92%; } }
+  @keyframes ew-pulse { 0%,100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(2.4); } }
   @keyframes ew-blink { 0%,100% { opacity: 1; } 50% { opacity: .15; } }
   #ew-label { font-size: 15px; color: var(--d-text-2); margin-bottom: 6px; text-align: center; min-height: 20px; }
   #ew-timer { font-size: 28px; font-weight: 600; margin-bottom: 20px; }
   #ew-done { text-align: center; }
   #ew-done-text { font-size: 17px; font-weight: 600; margin-bottom: 14px; }
-  @media (max-width: 640px) { #ew-stage { height: 220px; --ew-h: 110px; --ew-v: 85px; } }
+  @media (max-width: 640px) { #ew-stage { height: 240px; } }
 
   /* ══ pyramid text ══ */
   #pyramid {
