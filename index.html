@@ -1970,7 +1970,7 @@ function showReaderView() {
 }
 
 /* ── schulte trainer ── */
-let schulteSize = 5;
+let schulteSize = 4;
 let schulteSymbols = 'numbers';
 let schultePhase = 'setup'; // setup | starting | playing | done
 let schulteNext = 1;
@@ -2007,7 +2007,10 @@ function showSchulte() {
   hideAllViews();
   document.getElementById('schulte').style.display = 'block';
   schulteIntroMaybeShow();
-  schultePickSize(schulteSize);
+  // Әрбір кіруде әдепкі күйге (сандар + 4×4) қайтарамыз — соңғы таңдалғанды есте сақтамаймыз
+  schulteSymbols = 'numbers';
+  document.querySelectorAll('.schulte-symbols-btn').forEach(b => b.classList.toggle('active', b.dataset.symbols === 'numbers'));
+  schultePickSize(4);
 }
 
 /* ── eye warmup ── */
@@ -2177,16 +2180,15 @@ async function schulteStart() {
   const gen = schulteGen;
   schultePhase = 'starting';
   const startBtnEl = document.getElementById('schulte-start-btn');
-  if (startBtnEl) startBtnEl.disabled = true;
-  const remaining = await schulteRemainingToday();
+  if (startBtnEl) { startBtnEl.disabled = true; startBtnEl.textContent = 'Жүктелуде...'; }
+
+  const consumed = await schulteConsumePlay(); // бір ғана желі дөңгелегі (оқу+жазу) — бұрын 2 бөлек шақыру еді
   if (gen !== schulteGen) return; // осы уақытта жаңа ойын басталып кетті — тоқтаймыз
-  if (remaining <= 0) {
+  if (!consumed) {
     schultePhase = 'setup';
     schulteRefreshEnergyUI();
     return;
   }
-  await schulteConsumePlay();
-  if (gen !== schulteGen) return; // энергия жұмсалды, бірақ ойын ескірген — UI-ды бүлдірмей шығамыз
   schultePhase = 'playing';
 
   const center = document.getElementById('schulte-center');
@@ -2288,7 +2290,11 @@ async function schulteRemainingToday() {
 }
 
 async function schulteConsumePlay() {
-  if (!sb || !authUser) return;
+  // Бір өзі оқу+лимит тексеру+жазуды істейді (schulteStart-тың желі дөңгелегін
+  // 3-тен 2-ге дейін қысқарту үшін — бөлек remainingToday шақыруы қажет емес).
+  // Қайтарады: true — ойынға рұқсат етілді және есептелді, false — лимит
+  // таусылған немесе қате (fail-closed).
+  if (!sb || !authUser) return false;
   try {
     const { data: existing, error: readError } = await sb.from('exercise_daily_plays')
       .select('play_count')
@@ -2296,15 +2302,18 @@ async function schulteConsumePlay() {
       .eq('exercise', 'schulte')
       .eq('play_date', schulteTodayStr())
       .maybeSingle();
-    if (readError) return; // белгісіз санақты жаза алмаймыз
-    const nextCount = (existing ? existing.play_count : 0) + 1;
-    await sb.from('exercise_daily_plays').upsert({
+    if (readError) return false;
+    const used = existing ? existing.play_count : 0;
+    if (used >= 2) return false;
+    const { error: writeError } = await sb.from('exercise_daily_plays').upsert({
       user_id: authUser.id,
       exercise: 'schulte',
       play_date: schulteTodayStr(),
-      play_count: nextCount
+      play_count: used + 1
     }, { onConflict: 'user_id,exercise,play_date' });
-  } catch(e) {}
+    if (writeError) return false;
+    return true;
+  } catch(e) { return false; }
 }
 
 async function schulteRefreshEnergyUI() {
