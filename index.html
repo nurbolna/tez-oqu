@@ -299,9 +299,12 @@
   .schulte-back { font-size: 18px; color: var(--d-text-3); cursor: pointer; }
   .schulte-back:hover { color: var(--d-text-2); }
   #schulte-title { font-size: 16px; font-weight: 600; flex: 1; }
+  #schulte-energy { font-size: 14px; font-weight: 600; color: var(--d-text-2); }
   #schulte-sizes { display: flex; gap: 6px; }
+  #schulte-subheader { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 10px 24px; display: flex; }
   .schulte-size-btn { font-family: inherit; background: var(--d-tile); border: 1px solid var(--d-border); color: var(--d-text-2); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
   .schulte-size-btn.active { background: var(--d-accent); border-color: var(--d-accent); color: #fff; }
+  .schulte-size-btn:disabled { opacity: .5; cursor: default; }
   #schulte-body { max-width: 520px; margin: 0 auto; padding: 32px 20px 40px; display: flex; flex-direction: column; align-items: center; }
   #schulte-stats { display: flex; gap: 28px; margin-bottom: 22px; }
   .schulte-stat { text-align: center; }
@@ -312,6 +315,14 @@
   .schulte-cell:hover { border-color: var(--d-border-strong); }
   .schulte-cell.done { background: var(--d-accent-bg); color: var(--d-accent); border-color: var(--d-accent-bg); cursor: default; }
   .schulte-cell.wrong { background: #FBEAEA; border-color: var(--d-danger); }
+  .schulte-center { display: flex; align-items: center; justify-content: center; }
+  .schulte-center-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--d-danger); }
+  .schulte-intro-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; align-items: center; justify-content: center; }
+  .schulte-intro-overlay.open { display: flex; }
+  .schulte-intro-card { background: var(--d-panel); border-radius: 16px; padding: 28px 24px; max-width: 340px; text-align: center; }
+  .schulte-intro-card h3 { margin: 0 0 10px; font-size: 18px; }
+  .schulte-intro-card p { color: var(--d-text-2); font-size: 14px; margin: 0 0 14px; }
+  .schulte-intro-card ul { text-align: left; font-size: 13px; color: var(--d-text-2); padding-left: 18px; margin: 0 0 18px; }
   @media (max-width: 640px) { #schulte-sizes { flex-wrap: wrap; } #schulte-body { padding: 24px 16px 32px; } }
 
   /* ══ eye warmup ══ */
@@ -533,6 +544,31 @@
                   <div class="dash-trainer-name">Пирамидалы мәтін</div>
                   <div class="dash-trainer-sub">Перифериялық ену жаттығуы</div>
                 </div>
+                <div class="dash-trainer-card soon" id="trainer-matching">
+                  <div class="dash-trainer-icon"><i class="ti ti-puzzle"></i></div>
+                  <div class="dash-trainer-name">Сәйкестендіру</div>
+                  <div class="dash-trainer-sub">Жақында</div>
+                </div>
+                <div class="dash-trainer-card soon" id="trainer-memory-matrix">
+                  <div class="dash-trainer-icon"><i class="ti ti-brain"></i></div>
+                  <div class="dash-trainer-name">Есте сақтау матрицасы</div>
+                  <div class="dash-trainer-sub">Жақында</div>
+                </div>
+                <div class="dash-trainer-card soon" id="trainer-color-match">
+                  <div class="dash-trainer-icon"><i class="ti ti-palette"></i></div>
+                  <div class="dash-trainer-name">Түстерді сәйкестендіру</div>
+                  <div class="dash-trainer-sub">Жақында</div>
+                </div>
+                <div class="dash-trainer-card soon" id="trainer-mnemonics">
+                  <div class="dash-trainer-icon"><i class="ti ti-bulb"></i></div>
+                  <div class="dash-trainer-name">Мнемотехника</div>
+                  <div class="dash-trainer-sub">Жақында</div>
+                </div>
+                <div class="dash-trainer-card soon" id="trainer-arithmetic">
+                  <div class="dash-trainer-icon"><i class="ti ti-calculator"></i></div>
+                  <div class="dash-trainer-name">Арифметика</div>
+                  <div class="dash-trainer-sub">Жақында</div>
+                </div>
               </div>
             </div>
           </div>
@@ -557,10 +593,18 @@
   <div id="schulte-header">
     <i class="ti ti-arrow-left schulte-back" onclick="showDashboard()" title="Dashboard-қа оралу"></i>
     <span id="schulte-title">Шульте кестесі</span>
+    <span id="schulte-energy" title="Бүгінгі қалған тегін ойын саны">⚡2</span>
+    <i class="ti ti-info-circle schulte-back" onclick="schulteIntroOpen()" title="Нұсқаулық"></i>
     <div id="schulte-sizes">
       <button class="schulte-size-btn" data-size="3" onclick="schultePickSize(3)">3×3</button>
       <button class="schulte-size-btn" data-size="4" onclick="schultePickSize(4)">4×4</button>
       <button class="schulte-size-btn active" data-size="5" onclick="schultePickSize(5)">5×5</button>
+    </div>
+  </div>
+  <div id="schulte-subheader">
+    <div id="schulte-symbols">
+      <button class="schulte-size-btn schulte-symbols-btn active" data-symbols="numbers" onclick="schultePickSymbols('numbers')">123</button>
+      <button class="schulte-size-btn schulte-symbols-btn" data-symbols="letters" onclick="schultePickSymbols('letters')">АБВ</button>
     </div>
   </div>
   <div id="schulte-body">
@@ -571,6 +615,18 @@
     </div>
     <div id="schulte-grid"></div>
     <button id="schulte-restart" class="dash-btn-primary" onclick="schulteNewGame()"><i class="ti ti-refresh"></i> Қайта бастау</button>
+  </div>
+  <div id="schulte-intro" class="schulte-intro-overlay">
+    <div class="schulte-intro-card">
+      <h3>Таблица Шульте</h3>
+      <p>Перифериялық көру жаттығуы.</p>
+      <ul>
+        <li>Ортадағы қызыл нүктеге қараңыз</li>
+        <li>Сандарды/әріптерді өсу ретімен басыңыз</li>
+        <li>Телефонды көзден кемінде 30 см қашықтықта ұстаңыз</li>
+      </ul>
+      <button class="dash-btn-primary" onclick="schulteIntroClose()">Түсінікті</button>
+    </div>
   </div>
 </div>
 
@@ -1914,13 +1970,52 @@ function showReaderView() {
 
 /* ── schulte trainer ── */
 let schulteSize = 5;
+let schulteSymbols = 'numbers';
+let schultePhase = 'setup'; // setup | starting | playing | done
 let schulteNext = 1;
+let schulteTotal = 0;
 let schulteStartTime = null;
 let schulteTimerInterval = null;
+let schulteGen = 0; // schulteNewGame() сайын өседі; schulteStart() әр await-тан кейін осыны тексеріп, ескірген жалғасуды тоқтатады
+
+function schulteChar(n) {
+  if (schulteSymbols === 'letters') return String.fromCharCode(64 + n);
+  return String(n);
+}
+
+function schulteFormatTime(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+  const ss = String(totalSec % 60).padStart(2, '0');
+  return mm + ':' + ss;
+}
+
+function schulteIntroMaybeShow() {
+  if (localStorage.getItem('sr5_schulte_intro_seen')) return;
+  document.getElementById('schulte-intro').classList.add('open');
+}
+function schulteIntroOpen() {
+  document.getElementById('schulte-intro').classList.add('open');
+}
+function schulteIntroClose() {
+  localStorage.setItem('sr5_schulte_intro_seen', '1');
+  document.getElementById('schulte-intro').classList.remove('open');
+}
+
+function schulteRingCells(n) {
+  const cells = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (r === 0 || r === n - 1 || c === 0 || c === n - 1) cells.push({ row: r, col: c });
+    }
+  }
+  return cells;
+}
 
 function showSchulte() {
   hideAllViews();
   document.getElementById('schulte').style.display = 'block';
+  schulteIntroMaybeShow();
   schultePickSize(schulteSize);
 }
 
@@ -2031,65 +2126,206 @@ function showPyramid() {
 
 function schultePickSize(n) {
   schulteSize = n;
-  document.querySelectorAll('.schulte-size-btn').forEach(b => b.classList.toggle('active', +b.dataset.size === n));
+  document.querySelectorAll('.schulte-size-btn[data-size]').forEach(b => b.classList.toggle('active', +b.dataset.size === n));
+  schulteNewGame();
+}
+
+function schultePickSymbols(mode) {
+  schulteSymbols = mode;
+  document.querySelectorAll('.schulte-symbols-btn').forEach(b => b.classList.toggle('active', b.dataset.symbols === mode));
   schulteNewGame();
 }
 
 function schulteNewGame() {
+  schulteGen++;
   clearInterval(schulteTimerInterval);
+  schultePhase = 'setup';
   schulteNext = 1;
   schulteStartTime = null;
-  document.getElementById('schulte-timer').textContent = '0.0с';
+  document.getElementById('schulte-timer').textContent = '00:00';
   document.getElementById('schulte-status').textContent = '—';
-  const total = schulteSize * schulteSize;
-  const nums = Array.from({ length: total }, (_, i) => i + 1);
+
+  const ring = schulteRingCells(schulteSize);
+  schulteTotal = ring.length;
+  const nums = Array.from({ length: schulteTotal }, (_, i) => i + 1);
   for (let i = nums.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [nums[i], nums[j]] = [nums[j], nums[i]];
   }
+
   const grid = document.getElementById('schulte-grid');
   grid.style.gridTemplateColumns = 'repeat(' + schulteSize + ', 1fr)';
+  grid.style.gridTemplateRows = 'repeat(' + schulteSize + ', 1fr)';
   grid.style.setProperty('--cell-font', schulteSize <= 3 ? '36px' : schulteSize === 4 ? '28px' : '22px');
   grid.innerHTML = '';
-  nums.forEach(n => {
+
+  ring.forEach((pos, i) => {
+    const n = nums[i];
     const cell = document.createElement('div');
     cell.className = 'schulte-cell';
-    cell.textContent = n;
+    cell.textContent = schulteChar(n);
+    cell.style.gridColumn = (pos.col + 1) + ' / span 1';
+    cell.style.gridRow = (pos.row + 1) + ' / span 1';
     cell.onclick = () => schulteClick(n, cell);
     grid.appendChild(cell);
   });
-  const best = localStorage.getItem('sr5_schulte_best_' + schulteSize);
-  document.getElementById('schulte-best').textContent = best ? (parseFloat(best).toFixed(1) + 'с') : '—';
+
+  const center = document.createElement('div');
+  center.id = 'schulte-center';
+  center.className = 'schulte-center';
+  center.style.gridColumn = '2 / span ' + (schulteSize - 2);
+  center.style.gridRow = '2 / span ' + (schulteSize - 2);
+  const startBtn = document.createElement('button');
+  startBtn.id = 'schulte-start-btn';
+  startBtn.className = 'dash-btn-primary';
+  startBtn.textContent = 'Бастау';
+  startBtn.onclick = schulteStart;
+  center.appendChild(startBtn);
+  grid.appendChild(center);
+
+  schulteLoadBest();
+  schulteRefreshEnergyUI();
+}
+
+async function schulteStart() {
+  if (schultePhase !== 'setup') return;
+  const gen = schulteGen;
+  schultePhase = 'starting';
+  const startBtnEl = document.getElementById('schulte-start-btn');
+  if (startBtnEl) startBtnEl.disabled = true;
+  const remaining = await schulteRemainingToday();
+  if (gen !== schulteGen) return; // осы уақытта жаңа ойын басталып кетті — тоқтаймыз
+  if (remaining <= 0) {
+    schultePhase = 'setup';
+    schulteRefreshEnergyUI();
+    return;
+  }
+  await schulteConsumePlay();
+  if (gen !== schulteGen) return; // энергия жұмсалды, бірақ ойын ескірген — UI-ды бүлдірмей шығамыз
+  schultePhase = 'playing';
+
+  const center = document.getElementById('schulte-center');
+  center.innerHTML = '';
+  const dot = document.createElement('div');
+  dot.className = 'schulte-center-dot';
+  center.appendChild(dot);
+
+  schulteStartTime = performance.now();
+  document.getElementById('schulte-timer').textContent = '00:00';
+  schulteTimerInterval = setInterval(() => {
+    document.getElementById('schulte-timer').textContent = schulteFormatTime(performance.now() - schulteStartTime);
+  }, 1000);
+  schulteRefreshEnergyUI();
 }
 
 function schulteClick(n, cell) {
+  if (schultePhase !== 'playing') return;
   if (n !== schulteNext) {
     cell.classList.add('wrong');
     setTimeout(() => cell.classList.remove('wrong'), 250);
     return;
   }
-  if (schulteStartTime === null) {
-    schulteStartTime = performance.now();
-    schulteTimerInterval = setInterval(() => {
-      document.getElementById('schulte-timer').textContent = ((performance.now() - schulteStartTime) / 1000).toFixed(1) + 'с';
-    }, 100);
-  }
   cell.classList.add('done');
   schulteNext++;
-  const total = schulteSize * schulteSize;
-  if (schulteNext > total) {
+  if (schulteNext > schulteTotal) {
     clearInterval(schulteTimerInterval);
-    const elapsed = (performance.now() - schulteStartTime) / 1000;
-    document.getElementById('schulte-timer').textContent = elapsed.toFixed(1) + 'с';
-    const bestKey = 'sr5_schulte_best_' + schulteSize;
-    const prevBest = parseFloat(localStorage.getItem(bestKey));
-    if (!prevBest || elapsed < prevBest) {
-      localStorage.setItem(bestKey, elapsed);
-      document.getElementById('schulte-best').textContent = elapsed.toFixed(1) + 'с';
+    const elapsedMs = Math.round(performance.now() - schulteStartTime);
+    document.getElementById('schulte-timer').textContent = schulteFormatTime(elapsedMs);
+    document.getElementById('schulte-status').textContent = 'Дайын!';
+    schultePhase = 'done';
+    schulteSaveBest(schulteSize, schulteSymbols, elapsedMs);
+  }
+}
+
+async function schulteLoadBest() {
+  const el = document.getElementById('schulte-best');
+  if (!sb || !authUser) { el.textContent = '—'; return; }
+  try {
+    const { data, error } = await sb.from('schulte_best_times')
+      .select('best_ms')
+      .eq('user_id', authUser.id)
+      .eq('size', schulteSize)
+      .eq('symbols', schulteSymbols)
+      .maybeSingle();
+    if (error) { el.textContent = '—'; return; }
+    el.textContent = data ? schulteFormatTime(data.best_ms) : '—';
+  } catch(e) { el.textContent = '—'; }
+}
+
+async function schulteSaveBest(sizeVal, symbolsVal, elapsedMs) {
+  if (!sb || !authUser) return;
+  try {
+    const { data: existing, error: readError } = await sb.from('schulte_best_times')
+      .select('best_ms')
+      .eq('user_id', authUser.id)
+      .eq('size', sizeVal)
+      .eq('symbols', symbolsVal)
+      .maybeSingle();
+    if (readError) return; // белгісіз күй — жаңа "рекорд" ретінде жаза алмаймыз
+    if (existing && existing.best_ms <= elapsedMs) return;
+    const { error: writeError } = await sb.from('schulte_best_times').upsert({
+      user_id: authUser.id,
+      size: sizeVal,
+      symbols: symbolsVal,
+      best_ms: elapsedMs,
+      achieved_at: new Date().toISOString()
+    }, { onConflict: 'user_id,size,symbols' });
+    if (writeError) return;
+    if (sizeVal === schulteSize && symbolsVal === schulteSymbols) {
+      document.getElementById('schulte-best').textContent = schulteFormatTime(elapsedMs);
       document.getElementById('schulte-status').textContent = 'Жаңа рекорд!';
-    } else {
-      document.getElementById('schulte-status').textContent = 'Дайын!';
     }
+  } catch(e) {}
+}
+
+function schulteTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+async function schulteRemainingToday() {
+  if (!sb || !authUser) return 0;
+  try {
+    const { data, error } = await sb.from('exercise_daily_plays')
+      .select('play_count')
+      .eq('user_id', authUser.id)
+      .eq('exercise', 'schulte')
+      .eq('play_date', schulteTodayStr())
+      .maybeSingle();
+    if (error) return 0; // белгісіз күй — сақтық үшін ойнатпаймыз (лимитті айналып өтуден гөрі қауіпсіз)
+    const used = data ? data.play_count : 0;
+    return Math.max(0, 2 - used);
+  } catch(e) { return 0; }
+}
+
+async function schulteConsumePlay() {
+  if (!sb || !authUser) return;
+  try {
+    const { data: existing, error: readError } = await sb.from('exercise_daily_plays')
+      .select('play_count')
+      .eq('user_id', authUser.id)
+      .eq('exercise', 'schulte')
+      .eq('play_date', schulteTodayStr())
+      .maybeSingle();
+    if (readError) return; // белгісіз санақты жаза алмаймыз
+    const nextCount = (existing ? existing.play_count : 0) + 1;
+    await sb.from('exercise_daily_plays').upsert({
+      user_id: authUser.id,
+      exercise: 'schulte',
+      play_date: schulteTodayStr(),
+      play_count: nextCount
+    }, { onConflict: 'user_id,exercise,play_date' });
+  } catch(e) {}
+}
+
+async function schulteRefreshEnergyUI() {
+  const remaining = await schulteRemainingToday();
+  const energyEl = document.getElementById('schulte-energy');
+  if (energyEl) energyEl.textContent = '⚡' + remaining;
+  const startBtn = document.getElementById('schulte-start-btn');
+  if (startBtn) {
+    if (remaining <= 0) { startBtn.textContent = 'Ертең қайта келіңіз'; startBtn.disabled = true; }
+    else { startBtn.textContent = 'Бастау'; startBtn.disabled = false; }
   }
 }
 
