@@ -311,12 +311,12 @@
   .schulte-stat { text-align: center; }
   .schulte-stat-label { font-size: 12px; color: var(--d-text-3); margin-bottom: 3px; }
   .schulte-stat-value { font-size: 22px; font-weight: 600; }
-  #schulte-grid { display: grid; gap: 6px; width: 100%; aspect-ratio: 1; margin-bottom: 24px; }
+  #schulte-grid { display: grid; gap: 6px; width: 100%; aspect-ratio: 1; margin-bottom: 24px; position: relative; }
   .schulte-cell { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: var(--cell-font, 22px); font-weight: 500; cursor: pointer; user-select: none; }
   .schulte-cell:hover { border-color: var(--d-border-strong); }
   .schulte-cell.done { background: var(--d-accent-bg); color: var(--d-accent); border-color: var(--d-accent-bg); cursor: default; }
   .schulte-cell.wrong { background: #FBEAEA; border-color: var(--d-danger); }
-  .schulte-center { display: flex; align-items: center; justify-content: center; }
+  .schulte-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; display: flex; align-items: center; justify-content: center; }
   .schulte-center-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--d-danger); }
   .schulte-intro-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; align-items: center; justify-content: center; }
   .schulte-intro-overlay.open { display: flex; }
@@ -2003,16 +2003,6 @@ function schulteIntroClose() {
   document.getElementById('schulte-intro').classList.remove('open');
 }
 
-function schulteRingCells(n) {
-  const cells = [];
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      if (r === 0 || r === n - 1 || c === 0 || c === n - 1) cells.push({ row: r, col: c });
-    }
-  }
-  return cells;
-}
-
 function showSchulte() {
   hideAllViews();
   document.getElementById('schulte').style.display = 'block';
@@ -2146,8 +2136,7 @@ function schulteNewGame() {
   document.getElementById('schulte-timer').textContent = '00:00';
   document.getElementById('schulte-status').textContent = '—';
 
-  const ring = schulteRingCells(schulteSize);
-  schulteTotal = ring.length;
+  schulteTotal = schulteSize * schulteSize;
   const nums = Array.from({ length: schulteTotal }, (_, i) => i + 1);
   for (let i = nums.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -2160,13 +2149,10 @@ function schulteNewGame() {
   grid.style.setProperty('--cell-font', schulteSize <= 3 ? '36px' : schulteSize === 4 ? '28px' : '22px');
   grid.innerHTML = '';
 
-  ring.forEach((pos, i) => {
-    const n = nums[i];
+  nums.forEach(n => {
     const cell = document.createElement('div');
     cell.className = 'schulte-cell';
     cell.textContent = schulteChar(n);
-    cell.style.gridColumn = (pos.col + 1) + ' / span 1';
-    cell.style.gridRow = (pos.row + 1) + ' / span 1';
     cell.onclick = () => schulteClick(n, cell);
     grid.appendChild(cell);
   });
@@ -2174,8 +2160,6 @@ function schulteNewGame() {
   const center = document.createElement('div');
   center.id = 'schulte-center';
   center.className = 'schulte-center';
-  center.style.gridColumn = '2 / span ' + (schulteSize - 2);
-  center.style.gridRow = '2 / span ' + (schulteSize - 2);
   const startBtn = document.createElement('button');
   startBtn.id = 'schulte-start-btn';
   startBtn.className = 'dash-btn-primary';
@@ -2207,9 +2191,13 @@ async function schulteStart() {
 
   const center = document.getElementById('schulte-center');
   center.innerHTML = '';
-  const dot = document.createElement('div');
-  dot.className = 'schulte-center-dot';
-  center.appendChild(dot);
+  if (schulteSize % 2 === 0) {
+    // жұп өлшемде дәл орта — 4 ұяшықтың бұрышы, ешбір санды жаппайды
+    const dot = document.createElement('div');
+    dot.className = 'schulte-center-dot';
+    center.appendChild(dot);
+  }
+  // тақ өлшемде (3×3, 5×5) орталық ұяшықтың өзінде сан бар — нүкте қойылмайды
 
   schulteStartTime = performance.now();
   document.getElementById('schulte-timer').textContent = '00:00';
