@@ -3251,17 +3251,35 @@ function formatPhoneShort(p) {
 }
 
 async function initAuth() {
-  await migrateTextsToIndexedDB();
+  try { await migrateTextsToIndexedDB(); } catch(e) {}
+  let session = null;
   if (sb) {
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session && session.user) {
-        authUser = session.user;
-        updateAuthChip();
-        await showDashboard();
-        return;
-      }
-    } catch(e) {}
+    // The saved login lives in localStorage (supabase-js persistSession). Renewing an expired access
+    // token needs the network, so a network error must not look like "logged out": retry before asking to log in.
+    for (let attempt = 0; attempt < 3 && !session; attempt++) {
+      let err = null;
+      try {
+        const res = await sb.auth.getSession();
+        session = res.data && res.data.session;
+        err = res.error;
+      } catch (e) { err = e; }
+      if (session || !err || err.name !== 'AuthRetryableFetchError') break;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  if (session && session.user) {
+    authUser = session.user;
+    updateAuthChip();
+    // A problem while drawing the dashboard must never bounce a signed-in user back to the login form.
+    try { await showDashboard(); }
+    catch (e) {
+      console.error('showDashboard failed', e);
+      document.getElementById('dashboard').style.display = 'block';
+      const loading = document.getElementById('dashboard-loading');
+      loading.style.display = 'block';
+      loading.textContent = 'Дашбордты көрсету кезінде қате шықты. Бетті жаңартып көріңіз.';
+    }
+    return;
   }
   updateAuthChip();
   openAuthOverlay();
@@ -3569,7 +3587,9 @@ document.addEventListener('visibilitychange', () => {
   if (playing) stop();      // pauses, checkpoints reading stats and saves the position
   else lsSave();
 });
-initAuth();
+// Start only once every inline script has run — the dashboard nav/profile helpers live in a later script block.
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAuth);
+else initAuth();
 </script>
 
 <!-- timer done overlay -->
