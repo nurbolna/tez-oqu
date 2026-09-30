@@ -423,7 +423,35 @@
     .chrome-pop select { font-size: 16px; padding: 8px 10px; }
     .chrome-pop .theme-dot, .chrome-pop .hi-dot { width: 28px; height: 28px; }
   }
+  /* digits in inputs: lining figures on one baseline (Georgia's old-style numerals looked uneven) */
+  #auth-name-input, #auth-phone-input, #auth-otp-input, #login-phone-input, #login-password-input,
+  #setpass-password-input, #setpass-confirm-input { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-variant-numeric: lining-nums tabular-nums; }
+  #scrub-label { font-variant-numeric: lining-nums; }
+  /* keyboard shortcut hint is meaningless on touch devices */
+  @media (pointer: coarse) { #fs-hint { display: none !important; } }
+  /* remember-number: input stays focused (keeps the phone keyboard open) but invisible while digits are shown */
+  #remember-number-input.rn-hidden { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; padding: 0; border: 0; }
+  /* dashboard: odd stat tile spans the full row on phones instead of leaving a hole */
+  @media (max-width: 640px) { #dash-stats-grid > .dash-stat-tile:nth-child(3) { grid-column: 1 / -1; } }
   /* reader layout on small screens */
+
+  /* ══ dashboard navigation: bottom tab bar (phones) / left rail (touch tablets) ══ */
+  #dash-tabbar, #dash-rail { display: none; }
+  .dash-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--d-text-3); cursor: pointer; font-size: 11px; font-weight: 500; -webkit-user-select: none; user-select: none; }
+  .dash-tab i { font-size: 24px; line-height: 1; }
+  .dash-tab.active { color: var(--d-accent); }
+  @media (max-width: 640px) {
+    #dash-tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--d-panel); border-top: 1px solid var(--d-border); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); }
+    #dash-tabbar .dash-tab { flex: 1; min-height: 48px; border-radius: 10px; }
+    #dashboard-content { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+  }
+  @media (min-width: 641px) and (pointer: coarse) {
+    #dash-rail { display: flex; flex-direction: column; align-items: center; gap: 8px; position: fixed; left: 0; top: 0; bottom: 0; width: 84px; z-index: 30; background: var(--d-panel); border-right: 1px solid var(--d-border); padding: calc(20px + env(safe-area-inset-top)) 6px 20px calc(6px + env(safe-area-inset-left)); }
+    #dash-rail .dash-tab { width: 68px; min-height: 64px; border-radius: 12px; }
+    #dash-rail .dash-tab.active { background: var(--d-accent-bg); }
+    #dashboard-inner { margin-left: calc(84px + env(safe-area-inset-left)); }
+    #dash-topnav { display: none; }
+  }
   /* one column: narrow windows, any touch device held upright (phones, iPads), phones on their side */
   @media (max-width: 700px), (pointer: coarse) and (orientation: portrait), (pointer: coarse) and (max-height: 500px) {
     #columns-wrap { grid-template-columns: 1fr; }
@@ -550,14 +578,24 @@
 
 <div id="dashboard">
   <div id="dash-shell">
+    <nav id="dash-rail" aria-label="Навигация">
+      <div class="dash-tab active" data-nav="home" onclick="dashNavGo('home')"><i class="ti ti-home"></i><span>Басты</span></div>
+      <div class="dash-tab" data-nav="books" onclick="dashNavGo('books')"><i class="ti ti-books"></i><span>Кітаптар</span></div>
+      <div class="dash-tab" data-nav="trainers" onclick="dashNavGo('trainers')"><i class="ti ti-brain"></i><span>Жаттығу</span></div>
+    </nav>
+    <nav id="dash-tabbar" aria-label="Навигация">
+      <div class="dash-tab active" data-nav="home" onclick="dashNavGo('home')"><i class="ti ti-home"></i><span>Басты</span></div>
+      <div class="dash-tab" data-nav="books" onclick="dashNavGo('books')"><i class="ti ti-books"></i><span>Кітаптар</span></div>
+      <div class="dash-tab" data-nav="trainers" onclick="dashNavGo('trainers')"><i class="ti ti-brain"></i><span>Жаттығу</span></div>
+    </nav>
     <div id="dashboard-inner">
       <div id="dash-header">
         <div id="dash-header-left">
           <div id="dash-logo">Тез Оқу</div>
           <nav id="dash-topnav">
-            <span class="dash-nav-item active" onclick="document.getElementById('dashboard').scrollTo({top:0,behavior:'smooth'})">Басты бет</span>
-            <span class="dash-nav-item" onclick="document.getElementById('dash-trainers-section').scrollIntoView({behavior:'smooth',block:'start'})">Тренажерлар</span>
-            <span class="dash-nav-item" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})">Кітаптарым</span>
+            <span class="dash-nav-item active" data-nav="home" onclick="document.getElementById('dashboard').scrollTo({top:0,behavior:'smooth'})">Басты бет</span>
+            <span class="dash-nav-item" data-nav="trainers" onclick="document.getElementById('dash-trainers-section').scrollIntoView({behavior:'smooth',block:'start'})">Тренажерлар</span>
+            <span class="dash-nav-item" data-nav="books" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})">Кітаптарым</span>
           </nav>
         </div>
         <div id="dash-user-chip">
@@ -737,12 +775,11 @@
     <div class="remember-number-stats">
       <div class="remember-number-stat"><div class="remember-number-stat-label">Уақыт</div><div class="remember-number-stat-value" id="remember-number-timer">45</div></div>
       <div class="remember-number-stat"><div class="remember-number-stat-label">Рекорд</div><div class="remember-number-stat-value" id="remember-number-best">—</div></div>
-      <div class="remember-number-stat"><div class="remember-number-stat-label">Ұзындық</div><div class="remember-number-stat-value" id="remember-number-length">3</div></div>
     </div>
     <div id="remember-number-stage">
       <button id="remember-number-start-btn" class="dash-btn-primary" onclick="rnStart()">Бастау</button>
       <div id="remember-number-digits" style="display:none;"></div>
-      <input id="remember-number-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="off" style="display:none;" oninput="rnCheckAnswer()">
+      <input id="remember-number-input" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="off" class="rn-hidden" style="display:none;" oninput="rnCheckAnswer()">
     </div>
     <div id="remember-number-result">—</div>
     <button id="remember-number-restart" class="dash-btn-primary" style="display:none;" onclick="rnNewGame()"><i class="ti ti-refresh"></i> Қайта ойнау</button>
@@ -2511,13 +2548,14 @@ function rnResetTrainer() {
   rnMaxDigits = 3;
   rnCurrentNumber = '';
   document.getElementById('remember-number-timer').textContent = '45';
-  document.getElementById('remember-number-length').textContent = '3';
   const resultEl = document.getElementById('remember-number-result');
   resultEl.textContent = '—';
   resultEl.className = '';
   document.getElementById('remember-number-restart').style.display = 'none';
   const inputEl = document.getElementById('remember-number-input');
   inputEl.value = '';
+  inputEl.blur();
+  inputEl.classList.add('rn-hidden');
   inputEl.style.display = 'none';
   document.getElementById('remember-number-digits').style.display = 'none';
   const startBtn = document.getElementById('remember-number-start-btn');
@@ -2538,9 +2576,18 @@ async function rnStart() {
   startBtn.disabled = true;
   startBtn.textContent = 'Жүктелуде...';
 
+  // iOS only opens the keyboard for focus() called synchronously inside the tap,
+  // so focus the (invisible) answer input now, before any await.
+  const inputEl = document.getElementById('remember-number-input');
+  inputEl.classList.add('rn-hidden');
+  inputEl.style.display = 'block';
+  inputEl.focus();
+
   const consumed = await rnConsumePlay();
   if (gen !== rnGen) return; // осы уақытта жаңа ойын басталып кетті
   if (!consumed) {
+    inputEl.blur();
+    inputEl.style.display = 'none';
     startBtn.disabled = false;
     startBtn.textContent = 'Бастау';
     rnRefreshEnergyUI();
@@ -2570,14 +2617,15 @@ function rnNextRound(gen) {
   rnRound++;
   const cfg = rnRoundConfig(rnRound);
   rnMaxDigits = Math.max(rnMaxDigits, cfg.digits);
-  document.getElementById('remember-number-length').textContent = String(cfg.digits);
   rnCurrentNumber = rnGenerateNumber(cfg.digits);
   rnPhase = 'showing';
 
   const digitsEl = document.getElementById('remember-number-digits');
   const inputEl = document.getElementById('remember-number-input');
-  inputEl.style.display = 'none';
+  inputEl.classList.add('rn-hidden');
+  inputEl.style.display = 'block';
   inputEl.value = '';
+  if (document.activeElement !== inputEl) inputEl.focus();
   digitsEl.style.display = 'block';
   digitsEl.textContent = rnCurrentNumber;
 
@@ -2592,13 +2640,14 @@ function rnRevealInput(gen) {
   const inputEl = document.getElementById('remember-number-input');
   inputEl.maxLength = rnCurrentNumber.length;
   inputEl.value = '';
+  inputEl.classList.remove('rn-hidden');
   inputEl.style.display = 'block';
   inputEl.focus();
 }
 
 function rnCheckAnswer() {
-  if (rnPhase !== 'input') return;
   const inputEl = document.getElementById('remember-number-input');
+  if (rnPhase !== 'input') { inputEl.value = ''; return; } // digits still on screen: ignore typing
   const digitsOnly = inputEl.value.replace(/\D/g, '');
   if (digitsOnly !== inputEl.value) inputEl.value = digitsOnly;
   if (digitsOnly.length < rnCurrentNumber.length) return;
@@ -2619,12 +2668,15 @@ function rnGameOver(gen, timedOut) {
   clearInterval(rnGameInterval);
   rnPhase = 'done';
   document.getElementById('remember-number-digits').style.display = 'none';
-  document.getElementById('remember-number-input').style.display = 'none';
+  const doneInput = document.getElementById('remember-number-input');
+  doneInput.blur();
+  doneInput.classList.add('rn-hidden');
+  doneInput.style.display = 'none';
   if (timedOut) document.getElementById('remember-number-timer').textContent = '0';
 
   const finalScore = rnScore + rnMaxDigits;
   const resultEl = document.getElementById('remember-number-result');
-  resultEl.textContent = 'Нәтиже: ' + rnScore + ' сан тапты, макс. ' + rnMaxDigits + ' цифр (ұпай: ' + finalScore + ')';
+  resultEl.textContent = rnScore + ' сан тапты';
   resultEl.className = timedOut ? 'remember-number-result-good' : 'remember-number-result-bad';
   document.getElementById('remember-number-restart').style.display = 'inline-flex';
 
@@ -2690,11 +2742,11 @@ async function rnLoadBest() {
   if (!sb || !authUser) { el.textContent = '—'; return; }
   try {
     const { data, error } = await sb.from('remember_number_best_times')
-      .select('best_score')
+      .select('best_count')
       .eq('user_id', authUser.id)
       .maybeSingle();
     if (error) { el.textContent = '—'; return; }
-    el.textContent = data ? String(data.best_score) : '—';
+    el.textContent = data && data.best_count != null ? String(data.best_count) : '—';
   } catch(e) { el.textContent = '—'; }
 }
 
@@ -2715,7 +2767,7 @@ async function rnSaveBest(finalScore, count, maxDigits) {
       achieved_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
     if (writeError) return;
-    document.getElementById('remember-number-best').textContent = String(finalScore);
+    document.getElementById('remember-number-best').textContent = String(count);
   } catch(e) {}
 }
 
@@ -3170,6 +3222,40 @@ initAuth();
     <button onclick="closeTimerOverlay()">Жабу</button>
   </div>
 </div>
+<script>
+/* ── dashboard navigation (tab bar / rail / top nav share one active state) ── */
+const DASH_NAV_TARGETS = { home: null, books: 'dash-books-header', trainers: 'dash-trainers-section' };
+function dashNavSetActive(key) {
+  document.querySelectorAll('#dashboard [data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === key));
+}
+function dashNavGo(key) {
+  const dash = document.getElementById('dashboard');
+  const target = DASH_NAV_TARGETS[key] && document.getElementById(DASH_NAV_TARGETS[key]);
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else dash.scrollTo({ top: 0, behavior: 'smooth' });
+  dashNavSetActive(key);
+}
+(function () {
+  const dash = document.getElementById('dashboard');
+  let ticking = false;
+  function update() {
+    ticking = false;
+    const top = dash.getBoundingClientRect().top;
+    let key = 'home';
+    for (const k of ['trainers', 'books']) {
+      const el = document.getElementById(DASH_NAV_TARGETS[k]);
+      if (el && el.offsetParent !== null && el.getBoundingClientRect().top - top <= 140) key = k;
+    }
+    // In the one-column layout books come after trainers; at the very bottom, the last section wins.
+    if (dash.scrollTop + dash.clientHeight >= dash.scrollHeight - 4 && dash.scrollTop > 0) {
+      const b = document.getElementById(DASH_NAV_TARGETS.books);
+      if (b && b.offsetParent !== null) key = 'books';
+    }
+    dashNavSetActive(key);
+  }
+  dash.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+})();
+</script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
