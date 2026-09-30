@@ -444,8 +444,47 @@
   #remember-number-input.rn-hidden { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; padding: 0; border: 0; }
   /* dashboard: odd stat tile spans the full row on phones instead of leaving a hole */
   @media (max-width: 640px) { #dash-stats-grid > .dash-stat-tile:nth-child(3) { grid-column: 1 / -1; } }
+  /* bookmarks: side panel on touch tablets (overlays the text, so pages never re-flow), sheet on phones */
+  @keyframes bmSlideIn { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+  .bm-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 6px; }
+  .bm-close { display: none; cursor: pointer; font-size: 22px; padding: 6px; margin: -6px -6px -6px 0; color: var(--rt-text-muted); }
+  @media (max-width: 700px) { .chrome-pop.show { animation: sheetUp .2s ease-out; } .bm-close { display: inline-block; } }
+  @media (min-width: 701px) and (pointer: coarse) {
+    #pop-bookmarks { position: fixed; top: 0; right: 0; bottom: 0; left: auto; width: min(380px, 45vw) !important; max-height: none; margin-top: 0; border-radius: 0; border-width: 0 0 0 1px; font-size: 14px;
+      padding: calc(18px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) 18px; z-index: 40; box-shadow: -8px 0 28px rgba(44,26,14,0.22); overflow-y: auto; }
+    #pop-bookmarks.show { animation: bmSlideIn .2s ease-out; }
+    #pop-bookmarks .bm-head { font-size: 16px; }
+    .bm-close { display: inline-block; }
+    .bm-row { padding: 16px 4px; gap: 12px; }
+    .bm-snippet { font-size: 15px; line-height: 1.5; }
+    .bm-meta { font-size: 12px; margin-top: 5px; }
+    .bm-goto { padding: 9px 14px; font-size: 13px; }
+    .bm-del { font-size: 22px; padding: 9px; margin: -6px -6px 0 0; }
+  }
   /* reader layout on small screens */
 
+  /* ══ profile page (lives inside the dashboard, switched by the 4th nav tab) ══ */
+  #profile-content { display: none; padding: 32px 40px 48px; max-width: 760px; }
+  #dashboard.show-profile #dashboard-content { display: none !important; }
+  #dashboard.show-profile #dashboard-loading { display: none !important; }
+  #dashboard.show-profile #profile-content { display: block; }
+  #pf-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  #pf-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--d-accent-bg); color: var(--d-accent); font-size: 28px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  #pf-name { font-size: 20px; font-weight: 600; }
+  #pf-phone { font-size: 14px; color: var(--d-text-2); margin-top: 3px; }
+  .pf-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+  .pf-card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .pf-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--d-border); font-size: 14px; }
+  .pf-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .pf-card-title + .pf-row { padding-top: 0; }
+  .pf-row-label { color: var(--d-text-2); }
+  .pf-row-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pf-hint { font-size: 13px; color: var(--d-text-2); line-height: 1.5; }
+  #pf-install-btn { display: none; margin-top: 12px; }
+  #pf-signout { width: 100%; justify-content: center; background: var(--d-tile); color: var(--d-danger); padding: 12px 14px; font-size: 14px; margin-top: 4px; }
+  @media (hover: hover) { #pf-signout:hover { background: var(--d-tile-strong); } }
+  @media (max-width: 640px) { #profile-content { padding: 20px 16px calc(92px + env(safe-area-inset-bottom)); } }
   /* ══ dashboard navigation: bottom tab bar (phones) / left rail (touch tablets) ══ */
   #dash-tabbar, #dash-rail { display: none; }
   .dash-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--d-text-3); cursor: pointer; font-size: 11px; font-weight: 500; -webkit-user-select: none; user-select: none; }
@@ -563,7 +602,7 @@
   </div>
 
   <div id="pop-bookmarks" class="chrome-pop" style="width:270px;">
-    <div class="chrome-pop-label" style="margin:0 0 6px;">Бетбелгілер · <span id="bookmarks-count">0</span></div>
+    <div class="chrome-pop-label bm-head"><span>Бетбелгілер · <span id="bookmarks-count">0</span></span><i class="ti ti-x bm-close" onclick="closeAllPops()" aria-label="Жабу"></i></div>
     <div id="bookmarks-list"></div>
   </div>
 
@@ -597,20 +636,23 @@
       <div class="dash-tab active" data-nav="home" onclick="dashNavGo('home')"><i class="ti ti-home"></i><span>Басты</span></div>
       <div class="dash-tab" data-nav="books" onclick="dashNavGo('books')"><i class="ti ti-books"></i><span>Кітаптар</span></div>
       <div class="dash-tab" data-nav="trainers" onclick="dashNavGo('trainers')"><i class="ti ti-brain"></i><span>Жаттығу</span></div>
+      <div class="dash-tab" data-nav="profile" onclick="dashNavGo('profile')"><i class="ti ti-user"></i><span>Профиль</span></div>
     </nav>
     <nav id="dash-tabbar" aria-label="Навигация">
       <div class="dash-tab active" data-nav="home" onclick="dashNavGo('home')"><i class="ti ti-home"></i><span>Басты</span></div>
       <div class="dash-tab" data-nav="books" onclick="dashNavGo('books')"><i class="ti ti-books"></i><span>Кітаптар</span></div>
       <div class="dash-tab" data-nav="trainers" onclick="dashNavGo('trainers')"><i class="ti ti-brain"></i><span>Жаттығу</span></div>
+      <div class="dash-tab" data-nav="profile" onclick="dashNavGo('profile')"><i class="ti ti-user"></i><span>Профиль</span></div>
     </nav>
     <div id="dashboard-inner">
       <div id="dash-header">
         <div id="dash-header-left">
           <div id="dash-logo">Тез Оқу</div>
           <nav id="dash-topnav">
-            <span class="dash-nav-item active" data-nav="home" onclick="document.getElementById('dashboard').scrollTo({top:0,behavior:'smooth'})">Басты бет</span>
-            <span class="dash-nav-item" data-nav="trainers" onclick="document.getElementById('dash-trainers-section').scrollIntoView({behavior:'smooth',block:'start'})">Тренажерлар</span>
-            <span class="dash-nav-item" data-nav="books" onclick="document.getElementById('dash-books-header').scrollIntoView({behavior:'smooth',block:'start'})">Кітаптарым</span>
+            <span class="dash-nav-item active" data-nav="home" onclick="dashNavGo('home')">Басты бет</span>
+            <span class="dash-nav-item" data-nav="trainers" onclick="dashNavGo('trainers')">Тренажерлар</span>
+            <span class="dash-nav-item" data-nav="books" onclick="dashNavGo('books')">Кітаптарым</span>
+            <span class="dash-nav-item" data-nav="profile" onclick="dashNavGo('profile')">Профиль</span>
           </nav>
         </div>
         <div id="dash-user-chip">
@@ -619,6 +661,28 @@
         </div>
       </div>
       <div id="dashboard-loading">Жүктелуде...</div>
+      <div id="profile-content">
+        <div id="pf-head">
+          <div id="pf-avatar">?</div>
+          <div><div id="pf-name">—</div><div id="pf-phone"></div></div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-card-title">Бүгінгі тегін ойындар</div>
+          <div class="pf-row"><span class="pf-row-label">Шульте кестесі</span><span class="pf-row-value" id="pf-energy-schulte">—</span></div>
+          <div class="pf-row"><span class="pf-row-label">Санды есте сақта</span><span class="pf-row-value" id="pf-energy-rn">—</span></div>
+        </div>
+        <div class="pf-card">
+          <div class="pf-card-title">Рекордтар</div>
+          <div class="pf-row"><span class="pf-row-label">Санды есте сақта</span><span class="pf-row-value" id="pf-rec-rn">—</span></div>
+          <div id="pf-rec-schulte"></div>
+        </div>
+        <div class="pf-card" id="pf-install-card">
+          <div class="pf-card-title">Қолданба ретінде орнату</div>
+          <div class="pf-hint" id="pf-install-hint">Safari: «Бөлісу» → «Басты экранға қосу». Android Chrome: ⋮ мәзірі → «Қолданбаны орнату».</div>
+          <button class="dash-btn-primary" id="pf-install-btn" onclick="pfInstall()"><i class="ti ti-download"></i> Орнату</button>
+        </div>
+        <button class="dash-btn-primary" id="pf-signout" onclick="signOut()"><i class="ti ti-logout"></i> Шығу</button>
+      </div>
       <div id="dashboard-content">
         <div id="dash-greeting">Қайта келдіңіз!</div>
         <div id="dash-stats-grid">
@@ -1501,8 +1565,24 @@ function periodicCheckpoint() {
   checkpointStats();
   lsSave();
 }
+/* ── keep the screen awake while auto-reading (Screen Wake Lock API; silently skipped where unsupported) ── */
+let wakeLockSentinel = null;
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator) || wakeLockSentinel) return;
+  try {
+    wakeLockSentinel = await navigator.wakeLock.request('screen');
+    wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+  } catch (e) { wakeLockSentinel = null; }
+}
+function releaseWakeLock() {
+  const s = wakeLockSentinel;
+  wakeLockSentinel = null;
+  if (s) s.release().catch(() => {});
+}
+
 function start() {
   playing = true;
+  acquireWakeLock();
   document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-pause"></i>';
   // Use setTimeout chain instead of setInterval for accurate per-chunk timing
   timer = setInterval(step, getIv());
@@ -1514,6 +1594,7 @@ function start() {
 function stop() {
   const wasPlaying = playing;
   playing = false;
+  releaseWakeLock();
   document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-play"></i>';
   clearInterval(timer);
   clearInterval(cloudSyncInterval);
@@ -2054,8 +2135,10 @@ document.getElementById('chunk-select').addEventListener('change', () => {
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
+  if (playing) clearInterval(timer); // don't step through a layout that is about to change
   resizeTimer = setTimeout(async () => {
     if (words.length) { await measureWordsPerPage(); renderPage(pageOf(pos)); applyHighlight(); }
+    if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
   }, 300);
 });
 
@@ -3187,6 +3270,8 @@ async function initAuth() {
 /* ── dashboard ── */
 async function showDashboard() {
   hideAllViews();
+  document.getElementById('dashboard').classList.remove('show-profile');
+  dashNavSetActive('home');
   document.getElementById('dashboard').style.display = 'block';
   document.getElementById('dashboard-loading').style.display = 'block';
   document.getElementById('dashboard-content').style.display = 'none';
@@ -3478,6 +3563,12 @@ async function checkpointStats() {
 }
 
 window.addEventListener('beforeunload', lsSave);
+window.addEventListener('pagehide', lsSave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden') return;
+  if (playing) stop();      // pauses, checkpoints reading stats and saves the position
+  else lsSave();
+});
 initAuth();
 </script>
 
@@ -3491,22 +3582,80 @@ initAuth();
 </div>
 <script>
 /* ── dashboard navigation (tab bar / rail / top nav share one active state) ── */
-const DASH_NAV_TARGETS = { home: null, books: 'dash-books-header', trainers: 'dash-trainers-section' };
+const DASH_NAV_TARGETS = { home: null, books: 'dash-books-header', trainers: 'dash-trainers-section', profile: null };
 function dashNavSetActive(key) {
   document.querySelectorAll('#dashboard [data-nav]').forEach(el => el.classList.toggle('active', el.dataset.nav === key));
 }
 function dashNavGo(key) {
   const dash = document.getElementById('dashboard');
+  dash.classList.toggle('show-profile', key === 'profile');
+  if (key === 'profile') {
+    dash.scrollTo({ top: 0 });
+    dashNavSetActive('profile');
+    dashProfileRender();
+    return;
+  }
   const target = DASH_NAV_TARGETS[key] && document.getElementById(DASH_NAV_TARGETS[key]);
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   else dash.scrollTo({ top: 0, behavior: 'smooth' });
   dashNavSetActive(key);
 }
+/* ── profile page ── */
+const PF_SCHULTE_SIZES = [3, 4, 5];
+async function pfLoadRecords() {
+  const out = { rn: null, schulte: {} };
+  if (!sb || !authUser) return out;
+  try {
+    const rn = await sb.from('remember_number_best_times').select('best_count').eq('user_id', authUser.id).maybeSingle();
+    if (!rn.error && rn.data && rn.data.best_count != null) out.rn = rn.data.best_count;
+  } catch (e) {}
+  try {
+    const sc = await sb.from('schulte_best_times').select('size,symbols,best_ms').eq('user_id', authUser.id);
+    if (!sc.error && sc.data) sc.data.forEach(r => { out.schulte[r.size + '|' + r.symbols] = r.best_ms; });
+  } catch (e) {}
+  return out;
+}
+async function dashProfileRender() {
+  if (!authUser) return;
+  const meta = authUser.user_metadata || {};
+  const name = meta.full_name || '';
+  document.getElementById('pf-name').textContent = name || 'Пайдаланушы';
+  document.getElementById('pf-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase() || '?';
+  document.getElementById('pf-phone').textContent = authUser.phone ? formatPhoneShort(authUser.phone) : '';
+  pfUpdateInstallCard();
+  const [sLeft, rLeft, rec] = await Promise.all([schulteRemainingToday(), rnRemainingToday(), pfLoadRecords()]);
+  document.getElementById('pf-energy-schulte').textContent = '⚡ ' + sLeft + ' / 2';
+  document.getElementById('pf-energy-rn').textContent = '⚡ ' + rLeft + ' / 2';
+  document.getElementById('pf-rec-rn').textContent = rec.rn != null ? rec.rn + ' сан' : '—';
+  document.getElementById('pf-rec-schulte').innerHTML = PF_SCHULTE_SIZES.map(n => {
+    const num = rec.schulte[n + '|numbers'], let_ = rec.schulte[n + '|letters'];
+    const val = [num != null ? '123 ' + schulteFormatTime(num) : null, let_ != null ? 'АБВ ' + schulteFormatTime(let_) : null].filter(Boolean).join(' · ') || '—';
+    return '<div class="pf-row"><span class="pf-row-label">Шульте ' + n + '×' + n + '</span><span class="pf-row-value">' + val + '</span></div>';
+  }).join('');
+}
+let pfDeferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pfDeferredInstall = e; pfUpdateInstallCard(); });
+window.addEventListener('appinstalled', () => { pfDeferredInstall = null; pfUpdateInstallCard(); });
+function pfUpdateInstallCard() {
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  document.getElementById('pf-install-card').style.display = standalone ? 'none' : 'block';
+  document.getElementById('pf-install-btn').style.display = pfDeferredInstall ? 'inline-flex' : 'none';
+  document.getElementById('pf-install-hint').style.display = pfDeferredInstall ? 'none' : 'block';
+}
+async function pfInstall() {
+  if (!pfDeferredInstall) return;
+  pfDeferredInstall.prompt();
+  try { await pfDeferredInstall.userChoice; } catch (e) {}
+  pfDeferredInstall = null;
+  pfUpdateInstallCard();
+}
+
 (function () {
   const dash = document.getElementById('dashboard');
   let ticking = false;
   function update() {
     ticking = false;
+    if (dash.classList.contains('show-profile')) return;
     const top = dash.getBoundingClientRect().top;
     let key = 'home';
     for (const k of ['trainers', 'books']) {
