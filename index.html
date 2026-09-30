@@ -1088,73 +1088,101 @@ async function measureWordsPerPage(targetWord) {
   }
 
   const probe = document.createElement('div');
-  probe.style.cssText = `position:absolute;visibility:hidden;width:${colW}px;font-size:${curFontSize};line-height:2;text-align:justify;word-spacing:4px;font-family:${curFontFamily};white-space:normal;`;
+  probe.style.cssText = `position:absolute;visibility:hidden;width:${colW}px;font-size:${curFontSize};line-height:2;text-align:justify;word-spacing:1px;font-family:${curFontFamily};white-space:normal;`;
   document.body.appendChild(probe);
 
   // Small safety margin so last line is never cut
   const safeH = colH - 4;
+  const twoCols = !isSingleColumn();
 
-  // Exact check: the real page renders each word as <span class="w"> (with
-  // horizontal padding), which a plain-text probe can't reproduce exactly.
-  const probeSpans = probe.cloneNode(false);
-  probeSpans.style.wordSpacing = '1px'; // same as .col — the span padding is what the real page adds
-  document.body.appendChild(probeSpans);
-  function fitsSpans(startIdx, n) {
-    probeSpans.textContent = '';
-    for (let i = startIdx; i < startIdx + n; i++) {
-      const s = document.createElement('span');
-      s.className = 'w';
-      s.textContent = words[i] + ' ';
-      probeSpans.appendChild(s);
+  // The real page renders each word as <span class="w">. Lay out a run of words once,
+  // read every span's top, and the page break falls out of the line numbers: the text
+  // is plain inline flow, so every line is exactly one line-height tall, a column
+  // holds floor(safeH / lineHeight) lines, and column 2 simply continues the flow
+  // where column 1 stopped. One layout per page instead of ~10 trial layouts.
+  let lineH = 0;
+  let hint = 0; // words that fit in one column on the previous page
+  function layoutRaw(startIdx, cols) {
+    const remaining = words.length - startIdx;
+    let n = Math.min(remaining, hint ? Math.round(hint * cols * 1.2) + 30 : 400);
+    for (;;) {
+      probe.textContent = '';
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < n; i++) {
+        const sp = document.createElement('span');
+        sp.className = 'w';
+        sp.textContent = words[startIdx + i] + ' ';
+        frag.appendChild(sp);
+      }
+      probe.appendChild(frag);
+      const kids = probe.children;
+      const tops = new Array(n);
+      const hts = new Array(n);
+      for (let i = 0; i < n; i++) { tops[i] = kids[i].offsetTop; hts[i] = kids[i].offsetHeight; }
+      const top0 = tops[0];
+      if (!lineH) {
+        for (let i = 1; i < n; i++) { const d = tops[i] - tops[i - 1]; if (d > 0 && (!lineH || d < lineH)) lineH = d; }
+        if (!lineH) { const lh = parseFloat(getComputedStyle(probe).lineHeight); lineH = lh > 0 ? lh : 0; }
+      }
+      if (!lineH) return { c1: 0, c2: 0 };
+      let h1 = Infinity;
+      for (let i = 0; i < n; i++) if (hts[i] < h1) h1 = hts[i];
+      const maxLines = Math.floor(safeH / lineH + 1e-6);
+      // A word wider than the column (long hyphenated token) wraps over several lines:
+      // it occupies lines [first, first + extra].
+      const firstLine = (i) => Math.round((tops[i] - top0) / lineH);
+      const lastLine = (i) => firstLine(i) + (hts[i] > h1 * 1.5 ? Math.max(0, kids[i].getClientRects().length - 1) : 0);
+      let i = 0;
+      while (i < n && lastLine(i) < maxLines) i++;
+      const c1 = i;
+      let c2 = 0;
+      if (cols === 2) {
+        if (i < n && firstLine(i) < maxLines) {
+          // A wrapped word straddles the column boundary: column 2 restarts on it, so measure it fresh.
+          if (i >= n) { n = Math.min(remaining, n * 2); continue; }
+          c2 = layoutRaw(startIdx + c1, 1).c1;
+          return { c1, c2, kids: null };
+        }
+        while (i < n && lastLine(i) < 2 * maxLines) i++;
+        c2 = i - c1;
+      }
+      // Ran off the end of the measured run without hitting the page bottom: measure more words.
+      if (i >= n && n < remaining) { n = Math.min(remaining, n * 2); continue; }
+      return { c1, c2, kids: Array.from(kids) };
     }
-    return probeSpans.scrollHeight <= safeH;
   }
 
-  // First page: plain-text binary search. Every later page: start from the
-  // previous page's word count (pages hold nearly the same number of words) and
-  // gallop outwards — ~3 probes per page instead of ~10+.
-  let hint = 0;
-  function countFit(startIdx) {
-    const maxN = Math.min(1000, words.length - startIdx);
-    if (maxN <= 0) return 0;
-    if (!hint) {
-      let lo = 0, hi = maxN;
-      while (lo < hi) {
-        const mid = Math.ceil((lo + hi) / 2);
-        probe.textContent = words.slice(startIdx, startIdx + mid).join(' ');
-        if (probe.scrollHeight <= safeH) lo = mid; else hi = mid - 1;
-      }
-      while (lo > 1 && !fitsSpans(startIdx, lo)) lo--;
-      while (lo < maxN && fitsSpans(startIdx, lo + 1)) lo++;
-      if (lo) hint = lo;
-      return lo;
+  // The last word of a column also has its trailing space at the very end of the block,
+  // which can push it onto a new line when it only just fits mid-flow. Confirm every
+  // column with the exact words it will contain so the last line is never clipped.
+  function fitsExact(startIdx, count) {
+    probe.textContent = '';
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < count; i++) {
+      const sp = document.createElement('span');
+      sp.className = 'w';
+      sp.textContent = words[startIdx + i] + ' ';
+      frag.appendChild(sp);
     }
-    let good, bad; // good = known to fit, bad = known not to fit
-    const h = Math.min(hint, maxN);
-    if (fitsSpans(startIdx, h)) {
-      good = h;
-      let step = 1;
-      while (good < maxN) {
-        const t = Math.min(maxN, good + step);
-        if (fitsSpans(startIdx, t)) { good = t; step *= 2; } else { bad = t; break; }
-      }
-      if (bad === undefined) { hint = good; return good; }
-    } else {
-      bad = h;
-      let step = 1;
-      good = 0;
-      while (bad > 1) {
-        const t = Math.max(1, bad - step);
-        if (fitsSpans(startIdx, t)) { good = t; break; } else { bad = t; step *= 2; }
-      }
-      if (!good) { hint = 1; return 1; }
+    probe.appendChild(frag);
+    return probe.scrollHeight <= safeH;
+  }
+  function layoutPage(startIdx, cols) {
+    let { c1, c2, kids } = layoutRaw(startIdx, cols);
+    if (c1 === 0) return { c1, c2 };
+    // Re-attach just the words of one column to the probe and read the real height.
+    const fitsNodes = (from, count) => {
+      probe.replaceChildren(...kids.slice(from, from + count));
+      return probe.scrollHeight <= safeH;
+    };
+    const c1raw = c1;
+    while (c1 > 1 && !(kids ? fitsNodes(0, c1) : fitsExact(startIdx, c1))) c1--;
+    if (cols === 2) {
+      if (c1 !== c1raw) { c2 = layoutRaw(startIdx + c1, 1).c1; kids = null; }
+      const col2Start = startIdx + c1;
+      while (c2 > 1 && !(kids ? fitsNodes(c1, c2) : fitsExact(col2Start, c2))) c2--;
     }
-    while (bad - good > 1) {
-      const mid = (good + bad) >> 1;
-      if (fitsSpans(startIdx, mid)) good = mid; else bad = mid;
-    }
-    hint = good;
-    return good;
+    return { c1, c2 };
   }
 
   const target = Math.max(0, Math.min(words.length - 1, targetWord === undefined ? pos : targetWord));
@@ -1164,6 +1192,7 @@ async function measureWordsPerPage(targetWord) {
   let markReady;
   const ready = new Promise(r => { markReady = r; });
   let readyDone = false;
+  const SLICE_MS = 100;
 
   (async () => {
     try {
@@ -1171,20 +1200,22 @@ async function measureWordsPerPage(targetWord) {
       let sliceStart = performance.now();
       while (idx < words.length) {
         if (myRun !== paginateRun) { markReady(); return; }
-        const c1 = countFit(idx);
+        const { c1, c2 } = layoutPage(idx, twoCols ? 2 : 1);
         if (c1 === 0) { idx++; continue; }
-        if (isSingleColumn()) {
-          newPages.push({ start: idx, col1End: idx + c1, end: idx + c1 });
-          idx += c1;
-        } else {
-          const c2start = idx + c1;
-          const c2 = countFit(c2start);
-          const end = c2start + (c2 > 0 ? c2 : 0);
-          newPages.push({ start: idx, col1End: c2start, end: Math.min(end, words.length) });
-          idx = end > idx ? end : idx + 1;
+        if (c1) hint = c1;
+        const c2start = idx + c1;
+        const end = twoCols ? c2start + c2 : c2start;
+        newPages.push({ start: idx, col1End: c2start, end: Math.min(end, words.length) });
+        idx = end > idx ? end : idx + 1;
+        if (!readyDone && idx > target) {
+          readyDone = true;
+          markReady();
+          // Let the caller draw the first page before doing any more work.
+          await new Promise(r => { const t = setTimeout(r, 60); requestAnimationFrame(() => { clearTimeout(t); setTimeout(r, 0); }); });
+          sliceStart = performance.now();
+          continue;
         }
-        if (!readyDone && idx > target) { readyDone = true; markReady(); }
-        if (performance.now() - sliceStart > 16) {
+        if (performance.now() - sliceStart > SLICE_MS) {
           await new Promise(r => setTimeout(r, 0));
           sliceStart = performance.now();
           if (readyDone && myRun === paginateRun) updateUI();
@@ -1197,7 +1228,6 @@ async function measureWordsPerPage(targetWord) {
       updateUI();
     } finally {
       probe.remove();
-      probeSpans.remove();
       if (myRun === paginateRun) paginating = false;
       markReady();
     }
@@ -1749,6 +1779,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   document.getElementById('col1').innerHTML = '<div id="placeholder">Беттер дайындалуда…</div>';
   setTimeout(async () => {
     await measureWordsPerPage(resumeAt);
+    if (!pages.length) { await new Promise(r => setTimeout(r, 120)); await measureWordsPerPage(resumeAt); }
     if (savedProgress && savedProgress.total === words.length && savedProgress.pos > 0) {
       pos = savedProgress.pos;
       setWpmSelect(savedProgress.wpm || 250);
@@ -1764,7 +1795,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
     renderPage(pageOf(pos));
     applyHighlight();
     loadBookmark(fileName);
-  }, 120);
+  }, 0);
 }
 
 
