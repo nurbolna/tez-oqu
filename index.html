@@ -79,6 +79,8 @@
   #columns-wrap { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 52px; overflow: hidden; min-height: 0; max-height: 100%; align-content: start; }
   .col { font-family: var(--rt-font-family); font-size: var(--rt-font-size); line-height: 2; color: var(--rt-text); text-align: justify; word-spacing: 1px; overflow: hidden; }
 
+  .col { hyphens: manual; -webkit-hyphens: manual; }
+  #columns-wrap:lang(en):not(.no-hyph) .col { hyphens: auto; -webkit-hyphens: auto; }
   .w { display: inline; padding: 1px 2px; border-radius: 3px; cursor: pointer; }
   @media (hover: hover) { .w:hover { background: var(--rt-word-hover); } }
   .w.hi { background: var(--rt-hi-bg); color: #1A0E00; border-radius: 0; }
@@ -585,7 +587,6 @@
   @media (max-width: 700px), (pointer: coarse) and (orientation: portrait), (pointer: coarse) and (max-height: 500px) {
     #columns-wrap { grid-template-columns: 1fr; }
     #col2 { display: none; }
-    .col { text-align: left; }
     #reader-area { padding: calc(28px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left)); }
   }
   @media (max-width: 700px) {
@@ -645,6 +646,8 @@
       <option value="Verdana, Geneva, sans-serif">Verdana</option>
       <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
     </select>
+    <div class="chrome-pop-label">Сөз тасымалдау</div>
+    <label class="rr-row"><input type="checkbox" id="hyph-toggle" checked onchange="setHyphenation(this.checked)"> Жолдың соңында сөзді бөлу</label>
   </div>
 
   <div id="pop-speed" class="chrome-pop">
@@ -1262,6 +1265,104 @@ function cleanKazakhText(text) {
 }
 
 /* ══════════════════════════════════════════
+   WORD HYPHENATION — so justified (straight-edged) text does not get big gaps in narrow columns.
+   Kazakh / Russian (Cyrillic): soft hyphens (U+00AD) inserted by the syllable rules below, shown only where a line breaks.
+   English: the browser's own hyphenation (hyphens:auto + lang="en" on the columns).
+   Display text only — `words[]` itself is never changed.
+   ══════════════════════════════════════════ */
+const LS_HYPH = 'sr5_hyphenate';
+let hyphenateOn = (() => { try { return localStorage.getItem(LS_HYPH) !== '0'; } catch(e) { return true; } })();
+let bookScript = 'other';                 // 'cyr' | 'en' | 'other' — decided once per book in loadWords()
+const SHY = '­';
+const HY_VOWELS = 'аәеёиоөуұүыіэюя';
+const HY_MIN_LEN = 6, HY_MIN_LEFT = 2, HY_MIN_RIGHT = 3;
+const hyphCache = new Map();
+const EN_STOP = new Set(['the','of','and','to','a','in','is','that','it','for','was','with','as','on','he','be','at','by','this','his','are','not','or','have','from','but','had','they','you','were','she','an','which','we','her','there','their']);
+
+function detectBookScript(ws) {
+  const n = Math.min(ws.length, 3000);
+  if (!n) return 'other';
+  let cyr = 0, lat = 0, stop = 0;
+  for (let i = 0; i < n; i++) {
+    const w = ws[i];
+    for (let k = 0; k < w.length; k++) {
+      const c = w.charCodeAt(k);
+      if (c >= 0x400 && c <= 0x4FF) cyr++;
+      else if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 0xC0 && c <= 0x24F)) lat++;
+    }
+    if (EN_STOP.has(w.toLowerCase().replace(/[^a-z]/g, ''))) stop++;
+  }
+  if (cyr >= lat) return 'cyr';
+  return stop / n >= 0.12 ? 'en' : 'other';   // other Latin-script languages are left alone (English rules would break them wrongly)
+}
+
+// Syllable boundaries between vowels: one consonant goes to the next syllable (ма-ма), a cluster is split after its
+// first consonant (мек-теп, жыл-дам-дық). й stays with the vowel before it (май-ка), ь with its consonant (пись-мо, се-мья),
+// and a break after ъ (подъ-езд). At least 2 letters stay before the break and 3 after it.
+function hyphenateCyr(word) {
+  const m = /^([^\p{L}\p{N}]*)([\s\S]*?)([^\p{L}\p{N}]*)$/u.exec(word);
+  if (!m) return word;
+  const core = m[2];
+  if (core.length < HY_MIN_LEN || !/^[Ѐ-ӿ]+$/.test(core)) return word;   // digits, Latin, inner dashes: leave alone
+  const lc = core.toLowerCase();
+  const n = lc.length;
+  const isV = (i) => HY_VOWELS.includes(lc[i]) && !(lc[i] === 'у' && i > 0 && HY_VOWELS.includes(lc[i - 1]));  // у after a vowel is part of a diphthong: ау-лақ
+  const nuclei = [];
+  for (let i = 0; i < n; i++) if (isV(i)) nuclei.push(i);
+  if (nuclei.length < 2) return word;
+  const cuts = new Set();
+  for (let k = 0; k + 1 < nuclei.length; k++) {
+    const a = nuclei[k], b = nuclei[k + 1];
+    let br;
+    if (b === a + 1) br = b;
+    else {
+      const hard = lc.lastIndexOf('ъ', b - 1);
+      if (hard > a) br = hard + 1;
+      else {
+        let s = a + 1;
+        if (lc[s] === 'й') s++;
+        if (s >= b) br = lc[a + 1] === 'й' && b === a + 2 ? -1 : b;   // a lone й between vowels (да-йын / май-ор) is ambiguous between Kazakh and Russian: don't break
+        else {
+          let second = -1;
+          for (let i = s + 1; i < b; i++) if (lc[i] !== 'ь') { second = i; break; }
+          br = second === -1 ? s : second;
+        }
+      }
+    }
+    if (br >= HY_MIN_LEFT && n - br >= HY_MIN_RIGHT && lc[br] !== 'ь' && lc[br] !== 'ъ') cuts.add(br);   // br = -1 fails the first test
+  }
+  if (!cuts.size) return word;
+  let out = '';
+  for (let i = 0; i < core.length; i++) { if (cuts.has(i)) out += SHY; out += core[i]; }
+  return m[1] + out + m[3];
+}
+function displayWord(i) {
+  const w = words[i];
+  if (!hyphenateOn || bookScript !== 'cyr') return w;
+  let h = hyphCache.get(w);
+  if (h === undefined) {
+    if (hyphCache.size > 200000) hyphCache.clear();
+    h = hyphenateCyr(w);
+    hyphCache.set(w, h);
+  }
+  return h;
+}
+function hyphenationMode() { return hyphenateOn ? bookScript : 'off'; }
+// English relies on the browser: lang="en" + hyphens:auto (see the .col css); everything else ignores it
+function applyBookLang() {
+  const wrap = document.getElementById('columns-wrap');
+  if (bookScript === 'en') wrap.setAttribute('lang', 'en'); else wrap.removeAttribute('lang');
+  wrap.classList.toggle('no-hyph', !hyphenateOn);
+}
+async function setHyphenation(v) {
+  hyphenateOn = !!v;
+  try { localStorage.setItem(LS_HYPH, hyphenateOn ? '1' : '0'); } catch(e) {}
+  applyBookLang();
+  if (words.length) { await measureWordsPerPage(); renderPage(pageOf(pos)); applyHighlight(); }
+}
+document.getElementById('hyph-toggle').checked = hyphenateOn;
+
+/* ══════════════════════════════════════════
    PAGINATION
    ══════════════════════════════════════════ */
 function isSingleColumn() {
@@ -1270,7 +1371,7 @@ function isSingleColumn() {
 
 function pageCacheKey(colW, colH, fontSize, fontFamily) {
   if (!currentFileName) return null;
-  return '__pagecache__' + currentFileName + '::' + colW + 'x' + colH + '|' + fontSize + '|' + fontFamily + '|' + words.length + '|v4' + (isSingleColumn() ? '|1col' : '');
+  return '__pagecache__' + currentFileName + '::' + colW + 'x' + colH + '|' + fontSize + '|' + fontFamily + '|' + words.length + '|v5|hy:' + hyphenationMode() + (isSingleColumn() ? '|1col' : '');
 }
 
 let paginateRun = 0;      // bumped on every new pagination run; older runs see the change and stop
@@ -1313,6 +1414,8 @@ async function measureWordsPerPage(targetWord) {
 
   const probe = document.createElement('div');
   probe.style.cssText = `position:absolute;visibility:hidden;width:${colW}px;font-size:${curFontSize};line-height:2;text-align:justify;word-spacing:1px;font-family:${curFontFamily};white-space:normal;`;
+  if (bookScript === 'en') probe.setAttribute('lang', 'en');
+  probe.style.hyphens = probe.style.webkitHyphens = (hyphenateOn && bookScript === 'en') ? 'auto' : 'manual';
   document.body.appendChild(probe);
 
   // Small safety margin so last line is never cut
@@ -1335,7 +1438,7 @@ async function measureWordsPerPage(targetWord) {
       for (let i = 0; i < n; i++) {
         const sp = document.createElement('span');
         sp.className = 'w';
-        sp.textContent = words[startIdx + i] + ' ';
+        sp.textContent = displayWord(startIdx + i) + ' ';
         frag.appendChild(sp);
       }
       probe.appendChild(frag);
@@ -1385,7 +1488,7 @@ async function measureWordsPerPage(targetWord) {
     for (let i = 0; i < count; i++) {
       const sp = document.createElement('span');
       sp.className = 'w';
-      sp.textContent = words[startIdx + i] + ' ';
+      sp.textContent = displayWord(startIdx + i) + ' ';
       frag.appendChild(sp);
     }
     probe.appendChild(frag);
@@ -1537,7 +1640,7 @@ function renderPage(pageIdx) {
     for (let i = from; i < to && i < words.length; i++) {
       const s = document.createElement('span');
       s.className = 'w';
-      s.textContent = words[i] + ' ';
+      s.textContent = displayWord(i) + ' ';
       s.dataset.idx = i;  // store word index for buildLineChunks
       const ii = i;
       s.onclick = () => {
@@ -1775,10 +1878,7 @@ function lsSave() {
       savedAt: new Date().toLocaleString('kk-KZ')
     }));
   } catch(e) {}
-  const el = document.getElementById('save-notice');
-  el.style.display = 'inline-block';
-  setTimeout(() => el.style.display = 'none', 2000);
-
+  // progress is saved silently (phone + cloud); no label over the text any more
   if (authUser && currentBookId) syncPositionToCloud();
 }
 
@@ -2010,6 +2110,8 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   currentBookPrivate = forcePrivate !== undefined ? forcePrivate : !!(savedProgress && savedProgress.private);
   const cleaned = cleanKazakhText(text);
   words = cleaned.split(/\s+/).filter(w => w.length > 0);
+  bookScript = detectBookScript(words);
+  applyBookLang();
   pos = 0; stop();
   currentFileName = fileName;
   document.getElementById('reader-filename').textContent = fileName;
