@@ -257,6 +257,8 @@
   @media (hover: hover) { .dash-nav-item:hover { background: var(--d-tile); } }
   .dash-nav-item.active { background: var(--d-accent-bg); color: var(--d-accent); }
   #dash-user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--d-text-2); background: var(--d-tile); border: 1px solid var(--d-border); border-radius: 8px; padding: 5px 10px; }
+  #dash-admin { color: var(--d-text-3); margin-left: 2px; font-size: 15px; text-decoration: none; }
+  @media (hover: hover) { #dash-admin:hover { color: var(--d-text); } }
   #dash-signout { cursor: pointer; color: var(--d-text-3); margin-left: 2px; font-size: 15px; }
   @media (hover: hover) { #dash-signout:hover { color: var(--d-danger); } }
   #dashboard-loading { text-align: center; padding: 70px 0; color: var(--d-text-3); }
@@ -739,6 +741,7 @@
         </div>
         <div id="dash-user-chip">
           <i class="ti ti-brand-telegram" aria-hidden="true"></i> <span id="dash-phone"></span>
+          <a id="dash-admin" href="admin.html" title="Админ панель" style="display:none"><i class="ti ti-shield-lock"></i></a>
           <span id="dash-signout" onclick="signOut()" title="Шығу"><i class="ti ti-logout"></i></span>
         </div>
       </div>
@@ -3570,6 +3573,18 @@ async function showDashboard() {
 
   document.getElementById('dashboard-loading').style.display = 'none';
   document.getElementById('dashboard-content').style.display = 'block';
+  checkAdminButton();
+}
+
+// Админ панель батырмасы: тек admins кестесіндегі қолданушыға көрінеді (is_admin RPC).
+async function checkAdminButton() {
+  const btn = document.getElementById('dash-admin');
+  if (!btn) return;
+  btn.style.display = 'none';
+  try {
+    const { data, error } = await sb.rpc('is_admin');
+    if (!error && data === true) btn.style.display = '';
+  } catch (e) {}
 }
 
 const WORDS_PER_PAGE = 300;
