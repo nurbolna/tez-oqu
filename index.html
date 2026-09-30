@@ -226,6 +226,11 @@
   #auth-send-btn:disabled, #auth-verify-btn:disabled, #login-btn:disabled, #setpass-btn:disabled { opacity: 0.6; cursor: default; }
   .auth-link { margin-top: 12px; font-size: 12px; color: #8B6A3A; cursor: pointer; text-decoration: underline; }
   @media (hover: hover) { .auth-link:hover { color: #6B4020; } }
+  .auth-big { display: block; box-sizing: border-box; width: 100%; font-family: Georgia, serif; font-size: 15px; background: #4A6741; color: #F5EDD6; border: 1px solid #2E4A26; border-radius: 8px; padding: 13px 16px; margin: 14px 0; cursor: pointer; text-decoration: none; }
+  @media (hover: hover) { .auth-big:hover { background: #2E4A26; } }
+  .auth-or { font-size: 12px; color: #8B6A3A; margin: 4px 0 12px; }
+  #auth-step-start h2 { font-size: 26px; }
+  #tg-wait-dots { font-size: 13px; color: #6B4C2A; margin-top: 10px; }
   #auth-error { display: none; margin-top: 14px; font-size: 12px; color: #8B2000; background: #FFE8E0; border: 1px solid #D4806A; border-radius: 6px; padding: 8px 10px; text-align: left; }
   #auth-close { position: absolute; top: 10px; right: 14px; cursor: pointer; color: #8B6A3A; font-size: 18px; line-height: 1; }
   @media (hover: hover) { #auth-close:hover { color: #2C1A0E; } }
@@ -798,41 +803,43 @@
 
 <div id="auth-overlay">
   <div id="auth-box">
-    <div id="auth-step-login">
-      <h2>Кіру</h2>
-      <p class="auth-hint">Телефон нөміріңіз бен құпия сөзіңізді енгізіңіз:</p>
-      <input type="tel" id="login-phone-input" placeholder="+7 707 123 45 67">
-      <input type="password" id="login-password-input" placeholder="Құпия сөз">
-      <button id="login-btn" onclick="signInPassword()">Кіру</button>
-      <div class="auth-link" onclick="showAuthStep('phone','recover')">Құпия сөзді ұмыттыңыз ба? / Telegram арқылы кіру →</div>
-      <div class="auth-link" onclick="showAuthStep('phone','register')">Бұрын тіркелмегенсіз бе? Тіркелу →</div>
+    <div id="auth-step-start">
+      <h2>Тез Оқу</h2>
+      <p class="auth-hint" style="text-align:center;">Жылдам оқуды үйреніңіз</p>
+      <button class="auth-big" style="width:100%;" onclick="showAuthStep('choose')">Бастау</button>
+      <div class="auth-link" onclick="showAuthStep('login')">Құпия сөзбен кіру</div>
     </div>
-    <div id="auth-step-phone" style="display:none;">
-      <h2>Telegram арқылы кіру</h2>
-      <div id="auth-phone-botstep">
-        <p class="auth-hint">1. Алдымен ботпен байланысыңыз:</p>
-        <a href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener" id="auth-bot-link"><i class="ti ti-brand-telegram"></i> @TezOqu_Bot ашу</a>
-      </div>
-      <p class="auth-hint" id="auth-phone-hint">2. Атыңызды және телефон нөміріңізді енгізіңіз:</p>
-      <input type="text" id="auth-name-input" placeholder="Атыңыз">
-      <input type="tel" id="auth-phone-input" placeholder="+7 707 123 45 67">
-      <button id="auth-send-btn" onclick="requestOtp()">Кодты жіберу</button>
-      <div class="auth-link" onclick="showAuthStep('login')">← Артқа</div>
+    <div id="auth-step-choose" style="display:none;">
+      <h2>Кіру</h2>
+      <p class="auth-hint" style="text-align:center;">Telegram арқылы нөміріңізді бөлісіңіз, қалғанын өзіміз жасаймыз:</p>
+      <a id="tg-login-btn" class="auth-big" href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener" onclick="return tgLoginClick(event)"><i class="ti ti-brand-telegram"></i> Нөмірімді бөлісу (Telegram)</a>
+      <div class="auth-or">немесе нөміріңізді жазыңыз</div>
+      <input type="tel" id="auth-phone-input" placeholder="8 707 123 45 67" autocomplete="tel">
+      <button id="auth-send-btn" onclick="requestOtp()">Кодты алу</button>
+      <div class="auth-link" onclick="showAuthStep('start')">← Артқа</div>
+    </div>
+    <div id="auth-step-wait" style="display:none;">
+      <h2>Ботта растаңыз</h2>
+      <p class="auth-hint" style="line-height:1.6;">1. Ботта <b>Start</b> басыңыз.<br>2. «Нөмірімді бөлісу» түймесін басыңыз.<br>3. Осы бетке оралыңыз, кіру автоматты түрде болады.</p>
+      <a id="tg-reopen-btn" class="auth-big" href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener"><i class="ti ti-brand-telegram"></i> Ботты қайта ашу</a>
+      <div id="tg-wait-dots">Растауды күтіп тұрмын…</div>
+      <div class="auth-link" onclick="cancelTgLogin()">← Бас тарту</div>
     </div>
     <div id="auth-step-otp" style="display:none;">
       <h2>Кодты енгізіңіз</h2>
       <p class="auth-hint">Telegram-дағы боттан келген 6 таңбалы код</p>
       <input type="text" id="auth-otp-input" inputmode="numeric" maxlength="6" placeholder="000000">
       <button id="auth-verify-btn" onclick="verifyOtpCode()">Растау</button>
-      <div class="auth-link" onclick="showAuthStep('phone')">← Артқа</div>
+      <div class="auth-link" onclick="showAuthStep('choose')">← Артқа</div>
     </div>
-    <div id="auth-step-setpass" style="display:none;">
-      <h2>Құпия сөз орнатыңыз</h2>
-      <p class="auth-hint">Келесі жолы жылдам кіру үшін құпия сөз қойыңыз:</p>
-      <p class="auth-hint" style="margin:0 0 4px;font-size:11px;">Кемінде 6 таңба</p>
-      <input type="password" id="setpass-password-input" placeholder="Жаңа құпия сөз">
-      <input type="password" id="setpass-confirm-input" placeholder="Құпия сөзді қайталаңыз">
-      <button id="setpass-btn" onclick="submitSetPassword()">Сақтау</button>
+    <div id="auth-step-login" style="display:none;">
+      <h2>Құпия сөзбен кіру</h2>
+      <p class="auth-hint">Телефон нөміріңіз бен құпия сөзіңізді енгізіңіз:</p>
+      <input type="tel" id="login-phone-input" placeholder="8 707 123 45 67" autocomplete="tel">
+      <input type="password" id="login-password-input" placeholder="Құпия сөз">
+      <button id="login-btn" onclick="signInPassword()">Кіру</button>
+      <div class="auth-link" onclick="showAuthStep('choose')">Құпия сөзді ұмыттыңыз ба? Telegram арқылы кіру →</div>
+      <div class="auth-link" onclick="showAuthStep('start')">← Артқа</div>
     </div>
     <div id="auth-error"></div>
   </div>
@@ -2249,16 +2256,15 @@ try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch(e) {}
 
 let authUser = null;
 let authPhone = '';
-let authName = '';
-let authPhoneMode = 'register';
 let currentBookId = null;
 
 function normalizePhone(raw) {
-  let digits = raw.replace(/\D/g, '');
+  let digits = String(raw).replace(/\D/g, '');
   if (digits.length === 11 && digits.startsWith('8')) digits = '7' + digits.slice(1);
   if (digits.length === 10) digits = '7' + digits;
   return '+' + digits;
 }
+function phoneOk(p) { return /^\+\d{11,15}$/.test(p); }
 
 function hideAllViews() {
   document.getElementById('app').style.display = 'none';
@@ -2919,23 +2925,17 @@ async function rnSaveBest(finalScore, count, maxDigits) {
 
 function openAuthOverlay() {
   document.getElementById('auth-overlay').classList.add('show');
-  showAuthStep('login');
+  showAuthStep('start');
 }
 function closeAuthOverlay() {
   document.getElementById('auth-overlay').classList.remove('show');
 }
-function showAuthStep(step, phoneMode) {
-  if (step === 'phone' && phoneMode) authPhoneMode = phoneMode;
-  document.getElementById('auth-step-login').style.display = step === 'login' ? 'block' : 'none';
-  document.getElementById('auth-step-phone').style.display = step === 'phone' ? 'block' : 'none';
-  document.getElementById('auth-step-otp').style.display = step === 'otp' ? 'block' : 'none';
-  document.getElementById('auth-step-setpass').style.display = step === 'setpass' ? 'block' : 'none';
-  if (step === 'phone') {
-    const isRecover = authPhoneMode === 'recover';
-    document.getElementById('auth-phone-botstep').style.display = isRecover ? 'none' : 'block';
-    document.getElementById('auth-name-input').style.display = isRecover ? 'none' : 'block';
-    document.getElementById('auth-phone-hint').textContent = isRecover ? 'Телефон нөміріңізді енгізіңіз:' : '2. Атыңызды және телефон нөміріңізді енгізіңіз:';
-  }
+function showAuthStep(step) {
+  ['start', 'choose', 'wait', 'otp', 'login'].forEach(n => {
+    document.getElementById('auth-step-' + n).style.display = n === step ? 'block' : 'none';
+  });
+  if (step !== 'wait') stopTgPolling();
+  if (step === 'start' || step === 'choose') ensureLoginToken();
   document.getElementById('auth-error').style.display = 'none';
 }
 function authShowError(msg) {
@@ -2944,24 +2944,138 @@ function authShowError(msg) {
   el.style.display = 'block';
 }
 
+/* ── phone helpers: accept 8…, +7…, 7…, 707… with any spaces/dashes/brackets ── */
+function attachPhoneFormat(id) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    let d = el.value.replace(/\D/g, '');
+    if (!d || (d[0] !== '7' && d[0] !== '8')) return;
+    // "707 123 45 67" (national form) starts with 7 too: only format 7… once it is a full 11-digit number.
+    if (el.value.trim()[0] === '7' && d.length < 11) return;
+    d = ('7' + d.slice(1)).slice(0, 11);
+    let out = '+7';
+    if (d.length > 1) out += ' ' + d.slice(1, 4);
+    if (d.length > 4) out += ' ' + d.slice(4, 7);
+    if (d.length > 7) out += ' ' + d.slice(7, 9);
+    if (d.length > 9) out += ' ' + d.slice(9, 11);
+    el.value = out;
+  });
+}
+attachPhoneFormat('auth-phone-input');
+attachPhoneFormat('login-phone-input');
+
+/* ── one-tap login through the Telegram bot ── */
+const TG_BOT = 'TezOqu_Bot';
+let authLoginToken = null, authLoginTokenAt = 0, authLoginTimer = null, authLoginBusy = false, authOtpRequested = false;
+
+async function tgLoginApi(action, token) {
+  const res = await fetch(SUPABASE_URL + '/functions/v1/tg-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+    body: JSON.stringify({ action, token })
+  });
+  return res.json();
+}
+function tgBotUrl() {
+  return 'https://t.me/' + TG_BOT + (authLoginToken ? '?start=login_' + authLoginToken : '');
+}
+function setTgLinks() {
+  document.getElementById('tg-login-btn').href = tgBotUrl();
+  document.getElementById('tg-reopen-btn').href = tgBotUrl();
+}
+async function prefetchLoginToken() {
+  authLoginToken = null;
+  authOtpRequested = false;
+  setTgLinks();
+  try {
+    const r = await tgLoginApi('create');
+    authLoginToken = r.token || null;
+    authLoginTokenAt = Date.now();
+  } catch(e) {}
+  setTgLinks();
+}
+// Creating a token takes ~1-2 s, so it is made ahead of time (when the Start screen
+// shows) and reused while it is still fresh.
+function ensureLoginToken() {
+  if (authLoginToken && Date.now() - authLoginTokenAt < 10 * 60 * 1000) return Promise.resolve();
+  return prefetchLoginToken();
+}
+function tgLoginClick(e) {
+  const fresh = authLoginToken && Date.now() - authLoginTokenAt < 10 * 60 * 1000;
+  if (!fresh) {
+    // Token not ready yet: show the waiting screen; its "open the bot" button gets the
+    // link as soon as the token arrives (opening a window after a delay would be blocked).
+    e.preventDefault();
+    showTgWait();
+    ensureLoginToken();
+    return false;
+  }
+  showTgWait();
+  return true; // the link itself opens Telegram
+}
+function showTgWait() {
+  showAuthStep('wait');
+  setTgLinks();
+  stopTgPolling();
+  authLoginTimer = setInterval(pollTgLogin, 2000);
+}
+function stopTgPolling() {
+  if (authLoginTimer) { clearInterval(authLoginTimer); authLoginTimer = null; }
+}
+function cancelTgLogin() {
+  stopTgPolling();
+  showAuthStep('choose');
+}
+async function pollTgLogin() {
+  if (authLoginBusy || !authLoginToken || !authLoginTimer || !sb) return;
+  authLoginBusy = true;
+  try {
+    const r = await tgLoginApi('poll', authLoginToken);
+    if (r.status === 'confirmed' && !authOtpRequested) {
+      authOtpRequested = true;
+      const { error } = await sb.auth.signInWithOtp({ phone: r.phone });
+      if (error) { showAuthStep('choose'); authShowError('Кіру мүмкін болмады. Қайтадан көріңіз.'); }
+    } else if (r.status === 'otp_ready') {
+      stopTgPolling();
+      const { data, error } = await sb.auth.verifyOtp({ phone: r.phone, token: r.otp, type: 'sms' });
+      if (error) { showAuthStep('choose'); authShowError('Кіру мүмкін болмады. Қайтадан көріңіз.'); }
+      else await finishLogin(data.user, r.first_name);
+    } else if (r.status === 'expired') {
+      showAuthStep('choose');
+      authShowError('Уақыт өтіп кетті. «Нөмірімді бөлісу» түймесін қайта басыңыз.');
+    }
+  } catch(e) {
+  } finally {
+    authLoginBusy = false;
+  }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && authLoginTimer) pollTgLogin(); });
+
+async function finishLogin(user, firstName) {
+  authUser = user;
+  const meta = authUser.user_metadata = authUser.user_metadata || {};
+  if (!meta.full_name && firstName) {
+    meta.full_name = firstName;
+    sb.auth.updateUser({ data: { full_name: firstName } }).catch(() => {});
+  }
+  document.getElementById('auth-otp-input').value = '';
+  closeAuthOverlay();
+  updateAuthChip();
+  await showDashboard();
+}
+
+/* ── typed number: code goes to the Telegram chat, user types it ── */
 async function requestOtp() {
   if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
-  let name = '';
-  if (authPhoneMode !== 'recover') {
-    name = document.getElementById('auth-name-input').value.trim();
-    if (!name) { authShowError('Атыңызды енгізіңіз'); return; }
-  }
-  const raw = document.getElementById('auth-phone-input').value;
-  const phone = normalizePhone(raw);
-  if (phone.length < 11) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
-  authName = name;
+  const phone = normalizePhone(document.getElementById('auth-phone-input').value);
+  if (!phoneOk(phone)) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
   authPhone = phone;
   const btn = document.getElementById('auth-send-btn');
   btn.disabled = true; btn.textContent = 'Жіберілуде...';
   const { error } = await sb.auth.signInWithOtp({ phone });
-  btn.disabled = false; btn.textContent = 'Кодты жіберу';
+  btn.disabled = false; btn.textContent = 'Кодты алу';
   if (error) {
-    authShowError('Код жіберілмеді. Алдымен Telegram ботына өтіп, /start басыңыз, содан кейін қайта көріңіз.');
+    authShowError('Бұл нөмір ботпен әлі байланбаған. Жоғарыдағы «Нөмірімді бөлісу (Telegram)» түймесін басыңыз.');
     return;
   }
   showAuthStep('otp');
@@ -2976,21 +3090,14 @@ async function verifyOtpCode() {
   const { data, error } = await sb.auth.verifyOtp({ phone: authPhone, token, type: 'sms' });
   btn.disabled = false; btn.textContent = 'Растау';
   if (error) { authShowError('Код қате немесе мерзімі өткен'); return; }
-  authUser = data.user;
-  if (authName) {
-    authUser.user_metadata = authUser.user_metadata || {};
-    authUser.user_metadata.full_name = authName;
-    sb.auth.updateUser({ data: { full_name: authName } }).catch(() => {});
-  }
-  document.getElementById('auth-otp-input').value = '';
-  showAuthStep('setpass');
+  await finishLogin(data.user, '');
 }
 
 async function signInPassword() {
   if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
   const raw = document.getElementById('login-phone-input').value;
   const phone = normalizePhone(raw);
-  if (phone.length < 11) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
+  if (!phoneOk(phone)) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
   const password = document.getElementById('login-password-input').value;
   if (!password) { authShowError('Құпия сөзді енгізіңіз'); return; }
   const btn = document.getElementById('login-btn');
@@ -2998,28 +3105,11 @@ async function signInPassword() {
   const { data, error } = await sb.auth.signInWithPassword({ phone, password });
   btn.disabled = false; btn.textContent = 'Кіру';
   if (error) {
-    authShowError('Телефон немесе құпия сөз қате. Құпия сөзді ұмытсаңыз — жоғарыдағы "Құпия сөзді ұмыттыңыз ба?" сілтемесін, тіркелмеген болсаңыз — "Тіркелу" сілтемесін басыңыз.');
+    authShowError('Телефон немесе құпия сөз қате. Құпия сөзді ұмытсаңыз, «Telegram арқылы кіру» сілтемесін басыңыз.');
     return;
   }
   authUser = data.user;
   document.getElementById('login-password-input').value = '';
-  closeAuthOverlay();
-  updateAuthChip();
-  await showDashboard();
-}
-
-async function submitSetPassword() {
-  const p1 = document.getElementById('setpass-password-input').value;
-  const p2 = document.getElementById('setpass-confirm-input').value;
-  if (p1.length < 6) { authShowError('Құпия сөз кемінде 6 таңбадан тұруы керек'); return; }
-  if (p1 !== p2) { authShowError('Құпия сөздер сәйкес келмейді'); return; }
-  const btn = document.getElementById('setpass-btn');
-  btn.disabled = true; btn.textContent = 'Сақталуда...';
-  const { error } = await sb.auth.updateUser({ password: p1 });
-  btn.disabled = false; btn.textContent = 'Сақтау';
-  if (error) { authShowError('Құпия сөзді сақтау мүмкін болмады, қайталап көріңіз'); return; }
-  document.getElementById('setpass-password-input').value = '';
-  document.getElementById('setpass-confirm-input').value = '';
   closeAuthOverlay();
   updateAuthChip();
   await showDashboard();
