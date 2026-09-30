@@ -1042,7 +1042,15 @@ function pageCacheKey(colW, colH, fontSize, fontFamily) {
   return '__pagecache__' + currentFileName + '::' + colW + 'x' + colH + '|' + fontSize + '|' + fontFamily + '|' + words.length + '|v4' + (isSingleColumn() ? '|1col' : '');
 }
 
-async function measureWordsPerPage() {
+let paginateRun = 0;      // bumped on every new pagination run; older runs see the change and stop
+let paginating = false;   // true while the background run is still adding pages
+
+// Resolves as soon as the pages cover `targetWord` (default: current pos) — the
+// remaining pages are computed in small time slices afterwards, so the first
+// page appears fast even on a phone that has never opened this book before.
+async function measureWordsPerPage(targetWord) {
+  const myRun = ++paginateRun;
+  paginating = false;
   const col1el = document.getElementById('col1');
   const colW   = col1el.clientWidth;
   // Use the reader-area's actual inner height for precise measurement
@@ -1063,6 +1071,7 @@ async function measureWordsPerPage() {
   const cacheKey = pageCacheKey(colW, colH, curFontSize, curFontFamily);
   if (cacheKey) {
     const cached = await idbGetText(cacheKey);
+    if (myRun !== paginateRun) return;
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
@@ -1094,38 +1103,100 @@ async function measureWordsPerPage() {
     return probeSpans.scrollHeight <= safeH;
   }
 
+  // First page: plain-text binary search. Every later page: start from the
+  // previous page's word count (pages hold nearly the same number of words) and
+  // gallop outwards — ~3 probes per page instead of ~10+.
+  let hint = 0;
   function countFit(startIdx) {
-    let lo = 0, hi = Math.min(1000, words.length - startIdx);
-    while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      probe.textContent = words.slice(startIdx, startIdx + mid).join(' ');
-      if (probe.scrollHeight <= safeH) lo = mid; else hi = mid - 1;
-    }
-    while (lo > 1 && !fitsSpans(startIdx, lo)) lo--;
     const maxN = Math.min(1000, words.length - startIdx);
-    while (lo < maxN && fitsSpans(startIdx, lo + 1)) lo++;
-    return lo;
+    if (maxN <= 0) return 0;
+    if (!hint) {
+      let lo = 0, hi = maxN;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        probe.textContent = words.slice(startIdx, startIdx + mid).join(' ');
+        if (probe.scrollHeight <= safeH) lo = mid; else hi = mid - 1;
+      }
+      while (lo > 1 && !fitsSpans(startIdx, lo)) lo--;
+      while (lo < maxN && fitsSpans(startIdx, lo + 1)) lo++;
+      if (lo) hint = lo;
+      return lo;
+    }
+    let good, bad; // good = known to fit, bad = known not to fit
+    const h = Math.min(hint, maxN);
+    if (fitsSpans(startIdx, h)) {
+      good = h;
+      let step = 1;
+      while (good < maxN) {
+        const t = Math.min(maxN, good + step);
+        if (fitsSpans(startIdx, t)) { good = t; step *= 2; } else { bad = t; break; }
+      }
+      if (bad === undefined) { hint = good; return good; }
+    } else {
+      bad = h;
+      let step = 1;
+      good = 0;
+      while (bad > 1) {
+        const t = Math.max(1, bad - step);
+        if (fitsSpans(startIdx, t)) { good = t; break; } else { bad = t; step *= 2; }
+      }
+      if (!good) { hint = 1; return 1; }
+    }
+    while (bad - good > 1) {
+      const mid = (good + bad) >> 1;
+      if (fitsSpans(startIdx, mid)) good = mid; else bad = mid;
+    }
+    hint = good;
+    return good;
   }
 
-  pages = [];
-  let idx = 0;
-  while (idx < words.length) {
-    const c1 = countFit(idx);
-    if (c1 === 0) { idx++; continue; }
-    if (isSingleColumn()) {
-      pages.push({ start: idx, col1End: idx + c1, end: idx + c1 });
-      idx += c1;
-      continue;
+  const target = Math.max(0, Math.min(words.length - 1, targetWord === undefined ? pos : targetWord));
+  const newPages = [];
+  pages = newPages;
+  paginating = true;
+  let markReady;
+  const ready = new Promise(r => { markReady = r; });
+  let readyDone = false;
+
+  (async () => {
+    try {
+      let idx = 0;
+      let sliceStart = performance.now();
+      while (idx < words.length) {
+        if (myRun !== paginateRun) { markReady(); return; }
+        const c1 = countFit(idx);
+        if (c1 === 0) { idx++; continue; }
+        if (isSingleColumn()) {
+          newPages.push({ start: idx, col1End: idx + c1, end: idx + c1 });
+          idx += c1;
+        } else {
+          const c2start = idx + c1;
+          const c2 = countFit(c2start);
+          const end = c2start + (c2 > 0 ? c2 : 0);
+          newPages.push({ start: idx, col1End: c2start, end: Math.min(end, words.length) });
+          idx = end > idx ? end : idx + 1;
+        }
+        if (!readyDone && idx > target) { readyDone = true; markReady(); }
+        if (performance.now() - sliceStart > 16) {
+          await new Promise(r => setTimeout(r, 0));
+          sliceStart = performance.now();
+          if (readyDone && myRun === paginateRun) updateUI();
+        }
+      }
+      if (myRun !== paginateRun) { markReady(); return; }
+      paginating = false;
+      if (cacheKey) idbSetText(cacheKey, JSON.stringify(newPages)).catch(() => {});
+      markReady();
+      updateUI();
+    } finally {
+      probe.remove();
+      probeSpans.remove();
+      if (myRun === paginateRun) paginating = false;
+      markReady();
     }
-    const c2start = idx + c1;
-    const c2 = countFit(c2start);
-    const end = c2start + (c2 > 0 ? c2 : 0);
-    pages.push({ start: idx, col1End: c2start, end: Math.min(end, words.length) });
-    idx = end > idx ? end : idx + 1;
-  }
-  document.body.removeChild(probe);
-  document.body.removeChild(probeSpans);
-  if (cacheKey) idbSetText(cacheKey, JSON.stringify(pages)).catch(() => {});
+  })();
+
+  return ready;
 }
 
 // lineChunks: array of {start, end} word indices per 1/3 of visual line
@@ -1268,7 +1339,7 @@ function scrubPercentAt(clientX) {
 function scrubPreview(pct) {
   document.getElementById('scrub-fill').style.width = (pct * 100).toFixed(1) + '%';
   document.getElementById('scrub-thumb').style.left = (pct * 100).toFixed(1) + '%';
-  if (words.length && pages.length) {
+  if (words.length && pages.length && !paginating) {
     const p = pageOf(Math.round(pct * (words.length - 1)));
     document.getElementById('scrub-label').textContent = Math.round(pct * 100) + '% · ' + (p + 1) + ' / ' + pages.length + ' бет';
   }
@@ -1276,6 +1347,8 @@ function scrubPreview(pct) {
 function scrubCommit(pct) {
   if (!words.length || !pages.length) return;
   const targetWord = Math.max(0, Math.min(words.length - 1, Math.round(pct * (words.length - 1))));
+  // Still paginating in the background: can't jump past the pages computed so far.
+  if (paginating && targetWord >= pages[pages.length - 1].end) { updateUI(); return; }
   goPage(pageOf(targetWord));
 }
 document.getElementById('scrub-thumb').addEventListener('pointerdown', (e) => {
@@ -1350,7 +1423,7 @@ function updateUI() {
     document.getElementById('scrub-thumb').style.left = clamped.toFixed(1) + '%';
   }
   document.getElementById('scrub-label').textContent = pages.length
-    ? Math.round(clamped) + '% · ' + (currentPage + 1) + ' / ' + pages.length + ' бет · ~' + mins + ' мин'
+    ? Math.round(clamped) + '% · ' + (currentPage + 1) + ' / ' + (paginating ? '…' : pages.length) + ' бет · ~' + mins + ' мин'
     : '—';
 }
 
@@ -1665,8 +1738,10 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   document.getElementById('col1').innerHTML = '';
   document.getElementById('col2').innerHTML = '';
 
+  const resumeAt = (savedProgress && savedProgress.total === words.length && savedProgress.pos > 0) ? savedProgress.pos : 0;
+  document.getElementById('col1').innerHTML = '<div id="placeholder">Беттер дайындалуда…</div>';
   setTimeout(async () => {
-    await measureWordsPerPage();
+    await measureWordsPerPage(resumeAt);
     if (savedProgress && savedProgress.total === words.length && savedProgress.pos > 0) {
       pos = savedProgress.pos;
       setWpmSelect(savedProgress.wpm || 250);
@@ -3171,7 +3246,7 @@ document.getElementById('dash-upload-btn').addEventListener('click', () => {
 /* ── cloud book open/upload ── */
 async function openCloudBook(book) {
   showReaderView();
-  document.getElementById('placeholder') && (document.getElementById('col1').innerHTML = '<div id="placeholder">Жүктелуде...</div>');
+  document.getElementById('col1').innerHTML = '<div id="placeholder">Кітап жүктелуде…</div>';
   document.getElementById('col2').innerHTML = '';
   try {
     const prog = Array.isArray(book.reading_progress) ? book.reading_progress[0] : book.reading_progress;
