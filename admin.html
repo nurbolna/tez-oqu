@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Тез Оқу — Админ панель</title>
+<style>
+  :root {
+    --bg: #f7f3ea; --card: #fffdf8; --text: #2b2620; --muted: #8a8172; --border: #e4dccb;
+    --accent: #b5562b; --accent-soft: #f3e1d6; --ok: #3f7d4e; --bar: #c9885f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1d1a16; --card: #27231e; --text: #ece5d8; --muted: #9d9484; --border: #3a342c;
+            --accent: #e08a5c; --accent-soft: #3a2a20; --ok: #6fb382; --bar: #b5714a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Georgia, 'Times New Roman', serif; line-height: 1.45; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 16px; margin: 26px 0 10px; }
+  button { font: inherit; font-size: 14px; background: var(--card); color: var(--text); border: 1px solid var(--border);
+           border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .msg { max-width: 460px; margin: 18vh auto 0; text-align: center; background: var(--card); border: 1px solid var(--border);
+         border-radius: 12px; padding: 28px 22px; }
+  .msg a { color: var(--accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 24px; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .tablewrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; white-space: nowrap; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: normal; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr.user { cursor: pointer; }
+  tbody tr.user:hover { background: var(--accent-soft); }
+  td.num, th.num { text-align: right; }
+  .muted { color: var(--muted); }
+  .chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; }
+  .chart .col { flex: 1; background: var(--bar); border-radius: 3px 3px 0 0; min-height: 2px; position: relative; }
+  .chart .col.zero { background: var(--border); }
+  .axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .detail { margin-top: 10px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .detail h3 { font-size: 14px; margin: 0 0 6px; }
+  .detail table { font-size: 13px; }
+  .err { color: #c0392b; }
+  input[type=search] { font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+                       background: var(--card); color: var(--text); width: 100%; max-width: 280px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="msg">Жүктелуде…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://cvntpzojjszczjgpzkac.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_--SS0ekU58u-SwQJyfb3IA_HUTXxYf6';
+// Сессия index.html-мен бірдей localStorage-та сақталады (бір домен/қалта болса), бөлек кіру қажет емес.
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const app = document.getElementById('app');
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf = n => (n == null ? '—' : Number(n).toLocaleString('ru-RU'));
+const dt = s => s ? new Date(s).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+const d0 = s => s ? new Date(s).toLocaleDateString('ru-RU') : '—';
+const fmtMs = ms => (ms / 1000).toFixed(1) + ' с';
+const mb = b => b == null ? '—' : (b / 1048576).toFixed(1) + ' МБ';
+
+function message(html) { app.innerHTML = '<div class="msg">' + html + '</div>'; }
+
+let users = [], sortKey = 'last_sign_in_at', sortDir = -1, filter = '';
+
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return message('<p>Алдымен қосымшаға кіріңіз.</p><p><a href="index.html">Тез Оқу-ға өту →</a></p><p class="muted">Кіргеннен кейін бұл бетті жаңартыңыз.</p>');
+  const { data: ok, error } = await sb.rpc('is_admin');
+  if (error) return message('<p class="err">Қате: ' + esc(error.message) + '</p>');
+  if (!ok) return message('<p>Бұл бетке рұқсатыңыз жоқ.</p><p><a href="index.html">← Қосымшаға оралу</a></p>');
+  await load();
+}
+
+async function load() {
+  const [st, us, act] = await Promise.all([
+    sb.rpc('admin_stats'), sb.rpc('admin_users'), sb.rpc('admin_daily_activity', { days: 30 })
+  ]);
+  const fail = [st, us, act].find(r => r.error);
+  if (fail) return message('<p class="err">Қате: ' + esc(fail.error.message) + '</p>');
+  users = us.data;
+  render(st.data, act.data);
+}
+
+function render(s, act) {
+  const stats = [
+    ['Қолданушылар', s.users_total], ['Жаңа (7 күн)', s.users_new_7d],
+    ['Бүгін белсенді', s.active_today], ['Белсенді (7 күн)', s.active_7d],
+    ['Оқу сессиясы', s.sessions_total], ['Оқылған сөз', s.words_total],
+    ['Орташа WPM', s.avg_wpm], ['Кітап', s.books_total],
+    ['Шульте рекорд', s.schulte_plays], ['Көру өрісі әрекет', s.fov_results]
+  ];
+  const max = Math.max(1, ...act.map(a => Number(a.words)));
+  app.innerHTML = `
+    <header>
+      <h1>Тез Оқу — Админ панель</h1>
+      <div><button onclick="load()">Жаңарту</button> <button onclick="location.href='index.html'">← Қосымша</button></div>
+    </header>
+    <div class="grid">${stats.map(([l, v]) => `<div class="stat"><b>${nf(v)}</b><span>${l}</span></div>`).join('')}</div>
+
+    <h2>Соңғы 30 күндегі оқылған сөз</h2>
+    <div class="card">
+      <div class="chart">${act.map(a => {
+        const h = Math.round(Number(a.words) / max * 100);
+        return `<div class="col ${a.words == 0 ? 'zero' : ''}" style="height:${h}%" title="${d0(a.day)}: ${nf(a.words)} сөз, ${a.active_users} қолданушы"></div>`;
+      }).join('')}</div>
+      <div class="axis"><span>${d0(act[0]?.day)}</span><span>${d0(act[act.length - 1]?.day)}</span></div>
+    </div>
+
+    <h2>Қолданушылар</h2>
+    <p><input type="search" id="q" placeholder="Аты немесе телефон…" value="${esc(filter)}"></p>
+    <div class="tablewrap"><table>
+      <thead><tr>
+        <th data-k="full_name">Аты</th><th data-k="phone">Телефон</th>
+        <th data-k="created_at">Тіркелген</th><th data-k="last_sign_in_at">Соңғы кіру</th>
+        <th class="num" data-k="books_count">Кітап</th><th class="num" data-k="sessions_count">Сессия</th>
+        <th class="num" data-k="words_total">Сөз</th><th class="num" data-k="avg_wpm">WPM</th>
+        <th data-k="last_session">Соңғы оқу</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div id="detail"></div>`;
+  document.getElementById('q').oninput = e => { filter = e.target.value; rows(); };
+  document.querySelectorAll('th[data-k]').forEach(th => th.onclick = () => {
+    const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; rows();
+  });
+  rows();
+}
+
+function rows() {
+  const f = filter.trim().toLowerCase();
+  const list = users.filter(u => !f || (u.full_name || '').toLowerCase().includes(f) || (u.phone || '').includes(f))
+    .sort((a, b) => {
+      const x = a[sortKey], y = b[sortKey];
+      if (x == null) return 1; if (y == null) return -1;
+      return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
+    });
+  document.getElementById('rows').innerHTML = list.map(u => `
+    <tr class="user" data-id="${esc(u.id)}">
+      <td>${esc(u.full_name || '—')}</td><td>${esc(u.phone || '—')}</td>
+      <td>${dt(u.created_at)}</td><td>${dt(u.last_sign_in_at)}</td>
+      <td class="num">${nf(u.books_count)}</td><td class="num">${nf(u.sessions_count)}</td>
+      <td class="num">${nf(u.words_total)}</td><td class="num">${nf(u.avg_wpm)}</td>
+      <td>${d0(u.last_session)}</td>
+    </tr>`).join('') || '<tr><td colspan="9" class="muted">Ештеңе табылмады</td></tr>';
+  document.querySelectorAll('tr.user').forEach(tr => tr.onclick = () => showUser(tr.dataset.id));
+}
+
+async function showUser(id) {
+  const box = document.getElementById('detail');
+  box.innerHTML = '<p class="muted">Жүктелуде…</p>';
+  const { data: d, error } = await sb.rpc('admin_user_detail', { uid: id });
+  if (error) { box.innerHTML = '<p class="err">Қате: ' + esc(error.message) + '</p>'; return; }
+  const u = users.find(x => x.id === id);
+  const tbl = (head, body) => body.length
+    ? `<div class="tablewrap"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    : '<p class="muted">Деректер жоқ</p>';
+  const rn = d.remember_number;
+  box.innerHTML = `
+    <h2>${esc(u?.full_name || '—')} · ${esc(u?.phone || '')}</h2>
+    <div class="detail">
+      <div><h3>Кітаптар</h3>${tbl(['Файл', 'Сөз', 'Өлшем', 'Орны', 'WPM'],
+        d.books.map(b => [esc(b.filename), nf(b.total_words), mb(b.file_size), nf(b.position), nf(b.wpm)]))}</div>
+      <div><h3>Соңғы 30 сессия</h3>${tbl(['Күні', 'Сөз', 'WPM'],
+        d.sessions.map(s => [d0(s.session_date), nf(s.words_read), nf(s.wpm)]))}</div>
+      <div><h3>Шульте кестесі</h3>${tbl(['Өлшем', 'Белгі', 'Үздік'],
+        d.schulte.map(t => [esc(t.size + '×' + t.size), t.symbols === 'numbers' ? 'сандар' : 'әріптер', fmtMs(t.best_ms)]))}</div>
+      <div><h3>Санды есте сақта</h3>${rn
+        ? tbl(['Ұпай', 'Саны', 'Ең көп сан'], [[nf(rn.best_score), nf(rn.best_count), nf(rn.max_digits)]])
+        : '<p class="muted">Деректер жоқ</p>'}</div>
+      <div><h3>Көру өрісі</h3>${tbl(['Өріс', 'Нүкте', 'Дәлдік', 'Табылды'],
+        d.field_of_vision.map(f => [esc(f.field_size + '×' + f.field_size), f.points, f.best_accuracy + '%', f.best_found]))}</div>
+    </div>`;
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+init();
+</script>
+</body>
+</html>
