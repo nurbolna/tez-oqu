@@ -3819,7 +3819,22 @@ async function dashProfileRender() {
 let pfDeferredInstall = null;
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pfDeferredInstall = e; pfUpdateInstallCard(); });
 window.addEventListener('appinstalled', () => { pfDeferredInstall = null; pfUpdateInstallCard(); });
+function pfInstallHintText() {
+  const ua = navigator.userAgent;
+  const iOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(ua);
+  const firefox = /Firefox|FxiOS/.test(ua);
+  const chromium = /Chrome|CriOS|Edg|EdgiOS|SamsungBrowser/.test(ua);
+  if (/Telegram|Instagram|FBAN|FBAV|; wv\)/.test(ua)) return 'Қолданба ішіндегі браузерде орнату мүмкін емес. Сілтемені ' + (iOS ? 'Safari' : 'Chrome') + '-да ашыңыз.';
+  if (iOS) return 'Safari-де «Бөлісу» (⬆︎) түймесін басып, «Басты экранға қосу» таңдаңыз.';
+  if (android) return firefox ? 'Firefox: ⋮ мәзірі → «Орнату».' : 'Chrome: ⋮ мәзірі → «Қолданбаны орнату» (немесе «Басты экранға қосу»).';
+  if (firefox) return 'Firefox компьютерде қолданба орнатуды қолдамайды. Chrome немесе Edge-те ашыңыз.';
+  if (chromium) return 'Мекенжай жолының оң жағындағы орнату белгісін басыңыз немесе ⋮ мәзірі → «Қолданбаны орнату».';
+  if (/Macintosh/.test(ua)) return 'Safari: «Файл» мәзірі → «Dock-қа қосу». Немесе Chrome/Edge-те ашыңыз.';
+  return 'Браузер мәзірінен «Қолданбаны орнату» немесе «Басты экранға қосу» таңдаңыз.';
+}
 function pfUpdateInstallCard() {
+  document.getElementById('pf-install-hint').textContent = pfInstallHintText();
   const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   document.getElementById('pf-install-card').style.display = standalone ? 'none' : 'block';
   document.getElementById('pf-install-btn').style.display = pfDeferredInstall ? 'inline-flex' : 'none';
