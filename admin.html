@@ -97,11 +97,10 @@ function render(s, act) {
   const stats = [
     ['Қолданушылар', s.users_total], ['Жаңа (7 күн)', s.users_new_7d],
     ['Бүгін белсенді', s.active_today], ['Белсенді (7 күн)', s.active_7d],
-    ['Оқу сессиясы', s.sessions_total], ['Оқылған сөз', s.words_total],
-    ['Орташа WPM', s.avg_wpm], ['Кітап', s.books_total],
-    ['Шульте рекорд', s.schulte_plays], ['Көру өрісі әрекет', s.fov_results]
+    ['Оқылған бет', s.pages_total], ['Оқылған минут', s.minutes_total],
+    ['Орташа жылдамдық (сөз/мин)', s.avg_wpm]
   ];
-  const max = Math.max(1, ...act.map(a => Number(a.words)));
+  const max = Math.max(1, ...act.map(a => Number(a.minutes)));
   app.innerHTML = `
     <header>
       <h1>Тез Оқу — Админ панель</h1>
@@ -109,11 +108,11 @@ function render(s, act) {
     </header>
     <div class="grid">${stats.map(([l, v]) => `<div class="stat"><b>${nf(v)}</b><span>${l}</span></div>`).join('')}</div>
 
-    <h2>Соңғы 30 күндегі оқылған сөз</h2>
+    <h2>Соңғы 30 күндегі оқу уақыты (минут)</h2>
     <div class="card">
       <div class="chart">${act.map(a => {
-        const h = Math.round(Number(a.words) / max * 100);
-        return `<div class="col ${a.words == 0 ? 'zero' : ''}" style="height:${h}%" title="${d0(a.day)}: ${nf(a.words)} сөз, ${a.active_users} қолданушы"></div>`;
+        const h = Math.round(Number(a.minutes) / max * 100);
+        return `<div class="col ${a.minutes == 0 ? 'zero' : ''}" style="height:${h}%" title="${d0(a.day)}: ${nf(a.minutes)} мин, ${nf(a.pages)} бет, ${a.active_users} қолданушы"></div>`;
       }).join('')}</div>
       <div class="axis"><span>${d0(act[0]?.day)}</span><span>${d0(act[act.length - 1]?.day)}</span></div>
     </div>
@@ -124,8 +123,8 @@ function render(s, act) {
       <thead><tr>
         <th data-k="full_name">Аты</th><th data-k="phone">Телефон</th>
         <th data-k="created_at">Тіркелген</th><th data-k="last_sign_in_at">Соңғы кіру</th>
-        <th class="num" data-k="books_count">Кітап</th><th class="num" data-k="sessions_count">Сессия</th>
-        <th class="num" data-k="words_total">Сөз</th><th class="num" data-k="avg_wpm">WPM</th>
+        <th class="num" data-k="books_count">Кітап</th><th class="num" data-k="pages_total">Бет</th>
+        <th class="num" data-k="minutes_total">Минут</th><th class="num" data-k="avg_wpm">Сөз/мин</th>
         <th data-k="last_session">Соңғы оқу</th>
       </tr></thead>
       <tbody id="rows"></tbody>
@@ -150,11 +149,23 @@ function rows() {
     <tr class="user" data-id="${esc(u.id)}">
       <td>${esc(u.full_name || '—')}</td><td>${esc(u.phone || '—')}</td>
       <td>${dt(u.created_at)}</td><td>${dt(u.last_sign_in_at)}</td>
-      <td class="num">${nf(u.books_count)}</td><td class="num">${nf(u.sessions_count)}</td>
-      <td class="num">${nf(u.words_total)}</td><td class="num">${nf(u.avg_wpm)}</td>
+      <td class="num">${nf(u.books_count)}</td><td class="num">${nf(u.pages_total)}</td>
+      <td class="num">${nf(u.minutes_total)}</td><td class="num">${nf(u.avg_wpm)}</td>
       <td>${d0(u.last_session)}</td>
     </tr>`).join('') || '<tr><td colspan="9" class="muted">Ештеңе табылмады</td></tr>';
   document.querySelectorAll('tr.user').forEach(tr => tr.onclick = () => showUser(tr.dataset.id));
+}
+
+// Сессиялар қысқа (~20 с) бөліктер болғандықтан, күні бойынша біріктіреміз. Бет = сөз/300, минут = сөз/WPM.
+function byDay(sessions) {
+  const m = new Map();
+  sessions.forEach(s => {
+    const r = m.get(s.session_date) || { w: 0, min: 0 };
+    r.w += s.words_read || 0;
+    if (s.wpm > 0) r.min += (s.words_read || 0) / s.wpm;
+    m.set(s.session_date, r);
+  });
+  return [...m].map(([day, r]) => [d0(day), nf(Math.round(r.w / 300)), nf(Math.round(r.min))]);
 }
 
 async function showUser(id) {
@@ -172,8 +183,7 @@ async function showUser(id) {
     <div class="detail">
       <div><h3>Кітаптар</h3>${tbl(['Файл', 'Сөз', 'Өлшем', 'Орны', 'WPM'],
         d.books.map(b => [esc(b.filename), nf(b.total_words), mb(b.file_size), nf(b.position), nf(b.wpm)]))}</div>
-      <div><h3>Соңғы 30 сессия</h3>${tbl(['Күні', 'Сөз', 'WPM'],
-        d.sessions.map(s => [d0(s.session_date), nf(s.words_read), nf(s.wpm)]))}</div>
+      <div><h3>Күн бойынша оқу (соңғы сессиялар)</h3>${tbl(['Күні', 'Бет', 'Минут'], byDay(d.sessions))}</div>
       <div><h3>Шульте кестесі</h3>${tbl(['Өлшем', 'Белгі', 'Үздік'],
         d.schulte.map(t => [esc(t.size + '×' + t.size), t.symbols === 'numbers' ? 'сандар' : 'әріптер', fmtMs(t.best_ms)]))}</div>
       <div><h3>Санды есте сақта</h3>${rn
