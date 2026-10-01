@@ -770,6 +770,7 @@
       </div>
       <div id="dashboard-content">
         <div id="dash-greeting">Қайта келдіңіз!</div>
+        <div id="bl-banner"><div><b id="bl-banner-title">Өлшем тесті ашық</b><span>Мұғалім тестті ашты. Тыныш жерде, басқа қосымшаға өтпей орындаңыз.</span></div><button class="dash-btn-primary" onclick="blOpen()">Бастау</button></div>
         <div id="dash-stats-grid">
           <div class="dash-stat-tile">
             <div class="dash-stat-label">Бұл апта</div>
@@ -2654,6 +2655,8 @@ function hideAllViews() {
   document.getElementById('remember-number').style.display = 'none';
   const fovView = document.getElementById('field-of-vision');
   if (fovView) fovView.style.display = 'none';
+  const blView = document.getElementById('baseline');
+  if (blView) blView.style.display = 'none';
   if (typeof fovStop === 'function') fovStop();
 }
 
@@ -3582,6 +3585,7 @@ async function showDashboard() {
   document.getElementById('dashboard-loading').style.display = 'none';
   document.getElementById('dashboard-content').style.display = 'block';
   checkAdminButton();
+  try { if (typeof blRefresh === 'function') blRefresh(); } catch (e) {}
 }
 
 // Админ панель батырмасы: тек admins кестесіндегі қолданушыға көрінеді (is_admin RPC).
@@ -4445,6 +4449,188 @@ function fovRenderChart(values) {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
+</script>
+
+<!-- өлшем тесті (baseline): мұғалім ашады, оқушы сабақта тапсырады -->
+<style>
+  #baseline { display: none; height: 100vh; height: 100dvh; overflow-y: auto; background: #F7F7F5; color: #1F1E1B; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+  #baseline-top { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #fff; border-bottom: 1px solid #E4E3DD; font-weight: 500; }
+  #baseline-top i { font-size: 20px; cursor: pointer; color: #57564F; }
+  #baseline-body { max-width: 680px; margin: 0 auto; padding: 22px 18px 60px; }
+  #baseline-body h2 { font-size: 20px; font-weight: 500; margin: 0 0 10px; }
+  #baseline-body p { line-height: 1.6; margin: 0 0 12px; color: #57564F; }
+  .bl-text p { font-size: 18px; line-height: 1.75; color: #1F1E1B; margin: 0 0 14px; }
+  .bl-btn { font: inherit; font-size: 15px; padding: 10px 22px; border-radius: 10px; border: 0; background: #2A78D6; color: #fff; cursor: pointer; }
+  .bl-q { background: #fff; border: 1px solid #E4E3DD; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .bl-q b { display: block; font-weight: 500; margin-bottom: 8px; }
+  .bl-q label { display: block; padding: 7px 4px; cursor: pointer; line-height: 1.4; }
+  .bl-q input { margin-right: 8px; }
+  .bl-err { color: #B3261E; font-size: 14px; margin: 8px 0; min-height: 18px; }
+  .bl-res { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 18px; }
+  .bl-res div { background: #fff; border: 1px solid #E4E3DD; border-radius: 12px; padding: 12px; text-align: center; }
+  .bl-res b { display: block; font-size: 24px; font-weight: 500; }
+  .bl-res span { font-size: 12px; color: #8A8980; }
+  #bl-banner { display: none; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--d-accent-bg); border: 1px solid var(--d-accent); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; }
+  #bl-banner b { font-weight: 500; }
+  #bl-banner span { display: block; font-size: 13px; color: var(--d-text-2); margin-top: 2px; }
+</style>
+<div id="baseline">
+  <div id="baseline-top"><i class="ti ti-arrow-left" onclick="blBack()" aria-label="Артқа"></i><span id="baseline-title">Өлшем тесті</span></div>
+  <div id="baseline-body"></div>
+</div>
+<script>
+(function () {
+  const TEXTS = {"A": {"title": "Ұйқы және есте сақтау", "body": ["Ұйқы — адам ағзасының тек демалуы емес, ми үшін өте маңызды жұмыс кезеңі. Ұйқы кезінде ми күндіз алған ақпаратты реттеп, қажеттісін ұзақ мерзімді жадқа жібереді де, маңызсызын ұмытады. Ғалымдар бұл үдерісті жадтың бекуі деп атайды.", "Ұйқы бірнеше кезеңнен тұрады. Бір түн ішінде олар төрт-бес рет қайталанады, әрбір циклдің ұзақтығы шамамен тоқсан минут. Ұйқының бастапқы кезеңінде жүрек соғуы баяулайды, дене босаңсиды. Одан кейін терең ұйқы келеді. Дәл осы кезде дене тіндері қалпына келеді, ал ми фактілер мен оқиғаларды есте сақтауға дайындайды. Таңға жақын жылдам көз қозғалысы кезеңі ұзарады. Адам түс көретін осы кезең үйренген дағдыларды бекітуге көмектеседі.", "Бір тәжірибе ұйқының жадқа әсерін анық көрсетті. Студенттер екі топқа бөлінді: біріншісі жаңа сөздерді жаттап, түнде ұйықтады, екіншісі сол сөздерді жаттап, түні бойы ұйықтамады. Екі күннен кейін тексергенде, ұйықтаған топ сөздерді айтарлықтай көп еске түсірді. Ұйқысыз қалған топтың нәтижесі нашар болды және кейін қанша ұйықтаса да, жоғалған ақпаратты толық қайтара алмады.", "Ұйқының тағы бір пайдасы — ми өзін-өзі тазартады. Күндіз жұмыс істегенде жасушаларда қалдық заттар жиналады. Терең ұйқы кезінде ми тінінде сұйықтықтың қозғалысы күшейіп, бұл заттарды сыртқа шығарады. Сондықтан жақсы ұйықтаған адамның ертеңіне ойы анық, зейіні тұрақты болады. Қысқа күндізгі ұйқы, шамамен жиырма минут, күш қосады, бірақ ұзақ ұйықтап кетсе, түнгі ұйқыны бұзуы мүмкін.", "Сондықтан емтиханға түні бойы дайындалу тиімсіз. Ең жақсы жол — материалды кешке оқып, толық ұйықтау, ертеңіне қайталау. Жасөспірімдерге тәулігіне сегіз-он сағат ұйқы қажет, бірақ көпшілігі бұдан әлдеқайда аз ұйықтайды. Ұйқы жетіспесе, зейін төмендейді, көңіл-күй нашарлайды, жаңа тақырыпты меңгеру қиындайды.", "Ұйқы сапасын жақсартуға көмектесетін қарапайым ережелер бар. Күн сайын бір уақытта жатып, бір уақытта тұру керек. Ұйықтар алдында бір сағат бұрын телефон мен компьютерді қою қажет, себебі экран жарығы ұйқы гормонының бөлінуін кешіктіреді. Бөлме салқын әрі қараңғы болғаны жөн. Кешке кофе мен энергетикалық сусындарды ішпеген дұрыс."], "qs": [{"q": "Ұйқы кезінде ми қандай жұмыс атқарады?", "o": ["Күндізгі ақпараттың бәрін бірдей сақтайды", "Ақпаратты реттеп, қажеттісін ұзақ мерзімді жадқа жібереді", "Ақпаратты қабылдауды тоқтатып, толық өшеді", "Тек түс көрумен айналысады"], "a": 1}, {"q": "Бір ұйқы циклінің ұзақтығы шамамен қанша?", "o": ["Отыз минут", "Алпыс минут", "Тоқсан минут", "Жүз жиырма минут"], "a": 2}, {"q": "Тәжірибеде ұйықтамаған топтың нәтижесі қандай болды?", "o": ["Ұйықтаған топпен бірдей", "Одан жақсы", "Нашар, жоғалтқанын кейін толық қайтара алмады", "Нәтижесі тексерілмеді"], "a": 2}, {"q": "Мәтін бойынша емтиханға дайындалудың ең жақсы жолы қайсы?", "o": ["Түні бойы оқу", "Кешке оқып, толық ұйықтап, ертеңіне қайталау", "Тек таңертең бір рет оқу", "Материалды мүлде қайталамау"], "a": 1}, {"q": "Ұйықтар алдында телефонды қоюдың себебі не?", "o": ["Батареясы таусылып қалмауы үшін", "Экран жарығы ұйқы гормонының бөлінуін кешіктіреді", "Телефон сигналы жадқа әсер етеді", "Түс көру кезеңін қысқартады"], "a": 1}]}, "B": {"title": "Судың айналымы", "body": ["Жер бетіндегі су бір орында тұрмайды, ол үнемі қозғалыста болады. Судың мұхиттан атмосфераға, одан құрлыққа, содан кейін қайтадан мұхитқа оралуын су айналымы дейді. Бұл үдеріс миллиондаған жыл бойы тоқтамай жүріп келеді.", "Жер бетіндегі судың басым бөлігі, шамамен тоқсан жеті пайызы, мұхиттар мен теңіздерде тұзды күйде орналасқан. Тұщы судың үштен екісінен астамы мұздықтарда мұз болып жатыр, сондықтан адамға қолжетімді су өте аз. Су бір күйден екінші күйге ауысып отырады: сұйық, бу және қатты мұз. Атмосферадағы су буы ауада орта есеппен тоғыз-он күн тұрады, ал мұздықтағы су мыңдаған жыл бойы өзгермей жатуы мүмкін.", "Айналымның қозғаушы күші — Күн. Күн сәулесі мұхит, көл, өзен беттерін қыздырғанда, су булана бастайды. Су буы көрінбейді, ол жеңіл болғандықтан жоғары көтеріледі. Өсімдіктер де айналымға қатысады: олар топырақтан суды сіңіріп, жапырақтары арқылы буландырады. Бұл құбылыс транспирация деп аталады. Мысалы, үлкен ағаш бір күнде жүздеген литрге дейін суды ауаға жібере алады.", "Биікке көтерілген бу салқын ауаға тап болып, ұсақ тамшыларға айналады. Бұл құбылыс конденсация деп аталады. Тамшылар жиналып, бұлт түзеді. Бұлттағы тамшылар ірілеп, ауырлағанда жаңбыр, қар немесе бұршақ болып жерге түседі. Жауын-шашынның бір бөлігі тікелей мұхитқа құяды, ал енді бір бөлігі құрлыққа жауады.", "Құрлыққа түскен судың жолы әртүрлі. Бір бөлігі беткі ағыс болып, өзендерге құяды да, ақырында теңізге жетеді. Енді бір бөлігі топыраққа сіңіп, жер асты суларына қосылады. Жер асты сулары баяу қозғалады, кейде олардың бір тамшысы шығатын жеріне жеткенше ондаған, тіпті жүздеген жыл өтеді. Қыста қар мен мұз түрінде жиналған су көктемде еріп, өзендердің суын арттырады.", "Су айналымы тіршілік үшін аса маңызды. Ол тұщы суды үнемі жаңартып отырады: мұхит суы тұзды, бірақ буланғанда тұз қалып қояды, сондықтан жаңбыр суы тұщы болады. Сонымен қатар айналым климатты реттеп, жылуды Жердің бір бөлігінен екіншісіне тасымалдайды.", "Адам қызметі бұл үдеріске әсер етеді. Ормандарды кесу буланатын су мөлшерін азайтады, ал қала көшелеріндегі асфальт суды топыраққа жібермей, тез ағызып жібереді. Сондықтан су ресурстарын үнемдеу және ормандарды қорғау маңызды."], "qs": [{"q": "Су айналымының қозғаушы күші не?", "o": ["Жел", "Жер тартылысы", "Күн", "Мұхит толқыны"], "a": 2}, {"q": "Транспирация дегеніміз не?", "o": ["Бұлттың түзілуі", "Өсімдіктердің суды жапырақтары арқылы буландыруы", "Судың топыраққа сіңуі", "Қардың еруі"], "a": 1}, {"q": "Бұлттағы тамшылар жерге қашан түседі?", "o": ["Қызғанда", "Желмен қозғалғанда", "Ауа салқындағанда", "Ірілеп, ауырлағанда"], "a": 3}, {"q": "Жаңбыр суы неліктен тұщы болады?", "o": ["Бұлт суды тазартады", "Су буланғанда тұз қалып қояды", "Ол жер асты суынан келеді", "Оған қар қосылады"], "a": 1}, {"q": "Қала асфальты су айналымына қалай әсер етеді?", "o": ["Буланатын су мөлшерін көбейтеді", "Жаңбырдың жаууын тоқтатады", "Суды топыраққа жібермей, тез ағызып жібереді", "Жер асты суын тұщытады"], "a": 2}]}, "C": {"title": "Ұлы Жібек жолы", "body": ["Жібек жолы — біздің заманымыздан бұрынғы екінші ғасырдан бастап Қытайды Жерорта теңізі жағалауындағы елдермен байланыстырған сауда жолдарының жүйесі. Бұл бір жол емес, көптеген керуен жолдарының желісі болған. «Жібек жолы» деген атауды XIX ғасырда неміс ғалымы Фердинанд фон Рихтгофен ұсынған, өйткені бұл жолмен Еуропаға ең көп тасымалданған тауар қытай жібегі еді.", "Жібектен басқа керуендер фарфор, дәмдеуіштер, қағаз, асыл тастар, жылқы мен қару-жарақ тасыды. Сауда жолы Қазақстан жері арқылы да өтті. Оңтүстік Қазақстандағы Отырар, Сауран, Сайрам, Тараз, Түркістан қалалары керуендер аялдайтын ірі орталықтарға айналды. Бұл қалаларда базарлар, керуен-сарайлар, қолөнер шеберханалары болды. Көшпелі халық керуендерге жол көрсетіп, азық-түлік пен мал беріп отырды.", "Керуен-сарайлар бір күндік жол сайын орналасты. Онда саудагерлер түнеп, жануарларын тамақтандырып, жолға азық алатын. Керуен-сарайлар сауданың ғана емес, жаңалықтардың да тарайтын орны болды: мұнда әртүрлі елдердің адамдары кездесіп, бір-бірімен әңгімелесті. Саудагерлерге әртүрлі тілдерде келіссөз жүргізуге тура келді, сондықтан аудармашылардың еңбегі жоғары бағаланды.", "Жібек жолы тек тауар алмасудың жолы емес еді. Сауда керуендерімен бірге ғылым, өнер, діндер мен технологиялар да тарады. Мысалы, қағаз жасау тәсілі Қытайдан батысқа осы жолмен жетті. Ғалымдар мен саяхатшылар жаңа білім алып, оны өз елдеріне апарды. Жүздеген жыл бойы тілдер мен мәдениеттер бір-біріне ықпал етті.", "Керуенмен жүру қауіпті де қиын болды. Саудагерлер шөл мен таудан өтіп, қарақшылардан сақтануға мәжбүр болды. Сондықтан олар топ болып жүріп, түйе мен жылқы пайдаланды. Түйе шөлде бірнеше күн су ішпей жүре алады, сол себепті керуендердің басты көлігіне айналды. Бір тауар бір саудагердің қолымен соңына дейін жеткен жоқ: ол ондаған делдалдың қолынан өтіп, жолда бағасы өсе берді.", "XV ғасырдан бастап Жібек жолы бірте-бірте әлсірей бастады. Теңіз жолдары ашылып, кемелер тауарды арзан әрі көп мөлшерде жеткізді. Сонымен қатар ірі мемлекеттер арасындағы соғыстар құрлықтағы жолдарды қауіпті етті. Дегенмен Жібек жолының мұрасы бүгінге дейін сақталған: ескі қалалардың қирандылары мен тарихи ескерткіштер оның бай тарихын еске салады."], "qs": [{"q": "«Жібек жолы» атауын кім ұсынған?", "o": ["Марко Поло", "Әл-Фараби", "Ұлықбек", "Фердинанд фон Рихтгофен"], "a": 3}, {"q": "Мәтінде Қазақстандағы керуен орталығы ретінде қай қала аталған?", "o": ["Астана", "Қарағанды", "Отырар", "Ақтау"], "a": 2}, {"q": "Түйе неліктен керуендердің басты көлігіне айналды?", "o": ["Өте жылдам жүгіреді", "Шөлде бірнеше күн су ішпей жүре алады", "Қарақшылардан қорғайды", "Қар үстінде жақсы жүреді"], "a": 1}, {"q": "Қытайдан батысқа сауда жолымен қандай технология тарады?", "o": ["Кеме жасау", "Шыны құю", "Тас қалау", "Қағаз жасау"], "a": 3}, {"q": "Жібек жолы неліктен әлсірей бастады?", "o": ["Жібекке сұраныс жойылды", "Теңіз жолдары ашылып, кемелер тауарды арзан әрі көп жеткізді", "Керуен-сарайлар өртеніп кетті", "Қытай саудаға тыйым салды"], "a": 1}]}};
+  const ORDERS = [['A', 'B', 'C'], ['B', 'C', 'A'], ['C', 'A', 'B']];
+  const el = id => document.getElementById(id);
+  const body = () => el('baseline-body');
+  const st = { phase: null, testNo: 0, textId: null, t0: 0, interrupted: false, words: 0, seconds: 0, answers: [], result: null, saved: false };
+
+  function orderFor(uid) { let h = 0; for (const c of String(uid)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return ORDERS[h % 3]; }
+  function countWords(t) { return t.body.join(' ').split(/\s+/).filter(Boolean).length; }
+  function mk(tag, props, html) { const e = document.createElement(tag); if (props) Object.assign(e, props); if (html != null) e.innerHTML = html; return e; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  // Қазір ашық тест нөмірі мен оқушының қайсысын тапсырып қойғанын сұрайды
+  async function status() {
+    const [s, r] = await Promise.all([
+      sb.from('baseline_settings').select('open_test').eq('id', 1).maybeSingle(),
+      sb.from('baseline_tests').select('test_no').eq('user_id', authUser.id)
+    ]);
+    if (s.error || r.error) throw (s.error || r.error);
+    const open = s.data ? s.data.open_test : 0;
+    const done = (r.data || []).map(x => x.test_no);
+    return { open, done, available: open > 0 && !done.includes(open) };
+  }
+
+  window.blRefresh = async function () {
+    const b = el('bl-banner');
+    if (!b) return;
+    b.style.display = 'none';
+    try {
+      if (!sb || !authUser) return;
+      const s = await status();
+      if (!s.available) return;
+      el('bl-banner-title').textContent = 'Өлшем тесті ' + s.open + '/3 ашық';
+      b.style.display = 'flex';
+    } catch (e) {}
+  };
+
+  window.blBack = function () {
+    if (st.phase === 'read' && !confirm('Тестті тоқтатсаңыз, нәтиже сақталмайды. Шығасыз ба?')) return;
+    st.phase = null;
+    showDashboard();
+  };
+
+  window.blOpen = async function () {
+    hideAllViews();
+    el('baseline').style.display = 'block';
+    el('baseline-title').textContent = 'Өлшем тесті';
+    body().innerHTML = '<p>Жүктелуде…</p>';
+    st.phase = 'loading';
+    try {
+      const s = await status();
+      if (!s.available) {
+        body().innerHTML = s.open > 0
+          ? '<h2>Бұл тестті тапсырып қойдыңыз</h2><p>Келесі тестті мұғалім ашады, дашбордта хабарлама шығады.</p>'
+          : '<h2>Қазір тест жабық</h2><p>Мұғалім тестті ашқанда, дашбордта хабарлама шығады.</p>';
+        const b = mk('button', { className: 'bl-btn', textContent: 'Дашбордқа оралу' }); b.onclick = () => { st.phase = null; showDashboard(); }; body().appendChild(b);
+        st.phase = null; return;
+      }
+      st.testNo = s.open; st.textId = orderFor(authUser.id)[s.open - 1]; st.saved = false; st.result = null;
+      intro();
+    } catch (e) {
+      body().innerHTML = '<h2>Қате</h2><p>Тест ашылмады. Интернетті тексеріп, қайталап көріңіз.</p>';
+      st.phase = null;
+    }
+  };
+
+  function intro() {
+    st.phase = 'intro';
+    el('baseline-title').textContent = 'Өлшем тесті ' + st.testNo + '/3';
+    body().innerHTML = '<h2>Оқу жылдамдығын өлшейміз</h2>' +
+      '<p>1. Қысқа мәтін шығады. Оны <b>әдеттегідей, түсініп</b> оқыңыз: асықпаңыз, бірақ тоқтап қалмаңыз.</p>' +
+      '<p>2. Оқып болғанда «Оқып болдым» батырмасын басыңыз. Мәтін жасырылады.</p>' +
+      '<p>3. Мәтін бойынша 5 сұраққа жауап бересіз. Мәтінге қайта қарай алмайсыз.</p>' +
+      '<p>Тестті тыныш жерде, басқа қосымшаға өтпей орындаңыз. Бастағаннан кейін тоқтатуға болмайды.</p>';
+    const b = mk('button', { className: 'bl-btn', textContent: 'Бастау' }); b.onclick = startRead; body().appendChild(b);
+  }
+
+  function startRead() {
+    const t = TEXTS[st.textId];
+    st.phase = 'read'; st.interrupted = false; st.words = countWords(t);
+    body().innerHTML = '';
+    const wrap = mk('div', { className: 'bl-text' });
+    wrap.appendChild(mk('h2', null, esc(t.title)));
+    t.body.forEach(p => wrap.appendChild(mk('p', null, esc(p))));
+    body().appendChild(wrap);
+    const b = mk('button', { className: 'bl-btn', textContent: 'Оқып болдым' }); b.onclick = finishRead; body().appendChild(b);
+    window.scrollTo(0, 0); el('baseline').scrollTop = 0;
+    st.t0 = performance.now();
+  }
+
+  function finishRead() {
+    st.seconds = Math.max(1, Math.round((performance.now() - st.t0) / 100) / 10);
+    st.phase = 'quiz';
+    const t = TEXTS[st.textId];
+    st.answers = new Array(t.qs.length).fill(-1);
+    body().innerHTML = '<h2>Сұрақтар</h2><p>Мәтін жасырылды. Әр сұраққа бір жауап таңдаңыз.</p>';
+    t.qs.forEach((q, i) => {
+      const box = mk('div', { className: 'bl-q' });
+      box.appendChild(mk('b', null, (i + 1) + '. ' + esc(q.q)));
+      q.o.forEach((o, j) => {
+        const lab = mk('label', null, '<input type="radio" name="blq' + i + '"> ' + esc(o));
+        lab.querySelector('input').onchange = () => { st.answers[i] = j; el('bl-err').textContent = ''; };
+        box.appendChild(lab);
+      });
+      body().appendChild(box);
+    });
+    body().appendChild(mk('div', { className: 'bl-err', id: 'bl-err' }));
+    const b = mk('button', { className: 'bl-btn', textContent: 'Жауаптарды жіберу' }); b.onclick = submit; body().appendChild(b);
+    el('baseline').scrollTop = 0;
+  }
+
+  async function submit() {
+    if (st.answers.some(a => a < 0)) { el('bl-err').textContent = 'Барлық сұраққа жауап беріңіз.'; return; }
+    const t = TEXTS[st.textId];
+    const correct = t.qs.reduce((n, q, i) => n + (st.answers[i] === q.a ? 1 : 0), 0);
+    const wpm = Math.round(st.words / (st.seconds / 60));
+    st.result = { wpm, correct, total: t.qs.length };
+    st.phase = 'saving';
+    await save();
+  }
+
+  async function save() {
+    body().innerHTML = '<p>Сақталуда…</p>';
+    const r = st.result;
+    let err = null;
+    if (!st.saved) {
+      try {
+        const { error } = await sb.from('baseline_tests').insert({
+          user_id: authUser.id, test_no: st.testNo, text_id: st.textId, words: st.words,
+          seconds: st.seconds, wpm: r.wpm, correct: r.correct, total: r.total, interrupted: st.interrupted
+        });
+        if (error) err = error;
+      } catch (e) { err = e; }
+    }
+    if (err && err.code !== '23505') {
+      body().innerHTML = '<h2>Нәтиже сақталмады</h2><p>Интернетті тексеріп, қайталап көріңіз. Нәтижеңіз жоғалған жоқ.</p>';
+      const b = mk('button', { className: 'bl-btn', textContent: 'Қайта жіберу' }); b.onclick = save; body().appendChild(b);
+      return;
+    }
+    st.saved = true; st.phase = 'done';
+    const pct = Math.round(100 * r.correct / r.total), thr = Math.round(r.wpm * r.correct / r.total);
+    body().innerHTML = '<h2>Тест аяқталды</h2><div class="bl-res">' +
+      '<div><b>' + r.wpm + '</b><span>сөз/мин</span></div>' +
+      '<div><b>' + pct + '%</b><span>түсіну (' + r.correct + '/' + r.total + ')</span></div>' +
+      '<div><b>' + thr + '</b><span>қорытынды</span></div></div>' +
+      '<p>Қорытынды = жылдамдық × түсіну. Келесі тестті мұғалім ашады.</p>';
+    const b = mk('button', { className: 'bl-btn', textContent: 'Дашбордқа оралу' }); b.onclick = () => { st.phase = null; showDashboard(); }; body().appendChild(b);
+  }
+
+  // Оқу кезінде басқа қосымшаға/табқа өтсе, нәтиже күдікті деп белгіленеді (админ панельде «!»)
+  document.addEventListener('visibilitychange', () => { if (st.phase === 'read' && document.visibilityState === 'hidden') st.interrupted = true; });
+})();
 </script>
 
 <!-- feedback: жаттығудан / оқудан кейінгі пікір карточкасы -->

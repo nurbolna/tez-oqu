@@ -135,6 +135,8 @@ function render(s, act) {
       <div class="axis"><span>${dday(act[0]?.day)}</span><span>${dday(act[act.length - 1]?.day)}</span></div>
     </div>
 
+    <div id="bl-box"></div>
+
     <div id="fb-box"></div>
 
     <div class="chart-head">
@@ -159,6 +161,7 @@ function render(s, act) {
     const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; rows();
   });
   rows();
+  loadBaseline();
   loadFeedback();
 }
 
@@ -228,6 +231,76 @@ async function showUser(id) {
         d.field_of_vision.map(f => [esc(f.field_size + '×' + f.field_size), f.points, f.best_accuracy + '%', f.best_found]))}</div>
     </div>`;
   box.scrollIntoView({ behavior: 'smooth' });
+}
+
+let blRows = [], blOpenNo = 0;
+
+async function loadBaseline() {
+  const box = document.getElementById('bl-box');
+  if (!box) return;
+  box.innerHTML = '<h2>Өлшем тесті</h2><p class="muted">Жүктелуде…</p>';
+  const [st, r] = await Promise.all([
+    sb.from('baseline_settings').select('open_test').eq('id', 1).maybeSingle(),
+    sb.rpc('admin_baseline')
+  ]);
+  const err = st.error || r.error;
+  if (err) {
+    box.innerHTML = '<h2>Өлшем тесті</h2><p class="muted">Өлшем тесті әлі қосылмаған: baseline.sql дерекқорда іске қосылмаған болуы мүмкін. (' + esc(err.message) + ')</p>';
+    return;
+  }
+  blOpenNo = st.data ? st.data.open_test : 0;
+  blRows = r.data;
+  renderBaseline();
+}
+
+async function setBlOpen(n) {
+  const { error } = await sb.rpc('admin_set_baseline_open', { n });
+  if (error) { alert('Қате: ' + error.message); return; }
+  blOpenNo = n;
+  renderBaseline();
+}
+
+function renderBaseline() {
+  const box = document.getElementById('bl-box');
+  if (!box) return;
+  const byUser = new Map();
+  blRows.forEach(x => {
+    if (!byUser.has(x.user_id)) byUser.set(x.user_id, { name: x.full_name || x.phone || '—', t: {} });
+    byUser.get(x.user_id).t[x.test_no] = x;
+  });
+  const flag = x => x.interrupted || x.wpm > 700;
+  const cell = x => x
+    ? `<span title="Мәтін ${esc(x.text_id)}, ${x.words} сөз, ${x.seconds} с">${nf(x.wpm)} · ${x.comprehension}% · <b>${nf(x.throughput)}</b>${flag(x) ? ' <span class="err" title="Күдікті: басқа табқа өткен немесе тым жылдам">!</span>' : ''}</span>`
+    : '<span class="muted">—</span>';
+  const growth = u => {
+    const ks = [1, 2, 3].filter(k => u.t[k]);
+    if (ks.length < 2) return null;
+    const a = u.t[ks[0]].throughput, b = u.t[ks[ks.length - 1]].throughput;
+    return a > 0 ? Math.round((b / a - 1) * 100) : null;
+  };
+  const users2 = [...byUser.values()].sort((a, b) => a.name.localeCompare(b.name, 'kk'));
+  const gfmt = g => g == null ? '<span class="muted">—</span>' : `<b style="color:${g >= 0 ? 'var(--ok)' : '#c0392b'}">${g > 0 ? '+' : ''}${g}%</b>`;
+  const avg = (arr, f) => arr.length ? Math.round(arr.reduce((t, x) => t + f(x), 0) / arr.length) : null;
+  const avgCell = k => {
+    const r = blRows.filter(x => x.test_no === k && !flag(x));
+    return r.length ? `${nf(avg(r, x => x.wpm))} · ${avg(r, x => x.comprehension)}% · <b>${nf(avg(r, x => x.throughput))}</b>` : '<span class="muted">—</span>';
+  };
+  const clean = u => ![1, 2, 3].some(k => u.t[k] && flag(u.t[k]));
+  const gs = users2.filter(clean).map(growth).filter(g => g != null);
+  const done = k => blRows.filter(x => x.test_no === k).length;
+  box.innerHTML = `
+    <div class="chart-head">
+      <h2 style="margin:26px 0 0">Өлшем тесті</h2>
+      <div class="periods"><span class="muted" style="font-size:14px">Ашық тест:</span>
+        ${[[0, 'Жабық'], [1, 'Тест 1'], [2, 'Тест 2'], [3, 'Тест 3']].map(([n, l]) => `<button class="${n === blOpenNo ? 'on' : ''}" onclick="setBlOpen(${n})">${l}</button>`).join('')}</div>
+    </div>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">Тестті сабақта барлық оқушы бірге тапсырады: сабақ басында ашып, біткен соң «Жабық» басыңыз. Орындады: 1-тест ${done(1)}, 2-тест ${done(2)}, 3-тест ${done(3)}. Ұяшық: сөз/мин · түсіну % · <b>қорытынды</b> (сөз/мин × түсіну). «!» — күдікті нәтиже, ол сынып орташасына кірмейді.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Оқушы</th><th>1-тест</th><th>2-тест</th><th>3-тест</th><th class="num">Өсім</th></tr></thead>
+      <tbody>${users2.map(u => `<tr><td>${esc(u.name)}</td><td>${cell(u.t[1])}</td><td>${cell(u.t[2])}</td><td>${cell(u.t[3])}</td><td class="num">${gfmt(growth(u))}</td></tr>`).join('')
+        || '<tr><td colspan="5" class="muted">Әзірге нәтиже жоқ</td></tr>'}
+      ${users2.length ? `<tr style="background:var(--accent-soft)"><td><b>Сынып орташасы</b></td><td>${avgCell(1)}</td><td>${avgCell(2)}</td><td>${avgCell(3)}</td><td class="num">${gfmt(gs.length ? Math.round(gs.reduce((a, b) => a + b, 0) / gs.length) : null)}</td></tr>` : ''}
+      </tbody></table></div>`;
 }
 
 const SRC = { schulte: 'Шульте кестесі', remember_number: 'Санды есте сақта', field_of_vision: 'Көру өрісі', reading: 'Кітап оқу' };
