@@ -3616,6 +3616,7 @@ async function signInPassword() {
 
 async function signOut() {
   if (sb) { try { await sb.auth.signOut(); } catch(e) {} }
+  try { if (authUser) localStorage.removeItem('sr5_dash_cache_' + authUser.id); } catch(e) {}
   authUser = null;
   currentBookId = null;
   updateAuthChip();
@@ -3671,18 +3672,36 @@ async function initAuth() {
 }
 
 /* ── dashboard ── */
+let dashRunId = 0;
 async function showDashboard() {
   hideAllViews();
   document.getElementById('dashboard').classList.remove('show-profile');
   dashNavSetActive('home');
   document.getElementById('dashboard').style.display = 'block';
-  document.getElementById('dashboard-loading').style.display = 'block';
-  document.getElementById('dashboard-content').style.display = 'none';
+  // Stale-while-revalidate: алдыңғы деректі бірден көрсетіп, фонда жаңартамыз
+  // (Supabase RTT ≈ 400 мс — әйтпесе әр қайтуда спиннер шығады).
+  const cacheKey = 'sr5_dash_cache_' + (authUser && authUser.id);
+  const runId = ++dashRunId;
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch (e) {}
+  const hasCache = !!(cached && cached.stats && Array.isArray(cached.books));
+  document.getElementById('dashboard-loading').style.display = hasCache ? 'none' : 'block';
+  document.getElementById('dashboard-content').style.display = hasCache ? 'block' : 'none';
+  if (hasCache) {
+    try {
+      renderStats(cached.stats);
+      renderWeekChart(cached.stats.daily);
+      renderBooksGrid(cached.books);
+      renderPrivateBooksList();
+    } catch (e) {}
+  }
   const displayName = authUser.user_metadata && authUser.user_metadata.full_name || '';
   document.getElementById('dash-phone').textContent = displayName || (authUser.phone ? formatPhoneShort(authUser.phone) : '');
   document.getElementById('dash-greeting').textContent = displayName ? ('Қош келдіңіз, ' + displayName + '!') : 'Қайта келдіңіз!';
 
   const [statsData, booksData] = await Promise.all([loadStats(), loadCloudBooks()]);
+  if (runId !== dashRunId) return; // жаңа showDashboard() шақырылды — ескі жауап қажет емес
+  try { localStorage.setItem(cacheKey, JSON.stringify({ stats: statsData, books: booksData })); } catch (e) {}
   renderStats(statsData);
   renderWeekChart(statsData.daily);
   renderBooksGrid(booksData);
