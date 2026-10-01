@@ -53,6 +53,12 @@
   .detail h3 { font-size: 14px; margin: 0 0 6px; }
   .detail table { font-size: 13px; }
   .err { color: #c0392b; }
+  .mini { padding: 0 7px; font-size: 13px; line-height: 20px; margin-left: 6px; }
+  .atag { color: var(--muted); font-size: 12px; }
+  button.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .inrow { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 14px; }
+  .inrow:last-of-type { border-bottom: 0; }
+  .inrow:hover { background: var(--accent-soft); }
   .fbrow { padding: 10px 14px; border-bottom: 1px solid var(--border); }
   .fbrow:last-child { border-bottom: 0; }
   .fbmood { font-weight: bold; }
@@ -86,6 +92,7 @@ const mb = b => b == null ? '—' : (b / 1048576).toFixed(1) + ' МБ';
 function message(html) { app.innerHTML = '<div class="msg">' + html + '</div>'; }
 
 let today = '', period = '7d', users = [], sortKey = 'last_sign_in_at', sortDir = -1, filter = '';
+let lastAct = [], inactiveOpen = false, inactiveAll = false;
 
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
@@ -114,6 +121,7 @@ function render(s, act) {
     ['Оқылған бет', s.pages_total], ['Оқылған минут', s.minutes_total],
     ['Орташа жылдамдық (сөз/мин)', s.avg_wpm]
   ];
+  lastAct = act;
   const max = Math.max(1, ...act.map(a => Number(a.minutes)));
   const sumMin = Math.round(act.reduce((t, a) => t + Number(a.minutes_exact), 0)), sumPages = Math.round(act.reduce((t, a) => t + Number(a.pages_exact), 0));
   app.innerHTML = `
@@ -122,10 +130,14 @@ function render(s, act) {
       <div><button onclick="load()">Жаңарту</button> <button onclick="location.href='index.html'">← Қосымша</button></div>
     </header>
     <div class="grid">${stats.map(([l, v]) => `<div class="stat"><b>${nf(v)}</b><span>${l}</span></div>`).join('')}</div>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">Админ аккаунттар статистикаға, орташаға және «Оқымағандар» тізіміне кірмейді.</p>
 
     <div class="chart-head">
       <h2 style="margin:26px 0 0">Оқу уақыты, минут</h2>
-      <div class="muted" style="font-size:14px">Барлығы: <b style="color:var(--text)">${nf(sumMin)} минут · ${nf(sumPages)} бет</b> · ${dday(act[0]?.day)} – ${dday(act[act.length - 1]?.day)}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="muted" style="font-size:14px">Барлығы: <b style="color:var(--text)">${nf(sumMin)} минут · ${nf(sumPages)} бет</b> · ${dday(act[0]?.day)} – ${dday(act[act.length - 1]?.day)}</div>
+        <button onclick="exportDaily()">CSV ↓</button>
+      </div>
     </div>
     <div class="card">
       <div class="chart">${act.map(a => {
@@ -135,16 +147,19 @@ function render(s, act) {
       <div class="axis"><span>${dday(act[0]?.day)}</span><span>${dday(act[act.length - 1]?.day)}</span></div>
     </div>
 
+    <div id="ct-box"></div>
+
     <div id="bl-box"></div>
 
     <div id="fb-box"></div>
 
     <div class="chart-head">
       <h2 style="margin:26px 0 0">Қолданушылар</h2>
-      <div class="periods"><span class="muted" style="font-size:14px">Кезең:</span>${PERIODS.map(([k, l]) => `<button data-p="${k}" class="${k === period ? 'on' : ''}" onclick="setPeriod('${k}')">${l}</button>`).join('')}</div>
+      <div class="periods" id="users-periods"><span class="muted" style="font-size:14px">Кезең:</span>${PERIODS.map(([k, l]) => `<button data-p="${k}" class="${k === period ? 'on' : ''}" onclick="setPeriod('${k}')">${l}</button>`).join('')}<button onclick="exportUsers()">CSV ↓</button></div>
     </div>
     <p class="muted" id="period-label" style="font-size:14px;margin:0 0 8px">${periodLabel()}. Бет, минут және жылдамдық осы кезеңге есептелген.</p>
-    <p><input type="search" id="q" placeholder="Аты немесе телефон…" value="${esc(filter)}"></p>
+    <p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="search" id="q" placeholder="Аты немесе телефон…" value="${esc(filter)}"><button id="inactive-btn" onclick="toggleInactive()">Оқымағандар</button></p>
+    <div id="inactive-box"></div>
     <div class="tablewrap"><table>
       <thead><tr>
         <th data-k="full_name">Аты</th><th data-k="phone">Телефон</th>
@@ -161,6 +176,8 @@ function render(s, act) {
     const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; rows();
   });
   rows();
+  updateInactive();
+  loadContest();
   loadBaseline();
   loadFeedback();
 }
@@ -177,7 +194,7 @@ let periodReq = 0;
 async function setPeriod(k) {
   period = k;
   const req = ++periodReq;
-  document.querySelectorAll('.periods button').forEach(b => b.classList.toggle('on', b.dataset.p === k));
+  document.querySelectorAll('#users-periods button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === k));
   document.getElementById('period-label').textContent = periodLabel() + '. Бет, минут және жылдамдық осы кезеңге есептелген.';
   document.getElementById('rows').innerHTML = '<tr><td colspan="9" class="muted">Жүктелуде…</td></tr>';
   const { data, error } = await sb.rpc('admin_users', { period: k });
@@ -185,6 +202,7 @@ async function setPeriod(k) {
   if (error) { document.getElementById('rows').innerHTML = '<tr><td colspan="9" class="err">Қате: ' + esc(error.message) + '</td></tr>'; return; }
   users = data;
   rows();
+  updateInactive();
 }
 
 function rows() {
@@ -197,7 +215,7 @@ function rows() {
     });
   document.getElementById('rows').innerHTML = list.map(u => `
     <tr class="user" data-id="${esc(u.id)}">
-      <td>${esc(u.full_name || '—')}</td><td>${esc(u.phone || '—')}</td>
+      <td>${esc(u.full_name || '—')}${u.is_admin ? ' <span class="atag">· админ</span>' : ''}</td><td>${esc(u.phone || '—')}</td>
       <td>${dt(u.created_at)}</td><td>${dt(u.last_sign_in_at)}</td>
       <td class="num">${nf(u.books_count)}</td><td class="num">${nf(u.pages_total)}</td>
       <td class="num">${nf(u.minutes_total)}</td><td class="num">${nf(u.avg_wpm)}</td>
@@ -233,6 +251,88 @@ async function showUser(id) {
   box.scrollIntoView({ behavior: 'smooth' });
 }
 
+// ── Челлендж рейтингі (2 апталық сынақ). Дерек: admin_contest (contest.sql) + admin_baseline (тесттер).
+// Ұпай = 60% тұрақтылық + 40% өсім. Тұрақтылық: белсенді күн ÷ (күн саны − демалыс күндері).
+// Өсім: бірінші және соңғы тесттің «қорытынды» (WPM × түсіну) айырмасы, 0…100% аралығында қиылады.
+const CONTEST = { start: '2026-10-03', days: 14, passDays: 2, minMinutes: 9, wCons: 0.6, wGrow: 0.4 };
+CONTEST.end = addDays(CONTEST.start, CONTEST.days - 1);
+let ctRows = [], ctRanked = [];
+
+async function loadContest() {
+  const box = document.getElementById('ct-box');
+  if (!box) return;
+  box.innerHTML = '<h2>Челлендж рейтингі</h2><p class="muted">Жүктелуде…</p>';
+  const [c, b] = await Promise.all([
+    sb.rpc('admin_contest', { start_day: CONTEST.start, end_day: CONTEST.end, min_minutes: CONTEST.minMinutes }),
+    sb.rpc('admin_baseline')
+  ]);
+  if (c.error) {
+    box.innerHTML = '<h2>Челлендж рейтингі</h2><p class="muted">Рейтинг әлі қосылмаған: contest.sql дерекқорда іске қосылмаған болуы мүмкін. (' + esc(c.error.message) + ')</p>';
+    return;
+  }
+  const tests = new Map();
+  (b.data || []).forEach(x => {
+    if (!tests.has(x.user_id)) tests.set(x.user_id, {});
+    tests.get(x.user_id)[x.test_no] = x;
+  });
+  const needDays = Math.max(1, CONTEST.days - CONTEST.passDays);
+  ctRanked = c.data.filter(u => !u.is_admin).map(u => {
+    const t = tests.get(u.user_id) || {};
+    const ks = [1, 2, 3].filter(k => t[k]);
+    const flagged = ks.some(k => t[k].interrupted || t[k].wpm > 700);
+    let growth = null;
+    if (ks.length >= 2 && !flagged) {
+      const a = t[ks[0]].throughput, z = t[ks[ks.length - 1]].throughput;
+      growth = a > 0 ? Math.round((z / a - 1) * 100) : null;
+    }
+    const days = Number(u.active_days);
+    const cons = Math.round(Math.min(days, needDays) / needDays * 100);
+    const grow = growth == null ? 0 : Math.min(Math.max(growth, 0), 100);
+    return {
+      name: u.full_name || u.phone || '—', phone: u.phone || '', days, minutes: Number(u.total_minutes),
+      growth, flagged, nTests: ks.length, cons, grow,
+      total: Math.round(CONTEST.wCons * cons + CONTEST.wGrow * grow)
+    };
+  });
+  renderContest();
+}
+
+function renderContest() {
+  const box = document.getElementById('ct-box');
+  if (!box) return;
+  const dayNo = today ? Math.min(CONTEST.days, Math.max(0, Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(CONTEST.start + 'T00:00:00Z')) / 864e5) + 1)) : 0;
+  const state = dayNo === 0 ? 'Старт: ' + dday(CONTEST.start) : dayNo >= CONTEST.days && today > CONTEST.end ? 'Аяқталды' : dayNo + '-күн / ' + CONTEST.days;
+  const gfmt = g => g == null ? '<span class="muted">—</span>' : `<b style="color:${g >= 0 ? 'var(--ok)' : '#c0392b'}">${g > 0 ? '+' : ''}${g}%</b>`;
+  const byTotal = [...ctRanked].sort((a, b) => b.total - a.total || b.minutes - a.minutes || a.name.localeCompare(b.name, 'kk'));
+  const byCons = [...ctRanked].sort((a, b) => b.days - a.days || b.minutes - a.minutes);
+  const byGrow = ctRanked.filter(u => u.growth != null).sort((a, b) => b.growth - a.growth);
+  const top = (title, list, f) => `<div class="card"><h3 style="margin:0 0 6px;font-size:14px">${title}</h3>${
+    list.slice(0, 3).map((u, i) => `<div style="display:flex;justify-content:space-between;gap:8px;font-size:14px"><span>${['🥇', '🥈', '🥉'][i]} ${esc(u.name)}</span><b>${f(u)}</b></div>`).join('')
+    || '<span class="muted" style="font-size:14px">Әзірге деректер жоқ</span>'}</div>`;
+  box.innerHTML = `
+    <div class="chart-head">
+      <h2 style="margin:26px 0 0">Челлендж рейтингі <span class="muted" style="font-size:14px">· ${esc(state)}</span></h2>
+      <div class="periods"><button onclick="loadContest()">Жаңарту</button><button onclick="exportContest()">CSV ↓</button></div>
+    </div>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">${dday(CONTEST.start)} – ${dday(CONTEST.end)}. Белсенді күн: күніне ≥${CONTEST.minMinutes} минут ▶ оқу. Тұрақтылық ${CONTEST.days - CONTEST.passDays} күннен есептеледі (${CONTEST.passDays} демалыс күні рұқсат). Өсім: бірінші және соңғы тест қорытындысының айырмасы (0…100%). Жалпы ұпай = ${Math.round(CONTEST.wCons * 100)}% тұрақтылық + ${Math.round(CONTEST.wGrow * 100)}% өсім. «!» — күдікті тест, өсімге кірмейді.</p>
+    <div class="detail" style="margin:0 0 12px">
+      ${top('⭐ Жалпы чемпион', byTotal, u => u.total + ' ұпай')}
+      ${top('🏆 Ең тұрақты', byCons, u => u.days + ' күн')}
+      ${top('🚀 Ең үлкен өсім', byGrow, u => (u.growth > 0 ? '+' : '') + u.growth + '%')}
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>#</th><th>Оқушы</th><th class="num">Белсенді күн</th><th class="num">Минут</th><th class="num">Өсім</th><th class="num">Тұрақтылық</th><th class="num">Өсім ұпайы</th><th class="num">Жалпы</th></tr></thead>
+      <tbody>${byTotal.map((u, i) => `<tr><td class="muted">${i + 1}</td><td>${esc(u.name)}</td><td class="num">${u.days} / ${CONTEST.days}</td><td class="num">${nf(Math.round(u.minutes))}</td><td class="num">${gfmt(u.growth)}${u.flagged ? ' <span class="err" title="Күдікті тест">!</span>' : ''}</td><td class="num">${u.cons}</td><td class="num">${u.grow}</td><td class="num"><b>${u.total}</b></td></tr>`).join('')
+        || '<tr><td colspan="8" class="muted">Әзірге оқушы жоқ</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+function exportContest() {
+  downloadCsv('contest', [['Аты', 'Телефон', 'Белсенді күн', 'Минут', 'Өсім %', 'Тест саны', 'Күдікті', 'Тұрақтылық', 'Өсім ұпайы', 'Жалпы']]
+    .concat(ctRanked.slice().sort((a, b) => b.total - a.total || b.minutes - a.minutes)
+      .map(u => [u.name, u.phone, u.days, Math.round(u.minutes), u.growth == null ? '' : u.growth, u.nTests, u.flagged ? 'иә' : '', u.cons, u.grow, u.total])));
+}
+
 let blRows = [], blOpenNo = 0;
 
 async function loadBaseline() {
@@ -265,13 +365,14 @@ function renderBaseline() {
   if (!box) return;
   const byUser = new Map();
   blRows.forEach(x => {
-    if (!byUser.has(x.user_id)) byUser.set(x.user_id, { name: x.full_name || x.phone || '—', t: {} });
+    if (!byUser.has(x.user_id)) byUser.set(x.user_id, { name: x.full_name || x.phone || '—', admin: !!x.is_admin, t: {} });
     byUser.get(x.user_id).t[x.test_no] = x;
   });
   const flag = x => x.interrupted || x.wpm > 700;
   const cell = x => x
     ? `<span title="Мәтін ${esc(x.text_id)}, ${x.words} сөз, ${x.seconds} с">${nf(x.wpm)} · ${x.comprehension}% · <b>${nf(x.throughput)}</b>${flag(x) ? ' <span class="err" title="Күдікті: басқа табқа өткен немесе тым жылдам">!</span>' : ''}</span>`
     : '<span class="muted">—</span>';
+  const resetBtn = x => x ? `<button class="mini" data-reset="1" data-uid="${esc(x.user_id)}" data-n="${x.test_no}" data-name="${esc(x.full_name || x.phone || '')}" title="Қайта тапсыртуға рұқсат: бұл тест нәтижесі өшіріледі">↺</button>` : '';
   const growth = u => {
     const ks = [1, 2, 3].filter(k => u.t[k]);
     if (ks.length < 2) return null;
@@ -282,25 +383,110 @@ function renderBaseline() {
   const gfmt = g => g == null ? '<span class="muted">—</span>' : `<b style="color:${g >= 0 ? 'var(--ok)' : '#c0392b'}">${g > 0 ? '+' : ''}${g}%</b>`;
   const avg = (arr, f) => arr.length ? Math.round(arr.reduce((t, x) => t + f(x), 0) / arr.length) : null;
   const avgCell = k => {
-    const r = blRows.filter(x => x.test_no === k && !flag(x));
+    const r = blRows.filter(x => x.test_no === k && !flag(x) && !x.is_admin);
     return r.length ? `${nf(avg(r, x => x.wpm))} · ${avg(r, x => x.comprehension)}% · <b>${nf(avg(r, x => x.throughput))}</b>` : '<span class="muted">—</span>';
   };
   const clean = u => ![1, 2, 3].some(k => u.t[k] && flag(u.t[k]));
-  const gs = users2.filter(clean).map(growth).filter(g => g != null);
-  const done = k => blRows.filter(x => x.test_no === k).length;
+  const gs = users2.filter(u => !u.admin && clean(u)).map(growth).filter(g => g != null);
+  const done = k => blRows.filter(x => x.test_no === k && !x.is_admin).length;
   box.innerHTML = `
     <div class="chart-head">
       <h2 style="margin:26px 0 0">Өлшем тесті</h2>
       <div class="periods"><span class="muted" style="font-size:14px">Ашық тест:</span>
-        ${[[0, 'Жабық'], [1, 'Тест 1'], [2, 'Тест 2'], [3, 'Тест 3']].map(([n, l]) => `<button class="${n === blOpenNo ? 'on' : ''}" onclick="setBlOpen(${n})">${l}</button>`).join('')}</div>
+        ${[[0, 'Жабық'], [1, 'Тест 1'], [2, 'Тест 2'], [3, 'Тест 3']].map(([n, l]) => `<button class="${n === blOpenNo ? 'on' : ''}" onclick="setBlOpen(${n})">${l}</button>`).join('')}<button onclick="exportBaseline()">CSV ↓</button></div>
     </div>
     <p class="muted" style="font-size:14px;margin:0 0 8px">Тестті сабақта барлық оқушы бірге тапсырады: сабақ басында ашып, біткен соң «Жабық» басыңыз. Орындады: 1-тест ${done(1)}, 2-тест ${done(2)}, 3-тест ${done(3)}. Ұяшық: сөз/мин · түсіну % · <b>қорытынды</b> (сөз/мин × түсіну). «!» — күдікті нәтиже, ол сынып орташасына кірмейді.</p>
     <div class="tablewrap"><table>
       <thead><tr><th>Оқушы</th><th>1-тест</th><th>2-тест</th><th>3-тест</th><th class="num">Өсім</th></tr></thead>
-      <tbody>${users2.map(u => `<tr><td>${esc(u.name)}</td><td>${cell(u.t[1])}</td><td>${cell(u.t[2])}</td><td>${cell(u.t[3])}</td><td class="num">${gfmt(growth(u))}</td></tr>`).join('')
+      <tbody>${users2.map(u => `<tr><td>${esc(u.name)}${u.admin ? ' <span class="atag">· админ</span>' : ''}</td><td>${cell(u.t[1])}${resetBtn(u.t[1])}</td><td>${cell(u.t[2])}${resetBtn(u.t[2])}</td><td>${cell(u.t[3])}${resetBtn(u.t[3])}</td><td class="num">${gfmt(growth(u))}</td></tr>`).join('')
         || '<tr><td colspan="5" class="muted">Әзірге нәтиже жоқ</td></tr>'}
       ${users2.length ? `<tr style="background:var(--accent-soft)"><td><b>Сынып орташасы</b></td><td>${avgCell(1)}</td><td>${avgCell(2)}</td><td>${avgCell(3)}</td><td class="num">${gfmt(gs.length ? Math.round(gs.reduce((a, b) => a + b, 0) / gs.length) : null)}</td></tr>` : ''}
       </tbody></table></div>`;
+  box.onclick = e => {
+    const b = e.target.closest && e.target.closest('button[data-reset]');
+    if (b) resetBl(b.dataset.uid, Number(b.dataset.n), b.dataset.name);
+  };
+}
+
+// Оқушының бір тест нәтижесін өшіру: ол сол тестті қайта тапсыра алады (тест ашық болса)
+async function resetBl(uid, n, name) {
+  const note = blOpenNo === n ? '' : '\n\nҚазір ашық тест: ' + (blOpenNo ? blOpenNo : 'жоқ (жабық)') + '. Оқушы қайта тапсыруы үшін «Тест ' + n + '» батырмасын басыңыз.';
+  if (!confirm((name || 'Оқушы') + ': ' + n + '-тест нәтижесі өшіріледі және ол қайта тапсыра алады. Жалғастырасыз ба?' + note)) return;
+  const { error } = await sb.rpc('admin_reset_baseline', { uid, n });
+  if (error) { alert('Қате: ' + error.message + '\n(Жаңа SQL патчы іске қосылған ба?)'); return; }
+  await loadBaseline();
+}
+
+// ── CSV экспорт: UTF-8 BOM + нүктелі үтір (қазақша/орысша Excel-де дұрыс ашылады), ондық бөлік үтірмен
+function csvCell(v) {
+  if (v == null) return '';
+  if (typeof v === 'number') return String(v).replace('.', ',');
+  let s = String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;   // Excel формулаға айналмауы үшін (оқушы жазған мәтін)
+  return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function csvText(rows) { return '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\r\n'); }
+function downloadCsv(kind, rows) {
+  if (rows.length < 2) { alert('Экспорттауға деректер жоқ'); return; }
+  const blob = new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tez-oqu-' + kind + '-' + (today || new Date().toISOString().slice(0, 10)) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+const tsAlmaty = s => s ? new Date(s).toLocaleString('sv-SE', { timeZone: 'Asia/Almaty' }).slice(0, 16) : '';
+
+function exportUsers() {
+  const label = (PERIODS.find(p => p[0] === period) || [null, period])[1];
+  downloadCsv('users', [['Аты', 'Телефон', 'Тіркелген', 'Соңғы кіру', 'Кітап', 'Бет', 'Минут', 'Сөз/мин', 'Соңғы оқу', 'Кезең', 'Админ']]
+    .concat(users.map(u => [u.full_name, u.phone, tsAlmaty(u.created_at), tsAlmaty(u.last_sign_in_at), Number(u.books_count), Number(u.pages_total),
+      Number(u.minutes_total), Number(u.avg_wpm), u.last_session ? String(u.last_session).slice(0, 10) : '', label, u.is_admin ? 'иә' : ''])));
+}
+function exportDaily() {
+  downloadCsv('daily', [['Күні', 'Белсенді қолданушы', 'Бет', 'Минут']]
+    .concat(lastAct.map(a => [String(a.day).slice(0, 10), Number(a.active_users), Number(a.pages), Number(a.minutes)])));
+}
+function exportBaseline() {
+  downloadCsv('baseline', [['Аты', 'Телефон', 'Тест №', 'Мәтін', 'Сөз саны', 'Секунд', 'Сөз/мин', 'Дұрыс', 'Барлығы', 'Түсіну %', 'Қорытынды', 'Күдікті', 'Күні', 'Админ']]
+    .concat(blRows.map(x => [x.full_name || x.phone, x.phone, x.test_no, x.text_id, x.words, Number(x.seconds), x.wpm, x.correct, x.total,
+      x.comprehension, x.throughput, (x.interrupted || x.wpm > 700) ? 'иә' : '', tsAlmaty(x.created_at), x.is_admin ? 'иә' : ''])));
+}
+function exportFeedback() {
+  downloadCsv('feedback', [['Күні', 'Аты', 'Телефон', 'Жаттығу', 'Баға', 'Себептер', 'Түсініктеме', 'Контекст', 'Админ']]
+    .concat(fbRows.map(r => [tsAlmaty(r.created_at), r.full_name, r.phone, SRC[r.source] || r.source, (MOOD[r.mood] || [r.mood])[0],
+      (r.tags || []).join(', '), r.comment, r.context, r.is_admin ? 'иә' : ''])));
+}
+
+// ── Оқымағандар: батырманы басқанда ғана көрінеді; алдымен 3 оқушы, «Тағы N көрсету» басқанда қалғаны
+const INACTIVE_DAYS = 2, INACTIVE_PREVIEW = 3;
+function daysSince(d) {
+  if (!d || !today) return null;
+  return Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(String(d).slice(0, 10) + 'T00:00:00Z')) / 864e5);
+}
+function inactiveUsers() {
+  return users.map(u => ({ u, d: daysSince(u.last_session) }))
+    .filter(x => !x.u.is_admin && (x.d == null || x.d >= INACTIVE_DAYS))
+    .sort((a, b) => (b.d == null ? 1e9 : b.d) - (a.d == null ? 1e9 : a.d));
+}
+function toggleInactive() { inactiveOpen = !inactiveOpen; inactiveAll = false; updateInactive(); }
+function showAllInactive() { inactiveAll = true; updateInactive(); }
+function updateInactive() {
+  const btn = document.getElementById('inactive-btn'), box = document.getElementById('inactive-box');
+  if (!btn || !box) return;
+  const list = inactiveUsers();
+  btn.textContent = 'Оқымағандар (' + list.length + ')';
+  btn.classList.toggle('on', inactiveOpen);
+  if (!inactiveOpen) { box.innerHTML = ''; return; }
+  const shown = inactiveAll ? list : list.slice(0, INACTIVE_PREVIEW);
+  box.innerHTML = `<div class="card" style="margin-bottom:12px">
+    <div style="font-size:14px;margin-bottom:6px"><b>${INACTIVE_DAYS}+ күн оқымағандар</b> <span class="muted">(оқу сессиясы бойынша; оқушыны басыңыз)</span></div>
+    ${shown.length
+      ? shown.map(x => `<div class="inrow" data-id="${esc(x.u.id)}"><span><b>${esc(x.u.full_name || x.u.phone || '—')}</b> <span class="muted">${esc(x.u.phone || '')}</span></span><span class="muted">${x.d == null ? 'әлі оқымаған' : x.d + ' күн бұрын'}</span></div>`).join('')
+      : '<p class="muted" style="margin:0">Бәрі соңғы ' + INACTIVE_DAYS + ' күнде оқыған</p>'}
+    ${list.length > INACTIVE_PREVIEW && !inactiveAll ? `<button style="margin-top:8px" onclick="showAllInactive()">Тағы ${list.length - INACTIVE_PREVIEW} көрсету</button>` : ''}
+  </div>`;
+  box.querySelectorAll('.inrow').forEach(r => r.onclick = () => showUser(r.dataset.id));
 }
 
 const SRC = { schulte: 'Шульте кестесі', remember_number: 'Санды есте сақта', field_of_vision: 'Көру өрісі', reading: 'Кітап оқу' };
@@ -330,18 +516,20 @@ function setFb(k, v) {
 function renderFeedback() {
   const box = document.getElementById('fb-box');
   if (!box) return;
-  const bySrc = fbSrc === 'all' ? fbRows : fbRows.filter(r => r.source === fbSrc);
+  const real = fbRows.filter(r => !r.is_admin);                       // санауға тек оқушылар кіреді
+  const bySrc = fbSrc === 'all' ? real : real.filter(r => r.source === fbSrc);
   const cnt = m => bySrc.filter(r => r.mood === m).length;
-  const list = fbOnlyBad ? bySrc.filter(r => r.mood === 'bad') : bySrc;
+  const listAll = fbSrc === 'all' ? fbRows : fbRows.filter(r => r.source === fbSrc);   // тізімде админ жазбалары да көрінеді (белгімен)
+  const list = fbOnlyBad ? listAll.filter(r => r.mood === 'bad') : listAll;
   const srcRows = Object.keys(SRC).map(k => {
-    const r = fbRows.filter(x => x.source === k), c = m => r.filter(x => x.mood === m).length;
+    const r = real.filter(x => x.source === k), c = m => r.filter(x => x.mood === m).length;
     return `<tr><td>${SRC[k]}</td><td class="num">${r.length}</td><td class="num" style="color:var(--ok)">${c('good')}</td><td class="num">${c('ok')}</td><td class="num" style="color:#c0392b">${c('bad')}</td></tr>`;
   }).join('');
   box.innerHTML = `
     <div class="chart-head">
       <h2 style="margin:26px 0 0">Пікірлер</h2>
       <div class="periods"><span class="muted" style="font-size:14px">Кезең:</span>
-        ${[7, 14, 30].map(d => `<button class="${d === fbDays ? 'on' : ''}" onclick="setFb('days',${d})">${d} күн</button>`).join('')}</div>
+        ${[7, 14, 30].map(d => `<button class="${d === fbDays ? 'on' : ''}" onclick="setFb('days',${d})">${d} күн</button>`).join('')}<button onclick="exportFeedback()">CSV ↓</button></div>
     </div>
     <div class="grid" style="margin-bottom:10px">
       <div class="stat"><b style="color:var(--ok)">${cnt('good')}</b><span>Ұнады</span></div>
@@ -357,7 +545,7 @@ function renderFeedback() {
     </div>
     <div class="tablewrap">${list.length ? list.map(r => {
       const [ml, mc] = MOOD[r.mood] || [r.mood, 'inherit'];
-      return `<div class="fbrow"><div><span class="fbmood" style="color:${mc}">${esc(ml)}</span> · <b>${esc(r.full_name || r.phone || '—')}</b> · ${esc(SRC[r.source] || r.source)}${r.context ? ' (' + esc(r.context) + ')' : ''} · <span class="muted">${dt(r.created_at)}</span></div>
+      return `<div class="fbrow"><div><span class="fbmood" style="color:${mc}">${esc(ml)}</span> · <b>${esc(r.full_name || r.phone || '—')}</b>${r.is_admin ? ' <span class="atag">· админ</span>' : ''} · ${esc(SRC[r.source] || r.source)}${r.context ? ' (' + esc(r.context) + ')' : ''} · <span class="muted">${dt(r.created_at)}</span></div>
         ${(r.tags && r.tags.length) || r.comment ? `<div style="margin-top:4px">${(r.tags || []).map(t => `<span class="fbtag">${esc(t)}</span>`).join('')}${r.comment ? esc(r.comment) : ''}</div>` : ''}</div>`;
     }).join('') : '<p class="muted" style="padding:10px 14px;margin:0">Әзірге пікір жоқ</p>'}</div>`;
 }

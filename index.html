@@ -556,6 +556,13 @@
   #pf-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--d-accent-bg); color: var(--d-accent); font-size: 28px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   #pf-name { font-size: 20px; font-weight: 600; }
   #pf-phone { font-size: 14px; color: var(--d-text-2); margin-top: 3px; }
+  #pf-name-edit { cursor: pointer; color: var(--d-text-3); font-size: 16px; margin-left: 8px; vertical-align: 2px; }
+  @media (hover: hover) { #pf-name-edit:hover { color: var(--d-text); } }
+  #pf-name-form { display: none; }
+  #pf-name-input { font-family: inherit; font-size: 16px; padding: 8px 10px; border: 1px solid var(--d-border-strong); border-radius: 8px; background: var(--d-panel); color: var(--d-text); width: 100%; max-width: 280px; box-sizing: border-box; }
+  #pf-name-btns { display: flex; gap: 8px; margin-top: 8px; }
+  #pf-name-cancel { font-family: inherit; font-size: 13px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--d-border-strong); background: transparent; color: var(--d-text-2); cursor: pointer; }
+  #pf-name-err { font-size: 13px; color: #B3261E; margin-top: 6px; min-height: 16px; }
   .pf-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
   .pf-card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
   .pf-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--d-border); font-size: 14px; }
@@ -749,7 +756,15 @@
       <div id="profile-content">
         <div id="pf-head">
           <div id="pf-avatar">?</div>
-          <div><div id="pf-name">—</div><div id="pf-phone"></div></div>
+          <div>
+            <div id="pf-name-row"><span id="pf-name">—</span><i class="ti ti-pencil" id="pf-name-edit" onclick="pfEditName()" title="Атын өзгерту" aria-label="Атын өзгерту"></i></div>
+            <div id="pf-name-form">
+              <input type="text" id="pf-name-input" maxlength="60" placeholder="Аты-жөніңіз" autocomplete="name">
+              <div id="pf-name-btns"><button class="dash-btn-primary" id="pf-name-save" onclick="pfSaveName()">Сақтау</button><button id="pf-name-cancel" onclick="pfCancelName()">Бас тарту</button></div>
+              <div id="pf-name-err"></div>
+            </div>
+            <div id="pf-phone"></div>
+          </div>
         </div>
         <div class="pf-card">
           <div class="pf-card-title">Бүгінгі тегін ойындар</div>
@@ -4539,6 +4554,41 @@ function fovRenderChart(values) {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+</script>
+
+<script>
+/* профиль: атын өзгерту */
+function pfEditName() {
+  const meta = (authUser && authUser.user_metadata) || {};
+  document.getElementById('pf-name-input').value = meta.full_name || '';
+  document.getElementById('pf-name-err').textContent = '';
+  document.getElementById('pf-name-row').style.display = 'none';
+  document.getElementById('pf-name-form').style.display = 'block';
+  document.getElementById('pf-name-input').focus();
+}
+function pfCancelName() {
+  document.getElementById('pf-name-form').style.display = 'none';
+  document.getElementById('pf-name-row').style.display = '';
+}
+async function pfSaveName() {
+  const err = document.getElementById('pf-name-err');
+  const name = document.getElementById('pf-name-input').value.trim().replace(/\s+/g, ' ');
+  if (name.length < 2 || !/[A-Za-zЀ-ӿ]/.test(name)) { err.textContent = 'Аты-жөніңізді жазыңыз'; return; }
+  if (!sb || !authUser) { err.textContent = 'Қайтадан кіріңіз'; return; }
+  const btn = document.getElementById('pf-name-save');
+  btn.disabled = true; btn.textContent = 'Сақталуда...';
+  let res;
+  try { res = await sb.auth.updateUser({ data: { full_name: name } }); } catch (e) { res = { error: e }; }
+  btn.disabled = false; btn.textContent = 'Сақтау';
+  if (res.error) { err.textContent = 'Сақталмады. Интернетті тексеріп, қайталап көріңіз'; return; }
+  if (res.data && res.data.user) authUser = res.data.user;
+  else { authUser.user_metadata = authUser.user_metadata || {}; authUser.user_metadata.full_name = name; }
+  document.getElementById('pf-name').textContent = name;
+  document.getElementById('pf-avatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('dash-phone').textContent = name;
+  document.getElementById('dash-greeting').textContent = 'Қош келдіңіз, ' + name + '!';
+  pfCancelName();
 }
 </script>
 
