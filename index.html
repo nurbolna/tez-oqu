@@ -2131,11 +2131,23 @@ async function loadFromCache(fileName) {
 async function reconnectCloudBook(fileName) {
   if (!sb || !authUser) return;
   try {
-    const { data } = await sb.from('books')
-      .select('id')
+    let r = await sb.from('books')
+      .select(bmColOk === false ? 'id' : 'id, reading_progress(bookmarks)')
       .eq('filename', fileName)
       .maybeSingle();
-    if (data) currentBookId = data.id;
+    if (r.error && bmColOk !== false) {
+      bmColOk = false;
+      r = await sb.from('books').select('id').eq('filename', fileName).maybeSingle();
+    }
+    const data = r.data;
+    if (data) {
+      currentBookId = data.id;
+      if (bmColOk !== false) {
+        const prog = Array.isArray(data.reading_progress) ? data.reading_progress[0] : data.reading_progress;
+        // оқу басталып кеткен кезде жаңа кітапқа ауысып кетпегенін тексереміз
+        if (currentFileName === fileName) applyCloudBookmarks(data.id, prog ? prog.bookmarks : null);
+      }
+    }
   } catch(e) {}
 }
 
@@ -2145,6 +2157,8 @@ async function reconnectCloudBook(fileName) {
 function loadWords(text, fileName, savedProgress, forcePrivate) {
   currentBookId = null;
   currentBookPrivate = forcePrivate !== undefined ? forcePrivate : !!(savedProgress && savedProgress.private);
+  const cloudBm = savedProgress ? savedProgress.bm : undefined; // undefined = бұлттан оқылмады
+  bmCloudReadyFor = null;
   const cleaned = cleanKazakhText(text);
   words = cleaned.split(/\s+/).filter(w => w.length > 0);
   bookScript = detectBookScript(words);
@@ -2175,6 +2189,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
     renderPage(pageOf(pos));
     applyHighlight();
     loadBookmark(fileName);
+    if (currentBookId && cloudBm !== undefined) applyCloudBookmarks(currentBookId, cloudBm);
   }, 0);
 }
 
@@ -2447,8 +2462,26 @@ window.addEventListener('resize', () => {
    ══════════════════════════════════════════ */
 let bookmarks = []; // [{pos, createdAt, snippet}]
 
+// Бұлттағы бетбелгілер (reading_progress.bookmarks, bookmarks_sync.sql).
+// bmColOk: undefined = әлі білмейміз, false = баған жоқ. bmCloudReadyFor = бұлт нұсқасы оқылған кітап id.
+let bmColOk, bmCloudReadyFor = null;
+
 function saveBookmarks() {
   try { localStorage.setItem(LS + currentFileName + '_bm', JSON.stringify(bookmarks)); } catch(e) {}
+  if (authUser && currentBookId && bmCloudReadyFor === currentBookId) syncPositionToCloud();
+}
+
+// cloudBm: массив = бұлт шындық; null = бұлтта әлі жоқ (жергілікті болса жоғары жібереміз)
+function applyCloudBookmarks(bookId, cloudBm) {
+  if (cloudBm === undefined) return;
+  bmCloudReadyFor = bookId;
+  if (Array.isArray(cloudBm)) {
+    bookmarks = cloudBm.filter(b => b && typeof b.pos === 'number').sort((a, b) => a.pos - b.pos);
+    try { localStorage.setItem(LS + currentFileName + '_bm', JSON.stringify(bookmarks)); } catch(e) {}
+    updateBookmarkUI();
+  } else if (bookmarks.length) {
+    syncPositionToCloud();
+  }
 }
 
 function currentPageBookmarks() {
@@ -3614,9 +3647,44 @@ async function signInPassword() {
   await showDashboard();
 }
 
+// Шыққанда осы құрылғыдағы пайдаланушы деректерінің бәрін өшіреміз (ортақ құрылғы):
+// кітап мәтіндері (IndexedDB), позиция/бетбелгі, жергілікті статистика, дашборд кэші.
+// Тема/қаріп сияқты баптаулар қалады.
+async function wipeLocalUserData() {
+  try {
+    const db = await idbDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).clear();
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {}
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith(LS) || k.startsWith(LS_TEXT) || k.startsWith('sr5_dash_cache_') || k === LS_SESSIONS)) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch (e) {}
+}
+function hasPrivateLocalBooks() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(LS) && !k.endsWith('_bm') && JSON.parse(localStorage.getItem(k)).private) return true;
+    }
+  } catch (e) {}
+  return false;
+}
 async function signOut() {
+  if (hasPrivateLocalBooks() && !confirm('Жеке оқу кітаптары тек осы құрылғыда сақталған — шыққанда олар өшеді. Шығасыз ба?')) return;
+  stop();
+  clearTimeout(autoSaveTimer);
+  currentFileName = ''; // кейінгі lsSave (pagehide т.б.) өшірілген деректі қайта жазбасын
   if (sb) { try { await sb.auth.signOut(); } catch(e) {} }
-  try { if (authUser) localStorage.removeItem('sr5_dash_cache_' + authUser.id); } catch(e) {}
+  await wipeLocalUserData();
   authUser = null;
   currentBookId = null;
   updateAuthChip();
@@ -3672,7 +3740,7 @@ async function initAuth() {
 }
 
 /* ── dashboard ── */
-let dashRunId = 0;
+let dashRunId = 0, dashFresh = false; // dashFresh: books тізімі бұлттан жаңа алынған
 async function showDashboard() {
   hideAllViews();
   document.getElementById('dashboard').classList.remove('show-profile');
@@ -3682,6 +3750,7 @@ async function showDashboard() {
   // (Supabase RTT ≈ 400 мс — әйтпесе әр қайтуда спиннер шығады).
   const cacheKey = 'sr5_dash_cache_' + (authUser && authUser.id);
   const runId = ++dashRunId;
+  dashFresh = false;
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch (e) {}
   const hasCache = !!(cached && cached.stats && Array.isArray(cached.books));
@@ -3701,6 +3770,7 @@ async function showDashboard() {
 
   const [statsData, booksData] = await Promise.all([loadStats(), loadCloudBooks()]);
   if (runId !== dashRunId) return; // жаңа showDashboard() шақырылды — ескі жауап қажет емес
+  dashFresh = true;
   try { localStorage.setItem(cacheKey, JSON.stringify({ stats: statsData, books: booksData })); } catch (e) {}
   renderStats(statsData);
   renderWeekChart(statsData.daily);
@@ -3836,11 +3906,16 @@ function renderLocalChart(daily) {
 
 async function loadCloudBooks() {
   if (!sb || !authUser) return [];
-  const { data, error } = await sb.from('books')
-    .select('id, filename, storage_key, total_words, created_at, reading_progress(position, wpm, chunk_setting, updated_at)')
+  const sel = 'id, filename, storage_key, total_words, created_at, reading_progress(position, wpm, chunk_setting, updated_at';
+  let r = await sb.from('books').select(sel + (bmColOk === false ? '' : ', bookmarks') + ')')
     .order('created_at', { ascending: false });
-  if (error || !data) return [];
-  return data;
+  if (r.error && bmColOk !== false) {
+    // bookmarks бағаны әлі қосылмаған (bookmarks_sync.sql іске қосылмаған) — бұрынғы сұраныс
+    bmColOk = false;
+    r = await sb.from('books').select(sel + ')').order('created_at', { ascending: false });
+  } else if (!r.error) bmColOk = true;
+  if (r.error || !r.data) return [];
+  return r.data;
 }
 
 function timeAgoKk(dateStr) {
@@ -3891,7 +3966,7 @@ async function openCloudBook(book) {
   document.getElementById('col2').innerHTML = '';
   try {
     const prog = Array.isArray(book.reading_progress) ? book.reading_progress[0] : book.reading_progress;
-    const savedProgress = prog ? { pos: prog.position, total: book.total_words, wpm: prog.wpm, chunk: prog.chunk_setting } : null;
+    const savedProgress = prog ? { pos: prog.position, total: book.total_words, wpm: prog.wpm, chunk: prog.chunk_setting, bm: dashFresh ? prog.bookmarks : undefined } : null;
 
     // Already read on this device? Skip B2 entirely — this is what makes
     // repeat "Жалғастыру" clicks near-instant instead of re-downloading every time.
@@ -3912,6 +3987,12 @@ async function openCloudBook(book) {
 
     loadWords(text, book.filename, savedProgress);
     currentBookId = book.id;
+    // Дашборд кэштен көрсетілсе, кітап тізіміндегі бетбелгілер ескі болуы мүмкін — бұлттан жаңасын аламыз
+    if (!dashFresh && bmColOk !== false) {
+      sb.from('reading_progress').select('bookmarks').eq('book_id', book.id).maybeSingle().then(r => {
+        if (!r.error && currentBookId === book.id) applyCloudBookmarks(book.id, r.data ? r.data.bookmarks : null);
+      }).catch(() => {});
+    }
   } catch(e) {
     alert('Кітапты жүктеу кезінде қате шықты');
   }
@@ -3952,14 +4033,23 @@ async function uploadBookToCloud(filename, text) {
 async function syncPositionToCloud() {
   if (!sb || !authUser || !currentBookId) return;
   try {
-    await sb.from('reading_progress').upsert({
+    const row = {
       user_id: authUser.id,
       book_id: currentBookId,
       position: pos,
       wpm: getWPM(),
       chunk_setting: getChunk(),
       updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,book_id' });
+    };
+    // Бетбелгілерді бұлттағы нұсқасы оқылғаннан кейін ғана жібереміз (әйтпесе бос тізіммен үстінен жазып жібереміз)
+    const withBm = bmColOk !== false && bmCloudReadyFor === currentBookId;
+    if (withBm) row.bookmarks = bookmarks;
+    const { error } = await sb.from('reading_progress').upsert(row, { onConflict: 'user_id,book_id' });
+    if (error && withBm) {
+      bmColOk = false;
+      delete row.bookmarks;
+      await sb.from('reading_progress').upsert(row, { onConflict: 'user_id,book_id' });
+    }
   } catch(e) {}
 }
 
