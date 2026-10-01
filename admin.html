@@ -132,9 +132,9 @@ function render(s, act) {
 
     <div class="chart-head">
       <h2 style="margin:26px 0 0">Қолданушылар</h2>
-      <div class="periods"><span class="muted" style="font-size:14px">Кезең:</span>${PERIODS.map(([k, l]) => `<button class="${k === period ? 'on' : ''}" onclick="setPeriod('${k}')">${l}</button>`).join('')}</div>
+      <div class="periods"><span class="muted" style="font-size:14px">Кезең:</span>${PERIODS.map(([k, l]) => `<button data-p="${k}" class="${k === period ? 'on' : ''}" onclick="setPeriod('${k}')">${l}</button>`).join('')}</div>
     </div>
-    <p class="muted" style="font-size:14px;margin:0 0 8px">${periodLabel()}. Бет, минут және жылдамдық осы кезеңге есептелген.</p>
+    <p class="muted" id="period-label" style="font-size:14px;margin:0 0 8px">${periodLabel()}. Бет, минут және жылдамдық осы кезеңге есептелген.</p>
     <p><input type="search" id="q" placeholder="Аты немесе телефон…" value="${esc(filter)}"></p>
     <div class="tablewrap"><table>
       <thead><tr>
@@ -161,14 +161,19 @@ function periodLabel() {
   return 'Барлық уақыт';
 }
 
+let periodReq = 0;
+// Кезең ауысқанда тек қолданушылар кестесі қайта сұралады (статистика мен график кезеңге тәуелсіз).
 async function setPeriod(k) {
   period = k;
-  const { data, error } = await sb.rpc('admin_users', { period });
-  if (error) return message('<p class="err">Қате: ' + esc(error.message) + '</p>');
+  const req = ++periodReq;
+  document.querySelectorAll('.periods button').forEach(b => b.classList.toggle('on', b.dataset.p === k));
+  document.getElementById('period-label').textContent = periodLabel() + '. Бет, минут және жылдамдық осы кезеңге есептелген.';
+  document.getElementById('rows').innerHTML = '<tr><td colspan="9" class="muted">Жүктелуде…</td></tr>';
+  const { data, error } = await sb.rpc('admin_users', { period: k });
+  if (req !== periodReq) return;
+  if (error) { document.getElementById('rows').innerHTML = '<tr><td colspan="9" class="err">Қате: ' + esc(error.message) + '</td></tr>'; return; }
   users = data;
-  const { data: st } = await sb.rpc('admin_stats');
-  const { data: act } = await sb.rpc('admin_daily_activity', { days: 30 });
-  render(st, act);
+  rows();
 }
 
 function rows() {
