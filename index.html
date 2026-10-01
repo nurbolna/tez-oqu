@@ -581,8 +581,8 @@
   #vertical-pacer.is-playing #vertical-pacer-setup, #vertical-pacer.is-playing #vertical-pacer-results,
   #vertical-pacer.is-results #vertical-pacer-setup, #vertical-pacer.is-results #vertical-pacer-game { display: none; }
   #vertical-pacer:not(.is-results) #vertical-pacer-results { display: none; }
-  #vertical-pacer-stage { flex: 1; min-height: 0; overflow: hidden; position: relative; }
-  #vertical-pacer-list { position: absolute; left: 0; right: 0; top: 0; transition: transform .12s linear; will-change: transform; }
+  #vertical-pacer-stage { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+  #vertical-pacer-list { width: 100%; }
   .vertical-pacer-row { height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 12px; font-size: 22px; color: var(--d-text-2); white-space: nowrap; }
   .vertical-pacer-row.is-on { color: #111; }
   .vertical-pacer-row.is-on span { background: var(--vp-mark); padding: 2px 6px; }
@@ -4837,7 +4837,9 @@ let vpRaf = 0;            // the only timer this trainer ever creates (requestAn
 let vpBusy = false;       // "Бастау" was pressed, waiting for the energy check
 let vpChunks = [];        // [{ text, cum }] cum = words completed before this chunk starts
 let vpTotalWords = 0;
-let vpRows = [];
+let vpRows = [];          // rows of the page on screen
+let vpPageStart = 0;      // index of the first chunk on the page
+let vpPageEnd = 0;        // index after the last chunk on the page
 let vpPos = 0;            // words passed so far (fractional)
 let vpElapsed = 0;        // ms of running time (pauses excluded)
 let vpLast = 0;           // performance.now() of the previous frame
@@ -5014,20 +5016,8 @@ async function vpStart() {
   vpRefreshEnergyUI();
   const built = vpBuildChunks(vpSettings.level, VP.minWords);
   vpChunks = built.chunks; vpTotalWords = built.total;
-  const list = vpEl('vertical-pacer-list');
-  list.textContent = '';
-  vpRows = vpChunks.map(c => {
-    const row = document.createElement('div');
-    row.className = 'vertical-pacer-row';
-    const s = document.createElement('span');
-    s.textContent = c.text;
-    row.appendChild(s);
-    list.appendChild(row);
-    return row;
-  });
   vpPos = 0; vpElapsed = 0; vpIdx = -1;
-  list.style.transition = 'none';
-  list.style.transform = 'translateY(0)';
+  vpPageStart = 0; vpPageEnd = 0; vpRows = [];
   vpScreen('play');
   vpRenderSettings();
   vpEl('vertical-pacer-play').innerHTML = '<i class="ti ti-player-pause"></i>';
@@ -5047,18 +5037,33 @@ function vpTick(now) {
   vpUpdate();
   vpRaf = requestAnimationFrame(vpTick);
 }
+// shows chunks from `start` on as one page, as many rows as fit the stage
+function vpRenderPage(start) {
+  const stage = vpEl('vertical-pacer-stage');
+  const size = Math.max(3, Math.floor(stage.clientHeight / VP.rowH));
+  const list = vpEl('vertical-pacer-list');
+  list.textContent = '';
+  vpPageStart = start;
+  vpPageEnd = Math.min(vpChunks.length, start + size);
+  vpRows = [];
+  for (let i = vpPageStart; i < vpPageEnd; i++) {
+    const row = document.createElement('div');
+    row.className = 'vertical-pacer-row';
+    const sp = document.createElement('span');
+    sp.textContent = vpChunks[i].text;
+    row.appendChild(sp);
+    list.appendChild(row);
+    vpRows.push(row);
+  }
+}
 function vpUpdate() {
   let idx = vpIdx < 0 ? 0 : vpIdx;
   while (idx + 1 < vpChunks.length && vpChunks[idx + 1].cum <= vpPos) idx++;
   if (idx !== vpIdx) {
-    if (vpRows[vpIdx]) vpRows[vpIdx].classList.remove('is-on');
-    vpRows[idx].classList.add('is-on');
+    if (vpIdx < 0 || idx >= vpPageEnd) { vpRenderPage(idx); vpIdx = -1; } // next page: the marker starts again at the top
+    if (vpRows[vpIdx - vpPageStart]) vpRows[vpIdx - vpPageStart].classList.remove('is-on');
+    vpRows[idx - vpPageStart].classList.add('is-on');
     vpIdx = idx;
-    const stage = vpEl('vertical-pacer-stage');
-    const shift = Math.max(0, idx * VP.rowH - (stage.clientHeight / 2 - VP.rowH / 2));
-    const list = vpEl('vertical-pacer-list');
-    list.style.transition = '';
-    list.style.transform = 'translateY(' + (-shift) + 'px)';
   }
   vpEl('vertical-pacer-time').textContent = 'Уақыт ' + (Math.max(0, VP.totalMs - vpElapsed) / 1000).toFixed(1);
 }
