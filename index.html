@@ -547,6 +547,59 @@
     #field-of-vision-grid { --fov-size: min(calc(var(--fov-vh) - 110px), 60vw); }
     #field-of-vision-actions { justify-content: flex-start; }
   }
+  /* ══ Нейронды үдеткіш (vertical pacer) trainer — every class/id is prefixed vertical-pacer / vp ══ */
+  #vertical-pacer {
+    display: none; height: 100vh; height: 100dvh; background: var(--d-bg); color: var(--d-text);
+    --d-bg:#F7F7F5; --d-panel:#FFFFFF; --d-tile:#F1F1EE; --d-tile-strong:#E3E2DC;
+    --d-border:#E4E3DD; --d-border-strong:#D3D2C9;
+    --d-text:#1F1E1B; --d-text-2:#57564F; --d-text-3:#8A8980;
+    --d-accent:#2A78D6; --d-accent-bg:#E6F1FB; --d-green:#4E9B38;
+    --vp-mark:#00E5FF;
+    flex-direction: column;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+  }
+  #vertical-pacer.is-open { display: flex; }
+  #vertical-pacer-header { flex: none; display: flex; align-items: center; gap: 2px; background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 8px calc(10px + env(safe-area-inset-right)) 8px calc(10px + env(safe-area-inset-left)); }
+  #vertical-pacer-title { flex: 1; font-size: 16px; font-weight: 600; margin-left: 4px; }
+  #vertical-pacer-energy { font-size: 14px; font-weight: 600; color: var(--d-text-2); margin-right: 4px; }
+  .vertical-pacer-icon { font-size: 22px; line-height: 1; color: var(--d-text-2); cursor: pointer; padding: 9px; }
+  @media (hover: hover) { .vertical-pacer-icon:hover { color: var(--d-text); } }
+  #vertical-pacer-setup, #vertical-pacer-results { flex: 1; overflow-y: auto; width: 100%; max-width: 420px; margin: 0 auto; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+  .vertical-pacer-label { font-size: 13px; color: var(--d-text-2); margin: 16px 0 8px; }
+  .vertical-pacer-select { width: 100%; min-height: 48px; padding: 0 12px; font-family: inherit; font-size: 16px; color: var(--d-text); background: var(--d-panel); border: 1px solid var(--d-border-strong); border-radius: 10px; }
+  .vertical-pacer-wpm { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .vertical-pacer-wpm span { flex: 1; text-align: center; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .vertical-pacer-step { width: 52px; min-height: 48px; border: 1px solid var(--d-border-strong); background: var(--d-panel); border-radius: 10px; font-family: inherit; font-size: 22px; color: var(--d-text); cursor: pointer; }
+  .vertical-pacer-step:active { background: var(--d-tile); }
+  #vertical-pacer-best { min-height: 20px; margin: 18px 0 14px; text-align: center; font-size: 14px; color: var(--d-text-2); }
+  #vertical-pacer-msg { min-height: 20px; margin-top: 12px; text-align: center; font-size: 14px; color: var(--d-text-2); }
+  .vertical-pacer-btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 54px; border: none; border-radius: 12px; background: var(--d-accent); color: #fff; font-family: inherit; font-size: 17px; font-weight: 600; cursor: pointer; }
+  .vertical-pacer-btn:disabled { opacity: .45; cursor: default; }
+  #vertical-pacer-game { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  #vertical-pacer.is-playing #vertical-pacer-game { display: flex; }
+  #vertical-pacer.is-playing #vertical-pacer-setup, #vertical-pacer.is-playing #vertical-pacer-results,
+  #vertical-pacer.is-results #vertical-pacer-setup, #vertical-pacer.is-results #vertical-pacer-game { display: none; }
+  #vertical-pacer:not(.is-results) #vertical-pacer-results { display: none; }
+  #vertical-pacer-stage { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+  #vertical-pacer-list { position: absolute; left: 0; right: 0; top: 0; transition: transform .12s linear; will-change: transform; }
+  .vertical-pacer-row { height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 12px; font-size: 22px; color: var(--d-text-2); white-space: nowrap; }
+  .vertical-pacer-row.is-on { color: #111; }
+  .vertical-pacer-row.is-on span { background: var(--vp-mark); padding: 2px 6px; }
+  #vertical-pacer-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--d-border); background: var(--d-panel); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
+  #vertical-pacer-info { flex: 1; text-align: center; font-size: 14px; line-height: 1.5; color: var(--d-text-2); font-variant-numeric: tabular-nums; }
+  #vertical-pacer-play { width: 52px; }
+  .vertical-pacer-row-res { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--d-border); font-size: 17px; color: var(--d-text-2); }
+  .vertical-pacer-row-res b { color: var(--d-text); font-size: 26px; font-variant-numeric: tabular-nums; }
+  .vertical-pacer-row-big b { color: var(--d-accent); font-size: 44px; }
+  #vertical-pacer-newbest { min-height: 24px; margin: 12px 0 16px; text-align: center; font-weight: 600; color: var(--d-green); }
+  #vertical-pacer-intro { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; align-items: center; justify-content: center; padding: 16px; }
+  #vertical-pacer-intro.open { display: flex; }
+  .vertical-pacer-card { background: var(--d-panel); border-radius: 16px; padding: 24px 22px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+  .vertical-pacer-card h3 { margin: 0 0 10px; font-size: 18px; text-align: center; }
+  .vertical-pacer-card ul { margin: 0 0 18px; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--d-text-2); }
+  .vertical-pacer-card li { margin-bottom: 6px; }
+  @media (max-width: 520px) { #vertical-pacer-intro { align-items: flex-end; padding: 0; } .vertical-pacer-card { max-width: none; border-radius: 18px 18px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom)); } .vertical-pacer-row { font-size: 24px; } }
   /* ══ profile page (lives inside the dashboard, switched by the 4th nav tab) ══ */
   #profile-content { display: none; padding: 32px 40px 48px; max-width: 760px; }
   #dashboard.show-profile #dashboard-content { display: none !important; }
@@ -828,6 +881,11 @@
                   <div class="dash-trainer-name">Көру өрісі</div>
                   <div class="dash-trainer-sub">Периферия көруі · 50 секунд</div>
                 </div>
+                <div class="dash-trainer-card" id="trainer-vertical-pacer" onclick="showVerticalPacer()">
+                  <div class="dash-trainer-icon"><i class="ti ti-arrows-down"></i></div>
+                  <div class="dash-trainer-name">Нейронды үдеткіш</div>
+                  <div class="dash-trainer-sub">Тік баған · 60 секунд</div>
+                </div>
                 <div class="dash-trainer-card" id="trainer-pyramid" onclick="showPyramid()">
                   <div class="dash-trainer-icon"><i class="ti ti-triangle"></i></div>
                   <div class="dash-trainer-name">Пирамидалы мәтін</div>
@@ -968,6 +1026,64 @@
     </div>
     <div id="remember-number-result">—</div>
     <button id="remember-number-restart" class="dash-btn-primary" style="display:none;" onclick="rnNewGame()"><i class="ti ti-refresh"></i> Қайта ойнау</button>
+  </div>
+</div>
+
+<div id="vertical-pacer">
+  <div id="vertical-pacer-header">
+    <i class="ti ti-arrow-left vertical-pacer-icon" onclick="vpBack()" title="Dashboard-қа оралу" aria-label="Артқа"></i>
+    <span id="vertical-pacer-title">Нейронды үдеткіш</span>
+    <span id="vertical-pacer-energy" title="Бүгінгі қалған тегін ойын саны">⚡</span>
+    <i class="ti ti-info-circle vertical-pacer-icon" onclick="vpIntroOpen()" title="Нұсқаулық" aria-label="Нұсқаулық"></i>
+  </div>
+  <div id="vertical-pacer-setup">
+    <div class="vertical-pacer-label">Деңгей</div>
+    <select id="vertical-pacer-level" class="vertical-pacer-select" onchange="vpLevelChange()">
+      <option value="1">1 · қысқа сөздер</option>
+      <option value="1.1">1.1 · орташа сөздер</option>
+      <option value="1.1.1">1.1.1 · ұзын сөздер</option>
+      <option value="2.2">2.2 · 2 сөз</option>
+      <option value="3">3 · 3 сөз</option>
+      <option value="4">4 · 4 сөз</option>
+    </select>
+    <div class="vertical-pacer-label">Жылдамдық</div>
+    <div class="vertical-pacer-wpm">
+      <button class="vertical-pacer-step" onclick="vpWpm(-50)" aria-label="Баяулату">−</button>
+      <span id="vertical-pacer-wpm-setup">200 WPM</span>
+      <button class="vertical-pacer-step" onclick="vpWpm(50)" aria-label="Жылдамдату">+</button>
+    </div>
+    <div id="vertical-pacer-best"></div>
+    <button id="vertical-pacer-start" class="vertical-pacer-btn" onclick="vpStart()">Бастау</button>
+    <div id="vertical-pacer-msg"></div>
+  </div>
+  <div id="vertical-pacer-game">
+    <div id="vertical-pacer-stage"><div id="vertical-pacer-list"></div></div>
+    <div id="vertical-pacer-bar">
+      <button class="vertical-pacer-step" onclick="vpWpm(-50)" aria-label="Баяулату">−</button>
+      <div id="vertical-pacer-info"><span id="vertical-pacer-time">Уақыт 60.0</span><br><span id="vertical-pacer-wpm-game">Жылдамдық 200</span></div>
+      <button id="vertical-pacer-play" class="vertical-pacer-step" onclick="vpTogglePause()" aria-label="Тоқтата тұру"><i class="ti ti-player-pause"></i></button>
+      <button class="vertical-pacer-step" onclick="vpWpm(50)" aria-label="Жылдамдату">+</button>
+    </div>
+  </div>
+  <div id="vertical-pacer-results">
+    <div class="vertical-pacer-row-res vertical-pacer-row-big"><span>Оқылған сөз</span><b id="vertical-pacer-res-words">0</b></div>
+    <div class="vertical-pacer-row-res"><span>Жылдамдық</span><b id="vertical-pacer-res-wpm">0</b></div>
+    <div class="vertical-pacer-row-res"><span>Деңгей</span><b id="vertical-pacer-res-level">1</b></div>
+    <div id="vertical-pacer-newbest"></div>
+    <button class="vertical-pacer-btn" onclick="vpAgain()"><i class="ti ti-refresh"></i>&nbsp;Қайта ойнау</button>
+  </div>
+  <div id="vertical-pacer-intro">
+    <div class="vertical-pacer-card">
+      <h3>Нейронды үдеткіш</h3>
+      <ul>
+        <li>Көгілдір маркер сөздермен төмен қарай жүгіреді. Көзіңізді маркерден қалдырмаңыз.</li>
+        <li>Жаттығу 60 секундқа созылады. Нәтиже — осы уақытта маркер өткен сөз саны.</li>
+        <li>Жылдамдықты (100–600 WPM) жаттығу кезінде де − және + батырмаларымен өзгертуге болады.</li>
+        <li>Деңгей жоғарылаған сайын бір қадамда көбірек сөз көресіз.</li>
+        <li>Бос орын (пробел) — үзіліс.</li>
+      </ul>
+      <button class="vertical-pacer-btn" onclick="vpIntroClose()">Түсінікті</button>
+    </div>
   </div>
 </div>
 
@@ -2724,6 +2840,7 @@ function hideAllViews() {
   const blView = document.getElementById('baseline');
   if (blView) blView.style.display = 'none';
   if (typeof fovStop === 'function') fovStop();
+  if (typeof vpStop === 'function') vpStop();
 }
 
 function showReaderView() {
@@ -4698,6 +4815,316 @@ async function pfSaveName() {
   document.getElementById('dash-phone').textContent = name;
   document.getElementById('dash-greeting').textContent = 'Қош келдіңіз, ' + name + '!';
   pfCancelName();
+}
+
+/* ══ Нейронды үдеткіш (vertical pacer). Every global here is prefixed vp / VP; markup and CSS use vertical-pacer-*. ══ */
+const VP = { totalMs: 60000, wpmMin: 100, wpmMax: 600, wpmStep: 50, wpmDefault: 200, rowH: 52, minWords: 700, maxDt: 100 };
+const VP_LEVELS = {
+  '1':     { n: 1, len: [1, 4] },
+  '1.1':   { n: 1, len: [5, 7] },
+  '1.1.1': { n: 1, len: [8, 99] },
+  '2.2':   { n: 2 },
+  '3':     { n: 3 },
+  '4':     { n: 4 }
+};
+const VP_LS_SETTINGS = 'sr5_vp_settings';
+const VP_LS_INTRO = 'sr5_vp_intro_seen';
+
+let vpSettings = { level: '1.1', wpm: VP.wpmDefault };
+let vpPhase = 'idle';     // idle | play | pause | results
+let vpGen = 0;            // bumped on every stop: async continuations compare it and give up when stale
+let vpRaf = 0;            // the only timer this trainer ever creates (requestAnimationFrame)
+let vpBusy = false;       // "Бастау" was pressed, waiting for the energy check
+let vpChunks = [];        // [{ text, cum }] cum = words completed before this chunk starts
+let vpTotalWords = 0;
+let vpRows = [];
+let vpPos = 0;            // words passed so far (fractional)
+let vpElapsed = 0;        // ms of running time (pauses excluded)
+let vpLast = 0;           // performance.now() of the previous frame
+let vpIdx = -1;
+let vpBest = null;
+
+const vpEl = (id) => document.getElementById(id);
+
+function vpLoadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(VP_LS_SETTINGS) || 'null');
+    if (s && VP_LEVELS[s.level]) vpSettings.level = s.level;
+    if (s && s.wpm >= VP.wpmMin && s.wpm <= VP.wpmMax) vpSettings.wpm = Math.round(s.wpm / VP.wpmStep) * VP.wpmStep;
+  } catch (e) {}
+}
+function vpSaveSettings() { try { localStorage.setItem(VP_LS_SETTINGS, JSON.stringify(vpSettings)); } catch (e) {} }
+function vpRunning() { return vpPhase === 'play' || vpPhase === 'pause'; }
+
+/* ── pure helpers ── */
+function vpCleanWord(w) { return w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''); }
+function vpShuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+// builds the list of chunks for a level out of the shared Kazakh text base (PYRAMID_TEXTS), shuffled; reshuffled again if the base runs out
+function vpBuildChunks(levelKey, minWords) {
+  const lv = VP_LEVELS[levelKey];
+  const out = [];
+  let total = 0, rounds = 0;
+  while (total < minWords && rounds < 12) {
+    rounds++;
+    for (const text of vpShuffle(PYRAMID_TEXTS)) {
+      const words = text.split(/\s+/).filter(w => vpCleanWord(w));
+      if (lv.len) {
+        for (const raw of words) {
+          const w = vpCleanWord(raw);
+          const L = [...w].length;
+          if (L >= lv.len[0] && L <= lv.len[1]) { out.push({ text: w, words: 1, cum: total }); total += 1; }
+        }
+      } else {
+        for (let i = 0; i < words.length; i += lv.n) {
+          const part = words.slice(i, i + lv.n);
+          out.push({ text: part.join(' '), words: part.length, cum: total }); total += part.length;
+        }
+      }
+      if (total >= minWords) break;
+    }
+  }
+  return { chunks: out, total };
+}
+
+/* ── screens ── */
+function vpScreen(name) { // idle | play | results
+  const root = vpEl('vertical-pacer');
+  root.classList.toggle('is-playing', name === 'play');
+  root.classList.toggle('is-results', name === 'results');
+}
+function vpRenderSettings() {
+  vpEl('vertical-pacer-level').value = vpSettings.level;
+  vpEl('vertical-pacer-wpm-setup').textContent = vpSettings.wpm + ' WPM';
+  vpEl('vertical-pacer-wpm-game').textContent = 'Жылдамдық ' + vpSettings.wpm;
+}
+function vpWpm(delta) {
+  vpSettings.wpm = Math.max(VP.wpmMin, Math.min(VP.wpmMax, vpSettings.wpm + delta));
+  vpSaveSettings();
+  vpRenderSettings();
+}
+function vpLevelChange() {
+  vpSettings.level = vpEl('vertical-pacer-level').value;
+  vpSaveSettings();
+  vpRenderBest();
+}
+function vpSetMsg(t) { vpEl('vertical-pacer-msg').textContent = t || ''; }
+
+/* ── entering / leaving ── */
+function showVerticalPacer() {
+  hideAllViews();
+  vpEl('vertical-pacer').classList.add('is-open');
+  vpLoadSettings();
+  vpResetToIdle();
+  vpLoadBest();
+  let seen = false;
+  try { seen = !!localStorage.getItem(VP_LS_INTRO); } catch (e) {}
+  if (!seen) vpIntroOpen();
+}
+// stops everything this trainer has scheduled; safe to call at any time (also from hideAllViews)
+function vpStop() {
+  vpGen++;
+  if (vpRaf) cancelAnimationFrame(vpRaf);
+  vpRaf = 0;
+  vpBusy = false;
+  vpPhase = 'idle';
+  const root = vpEl('vertical-pacer');
+  if (root) root.classList.remove('is-open', 'is-playing', 'is-results');
+}
+function vpBack() { vpStop(); showDashboard(); }
+function vpResetToIdle(msg) {
+  if (vpRaf) cancelAnimationFrame(vpRaf);
+  vpRaf = 0;
+  vpBusy = false;
+  vpPhase = 'idle';
+  vpScreen('idle');
+  vpRenderSettings();
+  vpSetMsg(msg || '');
+  vpRefreshEnergyUI();
+  vpRenderBest();
+}
+function vpAgain() { vpStop(); vpEl('vertical-pacer').classList.add('is-open'); vpResetToIdle(); vpLoadBest(); }
+function vpIntroOpen() { vpEl('vertical-pacer-intro').classList.add('open'); }
+function vpIntroClose() {
+  vpEl('vertical-pacer-intro').classList.remove('open');
+  try { localStorage.setItem(VP_LS_INTRO, '1'); } catch (e) {}
+}
+
+/* ── energy (shared exercise_daily_plays table) ── */
+function vpTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+async function vpRemainingToday() {
+  if (!sb || !authUser) return 0;
+  try {
+    const { data, error } = await sb.from('exercise_daily_plays').select('play_count')
+      .eq('user_id', authUser.id).eq('exercise', 'neural_accelerator').eq('play_date', vpTodayStr()).maybeSingle();
+    if (error) return 0;
+    return Math.max(0, planLimit() - (data ? data.play_count : 0));
+  } catch (e) { return 0; }
+}
+// 'ok' | 'limit' | 'error'
+async function vpConsumePlay() {
+  if (!sb || !authUser) return 'error';
+  try {
+    const { data: existing, error: readError } = await sb.from('exercise_daily_plays').select('play_count')
+      .eq('user_id', authUser.id).eq('exercise', 'neural_accelerator').eq('play_date', vpTodayStr()).maybeSingle();
+    if (readError) return 'error';
+    const used = existing ? existing.play_count : 0;
+    if (used >= planLimit()) return 'limit';
+    const { error: writeError } = await sb.from('exercise_daily_plays').upsert({
+      user_id: authUser.id, exercise: 'neural_accelerator', play_date: vpTodayStr(), play_count: used + 1
+    }, { onConflict: 'user_id,exercise,play_date' });
+    return writeError ? 'error' : 'ok';
+  } catch (e) { return 'error'; }
+}
+async function vpRefreshEnergyUI() {
+  const gen = vpGen;
+  const remaining = await vpRemainingToday();
+  if (gen !== vpGen) return;
+  vpEl('vertical-pacer-energy').textContent = '⚡' + energyText(remaining);
+  const btn = vpEl('vertical-pacer-start');
+  if (vpPhase === 'idle' && !vpBusy) {
+    if (remaining <= 0) { btn.textContent = 'Ертең қайта келіңіз'; btn.disabled = true; }
+    else { btn.textContent = 'Бастау'; btn.disabled = false; }
+  }
+}
+
+/* ── game ── */
+async function vpStart() {
+  if (vpPhase !== 'idle' || vpBusy) return;
+  vpBusy = true;
+  const gen = vpGen;
+  const btn = vpEl('vertical-pacer-start');
+  btn.disabled = true;
+  vpSetMsg('');
+  const r = await vpConsumePlay();
+  if (gen !== vpGen) return;
+  vpBusy = false;
+  if (r !== 'ok') {
+    vpSetMsg(r === 'limit' ? 'Бүгінгі тегін ойындар таусылды. Ертең қайта келіңіз.' : 'Байланыс қатесі. Қайта көріңіз.');
+    btn.disabled = r === 'limit';
+    vpRefreshEnergyUI();
+    return;
+  }
+  vpRefreshEnergyUI();
+  const built = vpBuildChunks(vpSettings.level, VP.minWords);
+  vpChunks = built.chunks; vpTotalWords = built.total;
+  const list = vpEl('vertical-pacer-list');
+  list.textContent = '';
+  vpRows = vpChunks.map(c => {
+    const row = document.createElement('div');
+    row.className = 'vertical-pacer-row';
+    const s = document.createElement('span');
+    s.textContent = c.text;
+    row.appendChild(s);
+    list.appendChild(row);
+    return row;
+  });
+  vpPos = 0; vpElapsed = 0; vpIdx = -1;
+  list.style.transition = 'none';
+  list.style.transform = 'translateY(0)';
+  vpScreen('play');
+  vpRenderSettings();
+  vpEl('vertical-pacer-play').innerHTML = '<i class="ti ti-player-pause"></i>';
+  vpPhase = 'play';
+  vpUpdate();
+  vpLast = performance.now();
+  vpRaf = requestAnimationFrame(vpTick);
+}
+function vpTick(now) {
+  vpRaf = 0;
+  if (vpPhase !== 'play') return;
+  const dt = Math.min(now - vpLast, VP.maxDt); // a long frame (tab switch, hiccup) never skips the marker ahead
+  vpLast = now;
+  vpElapsed += dt;
+  vpPos += dt * vpSettings.wpm / 60000;
+  if (vpElapsed >= VP.totalMs || vpPos >= vpTotalWords) { vpFinish(); return; }
+  vpUpdate();
+  vpRaf = requestAnimationFrame(vpTick);
+}
+function vpUpdate() {
+  let idx = vpIdx < 0 ? 0 : vpIdx;
+  while (idx + 1 < vpChunks.length && vpChunks[idx + 1].cum <= vpPos) idx++;
+  if (idx !== vpIdx) {
+    if (vpRows[vpIdx]) vpRows[vpIdx].classList.remove('is-on');
+    vpRows[idx].classList.add('is-on');
+    vpIdx = idx;
+    const stage = vpEl('vertical-pacer-stage');
+    const shift = Math.max(0, idx * VP.rowH - (stage.clientHeight / 2 - VP.rowH / 2));
+    const list = vpEl('vertical-pacer-list');
+    list.style.transition = '';
+    list.style.transform = 'translateY(' + (-shift) + 'px)';
+  }
+  vpEl('vertical-pacer-time').textContent = 'Уақыт ' + (Math.max(0, VP.totalMs - vpElapsed) / 1000).toFixed(1);
+}
+function vpTogglePause() {
+  if (vpPhase === 'play') {
+    vpPhase = 'pause';
+    if (vpRaf) cancelAnimationFrame(vpRaf);
+    vpRaf = 0;
+    vpEl('vertical-pacer-play').innerHTML = '<i class="ti ti-player-play"></i>';
+  } else if (vpPhase === 'pause') {
+    vpPhase = 'play';
+    vpEl('vertical-pacer-play').innerHTML = '<i class="ti ti-player-pause"></i>';
+    vpLast = performance.now();
+    vpRaf = requestAnimationFrame(vpTick);
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && vpPhase === 'play') vpTogglePause();
+});
+document.addEventListener('keydown', (e) => {
+  if (!vpRunning() || !vpEl('vertical-pacer').classList.contains('is-open')) return;
+  if (e.code === 'Space') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) vpTogglePause(); }
+}, true);
+
+/* ── results ── */
+function vpFinish() {
+  if (vpRaf) cancelAnimationFrame(vpRaf);
+  vpRaf = 0;
+  vpPhase = 'results';
+  const res = { words: Math.min(vpTotalWords, Math.floor(vpPos)), wpm: vpSettings.wpm, level: vpSettings.level };
+  vpEl('vertical-pacer-res-words').textContent = res.words;
+  vpEl('vertical-pacer-res-wpm').textContent = res.wpm;
+  vpEl('vertical-pacer-res-level').textContent = res.level;
+  vpEl('vertical-pacer-newbest').textContent = '';
+  vpScreen('results');
+  vpSaveResult(res, vpGen);
+}
+async function vpSaveResult(res, gen) {
+  if (!sb || !authUser) return;
+  try {
+    const { data: ex, error: readError } = await sb.from('neural_accelerator_best_times').select('best_words')
+      .eq('user_id', authUser.id).eq('level', res.level).maybeSingle();
+    if (readError) return;
+    if (!ex || res.words > ex.best_words) {
+      const { error: writeError } = await sb.from('neural_accelerator_best_times').upsert({
+        user_id: authUser.id, level: res.level, best_words: res.words, wpm: res.wpm, achieved_at: new Date().toISOString()
+      }, { onConflict: 'user_id,level' });
+      if (!writeError && ex && gen === vpGen && vpPhase === 'results') vpEl('vertical-pacer-newbest').textContent = 'Жаңа рекорд!';
+    }
+  } catch (e) {}
+}
+async function vpLoadBest() {
+  vpBest = {};
+  if (!sb || !authUser) { vpRenderBest(); return; }
+  const gen = vpGen;
+  try {
+    const { data, error } = await sb.from('neural_accelerator_best_times').select('level,best_words,wpm').eq('user_id', authUser.id);
+    if (!error && data) data.forEach(r => { vpBest[r.level] = r; });
+  } catch (e) {}
+  if (gen === vpGen) vpRenderBest();
+}
+function vpRenderBest() {
+  const el = vpEl('vertical-pacer-best');
+  if (!el) return;
+  const b = vpBest && vpBest[vpSettings.level];
+  el.textContent = b ? 'Рекорд: ' + b.best_words + ' сөз (' + b.wpm + ' WPM)' : '';
 }
 </script>
 
