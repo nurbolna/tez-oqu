@@ -4446,7 +4446,7 @@ if ('serviceWorker' in navigator) {
 <style>
   #fb-sheet { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; justify-content: center; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; }
   #fb-sheet.open { display: flex; }
-  #fb-card { pointer-events: auto; width: 100%; max-width: 440px; background: #fff; color: #1F1E1B; border: 1px solid #E4E3DD; border-radius: 14px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(0,0,0,.18); font-family: inherit; }
+  #fb-card { pointer-events: auto; width: 100%; max-width: 440px; background: #fff; color: #1F1E1B; border: 1px solid #E4E3DD; border-radius: 14px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(0,0,0,.18); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
   #fb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
   #fb-title { font-size: 15px; font-weight: 500; }
   #fb-close { cursor: pointer; font-size: 20px; color: #8A8980; line-height: 1; padding: 2px; }
@@ -4473,14 +4473,8 @@ if ('serviceWorker' in navigator) {
       <button class="fb-mood" data-m="bad" onclick="fbMood('bad')"><i class="ti ti-mood-sad" aria-hidden="true"></i>Ұнамады</button>
     </div>
     <div id="fb-more">
-      <p>Не болды? (міндетті емес)</p>
-      <div id="fb-chips">
-        <button class="fb-chip" onclick="fbChip(this)">Түсініксіз</button>
-        <button class="fb-chip" onclick="fbChip(this)">Баяу жұмыс істеді</button>
-        <button class="fb-chip" onclick="fbChip(this)">Тым қиын</button>
-        <button class="fb-chip" onclick="fbChip(this)">Қате шықты</button>
-        <button class="fb-chip" onclick="fbChip(this)">Тым оңай</button>
-      </div>
+      <p id="fb-more-label">Не болды? (міндетті емес)</p>
+      <div id="fb-chips"></div>
       <textarea id="fb-txt" rows="2" maxlength="500" placeholder="Бір-екі сөзбен жазыңыз"></textarea>
       <div id="fb-actions"><button id="fb-send" onclick="fbSend()">Жіберу</button></div>
     </div>
@@ -4494,6 +4488,12 @@ if ('serviceWorker' in navigator) {
   const GAP_MS = 30 * 60 * 1000;   // жаттығуларда: бір тренажерге 30 минутта бір рет қана сұрайды
   const READ_MIN_WORDS = 300;      // кітап: кемінде ~1 бет оқылса, күніне бір рет
   const IDLE_HIDE_MS = 45000;      // смайл басылмаса, карточка өздігінен жабылады
+  const TAGS = {
+    good: ['Қызықты', 'Түсінікті', 'Пайдалы', 'Жылдам жұмыс істейді', 'Қолайлы'],
+    ok:   ['Түсініксіз', 'Қызықсыз', 'Тым қиын', 'Тым оңай', 'Баяу жұмыс істеді'],
+    bad:  ['Түсініксіз', 'Баяу жұмыс істеді', 'Тым қиын', 'Қате шықты', 'Қызықсыз']
+  };
+  const LABEL = { good: 'Не ұнады? (міндетті емес)', ok: 'Не жақсарту керек? (міндетті емес)', bad: 'Не болды? (міндетті емес)' };
   const st = { src: null, id: null, mood: null, tags: [], p: null, shownAt: 0, idle: null, watch: null };
   const el = id => document.getElementById(id);
   const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
@@ -4547,8 +4547,14 @@ if ('serviceWorker' in navigator) {
 
   window.fbMood = function (m) {
     if (!st.src) return;
+    const changed = st.mood !== m;
     st.mood = m;
     clearTimeout(st.idle);
+    if (changed) {
+      st.tags = [];
+      el('fb-more-label').textContent = LABEL[m];
+      el('fb-chips').innerHTML = TAGS[m].map(t => '<button class="fb-chip" onclick="fbChip(this)">' + t + '</button>').join('');
+    }
     document.querySelectorAll('.fb-mood').forEach(b => b.classList.toggle('sel', b.dataset.m === m));
     el('fb-more').style.display = 'block';
     if (!st.id) {
