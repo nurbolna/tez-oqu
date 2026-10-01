@@ -40,9 +40,14 @@
   tbody tr.user:hover { background: var(--accent-soft); }
   td.num, th.num { text-align: right; }
   .muted { color: var(--muted); }
-  .chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; }
-  .chart .col { flex: 1; background: var(--bar); border-radius: 3px 3px 0 0; min-height: 2px; position: relative; }
+  .chart { display: flex; align-items: flex-end; gap: 3px; height: 150px; }
+  .chart .cell { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+  .chart .val { font-size: 10px; line-height: 14px; height: 14px; color: var(--text); }
+  .chart .col { width: 100%; background: var(--bar); border-radius: 3px 3px 0 0; min-height: 2px; }
   .chart .col.zero { background: var(--border); }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .periods { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .periods button.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
   .axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 4px; }
   .detail { margin-top: 10px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
   .detail h3 { font-size: 14px; margin: 0 0 6px; }
@@ -67,12 +72,15 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const nf = n => (n == null ? '—' : Number(n).toLocaleString('ru-RU'));
 const dt = s => s ? new Date(s).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 const d0 = s => s ? new Date(s).toLocaleDateString('ru-RU') : '—';
+const dday = s => { if (!s) return '—'; const [y, m, d] = String(s).slice(0, 10).split('-'); return d + '.' + m + '.' + y; };
+const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const PERIODS = [['today', 'Бүгін'], ['7d', '7 күн'], ['30d', '30 күн'], ['all', 'Барлығы']];
 const fmtMs = ms => (ms / 1000).toFixed(1) + ' с';
 const mb = b => b == null ? '—' : (b / 1048576).toFixed(1) + ' МБ';
 
 function message(html) { app.innerHTML = '<div class="msg">' + html + '</div>'; }
 
-let users = [], sortKey = 'last_sign_in_at', sortDir = -1, filter = '';
+let today = '', period = '7d', users = [], sortKey = 'last_sign_in_at', sortDir = -1, filter = '';
 
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
@@ -85,11 +93,12 @@ async function init() {
 
 async function load() {
   const [st, us, act] = await Promise.all([
-    sb.rpc('admin_stats'), sb.rpc('admin_users'), sb.rpc('admin_daily_activity', { days: 30 })
+    sb.rpc('admin_stats'), sb.rpc('admin_users', { period }), sb.rpc('admin_daily_activity', { days: 30 })
   ]);
   const fail = [st, us, act].find(r => r.error);
   if (fail) return message('<p class="err">Қате: ' + esc(fail.error.message) + '</p>');
   users = us.data;
+  today = st.data.today;
   render(st.data, act.data);
 }
 
@@ -101,6 +110,7 @@ function render(s, act) {
     ['Орташа жылдамдық (сөз/мин)', s.avg_wpm]
   ];
   const max = Math.max(1, ...act.map(a => Number(a.minutes)));
+  const sumMin = Math.round(act.reduce((t, a) => t + Number(a.minutes_exact), 0)), sumPages = Math.round(act.reduce((t, a) => t + Number(a.pages_exact), 0));
   app.innerHTML = `
     <header>
       <h1>Тез Оқу — Админ панель</h1>
@@ -108,16 +118,23 @@ function render(s, act) {
     </header>
     <div class="grid">${stats.map(([l, v]) => `<div class="stat"><b>${nf(v)}</b><span>${l}</span></div>`).join('')}</div>
 
-    <h2>Соңғы 30 күндегі оқу уақыты (минут)</h2>
+    <div class="chart-head">
+      <h2 style="margin:26px 0 0">Оқу уақыты, минут</h2>
+      <div class="muted" style="font-size:14px">Барлығы: <b style="color:var(--text)">${nf(sumMin)} минут · ${nf(sumPages)} бет</b> · ${dday(act[0]?.day)} – ${dday(act[act.length - 1]?.day)}</div>
+    </div>
     <div class="card">
       <div class="chart">${act.map(a => {
-        const h = Math.round(Number(a.minutes) / max * 100);
-        return `<div class="col ${a.minutes == 0 ? 'zero' : ''}" style="height:${h}%" title="${d0(a.day)}: ${nf(a.minutes)} мин, ${nf(a.pages)} бет, ${a.active_users} қолданушы"></div>`;
+        const v = Number(a.minutes), h = v ? Math.max(4, Math.round(v / max * 100)) : 0;
+        return `<div class="cell" title="${dday(a.day)}: ${nf(a.minutes)} мин, ${nf(a.pages)} бет, ${a.active_users} қолданушы"><div class="val">${v || ''}</div><div class="col ${v ? '' : 'zero'}" style="height:${v ? h + '%' : '2px'}"></div></div>`;
       }).join('')}</div>
-      <div class="axis"><span>${d0(act[0]?.day)}</span><span>${d0(act[act.length - 1]?.day)}</span></div>
+      <div class="axis"><span>${dday(act[0]?.day)}</span><span>${dday(act[act.length - 1]?.day)}</span></div>
     </div>
 
-    <h2>Қолданушылар</h2>
+    <div class="chart-head">
+      <h2 style="margin:26px 0 0">Қолданушылар</h2>
+      <div class="periods"><span class="muted" style="font-size:14px">Кезең:</span>${PERIODS.map(([k, l]) => `<button class="${k === period ? 'on' : ''}" onclick="setPeriod('${k}')">${l}</button>`).join('')}</div>
+    </div>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">${periodLabel()}. Бет, минут және жылдамдық осы кезеңге есептелген.</p>
     <p><input type="search" id="q" placeholder="Аты немесе телефон…" value="${esc(filter)}"></p>
     <div class="tablewrap"><table>
       <thead><tr>
@@ -137,6 +154,23 @@ function render(s, act) {
   rows();
 }
 
+function periodLabel() {
+  if (period === 'today') return 'Бүгін: ' + dday(today) + ' (Қазақстан уақыты)';
+  if (period === '7d') return 'Соңғы 7 күн: ' + dday(addDays(today, -6)) + ' – ' + dday(today);
+  if (period === '30d') return 'Соңғы 30 күн: ' + dday(addDays(today, -29)) + ' – ' + dday(today);
+  return 'Барлық уақыт';
+}
+
+async function setPeriod(k) {
+  period = k;
+  const { data, error } = await sb.rpc('admin_users', { period });
+  if (error) return message('<p class="err">Қате: ' + esc(error.message) + '</p>');
+  users = data;
+  const { data: st } = await sb.rpc('admin_stats');
+  const { data: act } = await sb.rpc('admin_daily_activity', { days: 30 });
+  render(st, act);
+}
+
 function rows() {
   const f = filter.trim().toLowerCase();
   const list = users.filter(u => !f || (u.full_name || '').toLowerCase().includes(f) || (u.phone || '').includes(f))
@@ -151,21 +185,9 @@ function rows() {
       <td>${dt(u.created_at)}</td><td>${dt(u.last_sign_in_at)}</td>
       <td class="num">${nf(u.books_count)}</td><td class="num">${nf(u.pages_total)}</td>
       <td class="num">${nf(u.minutes_total)}</td><td class="num">${nf(u.avg_wpm)}</td>
-      <td>${d0(u.last_session)}</td>
+      <td>${dday(u.last_session)}</td>
     </tr>`).join('') || '<tr><td colspan="9" class="muted">Ештеңе табылмады</td></tr>';
   document.querySelectorAll('tr.user').forEach(tr => tr.onclick = () => showUser(tr.dataset.id));
-}
-
-// Сессиялар қысқа (~20 с) бөліктер болғандықтан, күні бойынша біріктіреміз. Бет = сөз/300, минут = сөз/WPM.
-function byDay(sessions) {
-  const m = new Map();
-  sessions.forEach(s => {
-    const r = m.get(s.session_date) || { w: 0, min: 0 };
-    r.w += s.words_read || 0;
-    if (s.wpm > 0) r.min += (s.words_read || 0) / s.wpm;
-    m.set(s.session_date, r);
-  });
-  return [...m].map(([day, r]) => [d0(day), nf(Math.round(r.w / 300)), nf(Math.round(r.min))]);
 }
 
 async function showUser(id) {
@@ -183,7 +205,7 @@ async function showUser(id) {
     <div class="detail">
       <div><h3>Кітаптар</h3>${tbl(['Файл', 'Сөз', 'Өлшем', 'Орны', 'WPM'],
         d.books.map(b => [esc(b.filename), nf(b.total_words), mb(b.file_size), nf(b.position), nf(b.wpm)]))}</div>
-      <div><h3>Күн бойынша оқу (соңғы сессиялар)</h3>${tbl(['Күні', 'Бет', 'Минут'], byDay(d.sessions))}</div>
+      <div><h3>Күн бойынша оқу (соңғы 30 күн, Қазақстан уақыты)</h3>${tbl(['Күні', 'Бет', 'Минут'], d.days.map(x => [dday(x.day), nf(x.pages), nf(x.minutes)]))}</div>
       <div><h3>Шульте кестесі</h3>${tbl(['Өлшем', 'Белгі', 'Үздік'],
         d.schulte.map(t => [esc(t.size + '×' + t.size), t.symbols === 'numbers' ? 'сандар' : 'әріптер', fmtMs(t.best_ms)]))}</div>
       <div><h3>Санды есте сақта</h3>${rn
