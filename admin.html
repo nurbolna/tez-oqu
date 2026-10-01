@@ -53,6 +53,11 @@
   .detail h3 { font-size: 14px; margin: 0 0 6px; }
   .detail table { font-size: 13px; }
   .err { color: #c0392b; }
+  .fbrow { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .fbrow:last-child { border-bottom: 0; }
+  .fbmood { font-weight: bold; }
+  .fbtag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-right: 4px; }
+  select { font: inherit; font-size: 14px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
   input[type=search] { font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
                        background: var(--card); color: var(--text); width: 100%; max-width: 280px; }
 </style>
@@ -130,6 +135,8 @@ function render(s, act) {
       <div class="axis"><span>${dday(act[0]?.day)}</span><span>${dday(act[act.length - 1]?.day)}</span></div>
     </div>
 
+    <div id="fb-box"></div>
+
     <div class="chart-head">
       <h2 style="margin:26px 0 0">Қолданушылар</h2>
       <div class="periods"><span class="muted" style="font-size:14px">Кезең:</span>${PERIODS.map(([k, l]) => `<button data-p="${k}" class="${k === period ? 'on' : ''}" onclick="setPeriod('${k}')">${l}</button>`).join('')}</div>
@@ -152,6 +159,7 @@ function render(s, act) {
     const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; rows();
   });
   rows();
+  loadFeedback();
 }
 
 function periodLabel() {
@@ -220,6 +228,65 @@ async function showUser(id) {
         d.field_of_vision.map(f => [esc(f.field_size + '×' + f.field_size), f.points, f.best_accuracy + '%', f.best_found]))}</div>
     </div>`;
   box.scrollIntoView({ behavior: 'smooth' });
+}
+
+const SRC = { schulte: 'Шульте кестесі', remember_number: 'Санды есте сақта', field_of_vision: 'Көру өрісі', reading: 'Кітап оқу' };
+const MOOD = { good: ['Ұнады', 'var(--ok)'], ok: ['Орташа', '#b8860b'], bad: ['Ұнамады', '#c0392b'] };
+let fbRows = [], fbDays = 14, fbOnlyBad = false, fbSrc = 'all';
+
+async function loadFeedback() {
+  const box = document.getElementById('fb-box');
+  if (!box) return;
+  box.innerHTML = '<h2>Пікірлер</h2><p class="muted">Жүктелуде…</p>';
+  const { data, error } = await sb.rpc('admin_feedback', { days: fbDays });
+  if (error) {
+    box.innerHTML = '<h2>Пікірлер</h2><p class="muted">Пікірлер әлі қосылмаған: feedback.sql дерекқорда іске қосылмаған болуы мүмкін. (' + esc(error.message) + ')</p>';
+    return;
+  }
+  fbRows = data;
+  renderFeedback();
+}
+
+function setFb(k, v) {
+  if (k === 'days') { fbDays = v; loadFeedback(); return; }
+  if (k === 'bad') fbOnlyBad = v;
+  if (k === 'src') fbSrc = v;
+  renderFeedback();
+}
+
+function renderFeedback() {
+  const box = document.getElementById('fb-box');
+  if (!box) return;
+  const bySrc = fbSrc === 'all' ? fbRows : fbRows.filter(r => r.source === fbSrc);
+  const cnt = m => bySrc.filter(r => r.mood === m).length;
+  const list = fbOnlyBad ? bySrc.filter(r => r.mood === 'bad') : bySrc;
+  const srcRows = Object.keys(SRC).map(k => {
+    const r = fbRows.filter(x => x.source === k), c = m => r.filter(x => x.mood === m).length;
+    return `<tr><td>${SRC[k]}</td><td class="num">${r.length}</td><td class="num" style="color:var(--ok)">${c('good')}</td><td class="num">${c('ok')}</td><td class="num" style="color:#c0392b">${c('bad')}</td></tr>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="chart-head">
+      <h2 style="margin:26px 0 0">Пікірлер</h2>
+      <div class="periods"><span class="muted" style="font-size:14px">Кезең:</span>
+        ${[7, 14, 30].map(d => `<button class="${d === fbDays ? 'on' : ''}" onclick="setFb('days',${d})">${d} күн</button>`).join('')}</div>
+    </div>
+    <div class="grid" style="margin-bottom:10px">
+      <div class="stat"><b style="color:var(--ok)">${cnt('good')}</b><span>Ұнады</span></div>
+      <div class="stat"><b style="color:#b8860b">${cnt('ok')}</b><span>Орташа</span></div>
+      <div class="stat"><b style="color:#c0392b">${cnt('bad')}</b><span>Ұнамады</span></div>
+    </div>
+    <div class="tablewrap" style="margin-bottom:10px"><table>
+      <thead><tr><th>Жаттығу</th><th class="num">Барлығы</th><th class="num">Ұнады</th><th class="num">Орташа</th><th class="num">Ұнамады</th></tr></thead>
+      <tbody>${srcRows}</tbody></table></div>
+    <div class="periods" style="margin-bottom:8px">
+      <select onchange="setFb('src',this.value)"><option value="all">Барлық жаттығу</option>${Object.keys(SRC).map(k => `<option value="${k}" ${k === fbSrc ? 'selected' : ''}>${SRC[k]}</option>`).join('')}</select>
+      <button class="${fbOnlyBad ? 'on' : ''}" onclick="setFb('bad',${!fbOnlyBad})">Тек ұнамағандар</button>
+    </div>
+    <div class="tablewrap">${list.length ? list.map(r => {
+      const [ml, mc] = MOOD[r.mood] || [r.mood, 'inherit'];
+      return `<div class="fbrow"><div><span class="fbmood" style="color:${mc}">${esc(ml)}</span> · <b>${esc(r.full_name || r.phone || '—')}</b> · ${esc(SRC[r.source] || r.source)}${r.context ? ' (' + esc(r.context) + ')' : ''} · <span class="muted">${dt(r.created_at)}</span></div>
+        ${(r.tags && r.tags.length) || r.comment ? `<div style="margin-top:4px">${(r.tags || []).map(t => `<span class="fbtag">${esc(t)}</span>`).join('')}${r.comment ? esc(r.comment) : ''}</div>` : ''}</div>`;
+    }).join('') : '<p class="muted" style="padding:10px 14px;margin:0">Әзірге пікір жоқ</p>'}</div>`;
 }
 
 init();

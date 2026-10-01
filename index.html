@@ -606,7 +606,7 @@
   <input type="file" id="file-input" accept=".txt,.pdf,.epub">
 
   <div id="chrome-top">
-    <i class="ti ti-arrow-left" id="back-to-dash" onclick="stop(); if(authUser){showDashboard();}else{openAuthOverlay();}" title="Dashboard-қа оралу"></i>
+    <i class="ti ti-arrow-left" id="back-to-dash" onclick="stop(); if(authUser){showDashboard(); try{fbAskReading();}catch(e){}}else{openAuthOverlay();}" title="Dashboard-қа оралу"></i>
     <span id="reader-filename"></span>
     <div id="chrome-top-actions">
       <button class="chrome-icon-btn" id="toc-btn" aria-label="Бетбелгілер"><i class="ti ti-list"></i></button>
@@ -2937,6 +2937,7 @@ function schulteClick(n, cell) {
     document.getElementById('schulte-status').textContent = 'Дайын!';
     schultePhase = 'done';
     schulteSaveBest(schulteSize, schulteSymbols, elapsedMs);
+    try { fbAsk('schulte', schulteSize + '×' + schulteSize + ' ' + (schulteSymbols === 'letters' ? 'әріп' : 'сан') + ', ' + schulteFormatTime(elapsedMs)); } catch (e) {}
   }
 }
 
@@ -3215,6 +3216,7 @@ function rnGameOver(gen, timedOut) {
   document.getElementById('remember-number-restart').style.display = 'inline-flex';
 
   rnSaveBest(finalScore, rnScore, rnMaxDigits);
+  try { fbAsk('remember_number', rnScore + ' сан'); } catch (e) {}
 }
 
 function rnTodayStr() {
@@ -3832,6 +3834,7 @@ async function checkpointStats() {
   const delta = pos - statsBasePos;
   statsBasePos = pos;
   if (delta <= 0) return;
+  window.fbReadWords = (window.fbReadWords || 0) + delta;
   // A book only ever has one home for its stats: cloud if it's cloud-linked,
   // local otherwise — never both, or a cloud-linked book's reading would be
   // double-counted once local + cloud stats are merged for display.
@@ -4353,6 +4356,7 @@ function fovFinish() {
   fovShowScreen('results');
   fovSetControlsEnabled(true);
   fovAfterFinish(res, fovGen);
+  try { fbAsk('field_of_vision', res.size + '×' + res.size + ', ' + res.points + ' нүкте, дәлдік ' + fovFmtPct(res.accuracy)); } catch (e) {}
 }
 async function fovAfterFinish(res, gen) {
   const info = await fovSaveResult(res);
@@ -4437,5 +4441,150 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
 </script>
+
+<!-- feedback: жаттығудан / оқудан кейінгі пікір карточкасы -->
+<style>
+  #fb-sheet { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; justify-content: center; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; }
+  #fb-sheet.open { display: flex; }
+  #fb-card { pointer-events: auto; width: 100%; max-width: 440px; background: #fff; color: #1F1E1B; border: 1px solid #E4E3DD; border-radius: 14px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(0,0,0,.18); font-family: inherit; }
+  #fb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  #fb-title { font-size: 15px; font-weight: 500; }
+  #fb-close { cursor: pointer; font-size: 20px; color: #8A8980; line-height: 1; padding: 2px; }
+  #fb-moods { display: flex; gap: 8px; }
+  .fb-mood { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 10px; border: 1px solid #D3D2C9; background: #fff; color: #57564F; font: inherit; font-size: 13px; cursor: pointer; }
+  .fb-mood i { font-size: 28px; }
+  .fb-mood.sel { border: 2px solid #2A78D6; padding: 9px 5px; color: #1F1E1B; }
+  #fb-more { display: none; margin-top: 12px; }
+  #fb-more p { margin: 0 0 6px; font-size: 13px; color: #57564F; }
+  #fb-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .fb-chip { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid #D3D2C9; background: #fff; color: #57564F; cursor: pointer; }
+  .fb-chip.sel { background: #E6F1FB; color: #2A78D6; border-color: #2A78D6; }
+  #fb-txt { width: 100%; box-sizing: border-box; resize: none; font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 8px; border: 1px solid #D3D2C9; background: #fff; color: #1F1E1B; }
+  #fb-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+  #fb-send { font: inherit; font-size: 14px; padding: 7px 16px; border-radius: 8px; border: 0; background: #2A78D6; color: #fff; cursor: pointer; }
+  #fb-thanks { display: none; margin: 4px 0 0; font-size: 14px; color: #2E7D4F; }
+</style>
+<div id="fb-sheet" role="dialog" aria-label="Пікір">
+  <div id="fb-card">
+    <div id="fb-head"><span id="fb-title">Бұл жаттығу қалай болды?</span><i class="ti ti-x" id="fb-close" onclick="fbClose()" aria-label="Жабу"></i></div>
+    <div id="fb-moods">
+      <button class="fb-mood" data-m="good" onclick="fbMood('good')"><i class="ti ti-mood-happy" aria-hidden="true"></i>Ұнады</button>
+      <button class="fb-mood" data-m="ok" onclick="fbMood('ok')"><i class="ti ti-mood-neutral" aria-hidden="true"></i>Орташа</button>
+      <button class="fb-mood" data-m="bad" onclick="fbMood('bad')"><i class="ti ti-mood-sad" aria-hidden="true"></i>Ұнамады</button>
+    </div>
+    <div id="fb-more">
+      <p>Не болды? (міндетті емес)</p>
+      <div id="fb-chips">
+        <button class="fb-chip" onclick="fbChip(this)">Түсініксіз</button>
+        <button class="fb-chip" onclick="fbChip(this)">Баяу жұмыс істеді</button>
+        <button class="fb-chip" onclick="fbChip(this)">Тым қиын</button>
+        <button class="fb-chip" onclick="fbChip(this)">Қате шықты</button>
+        <button class="fb-chip" onclick="fbChip(this)">Тым оңай</button>
+      </div>
+      <textarea id="fb-txt" rows="2" maxlength="500" placeholder="Бір-екі сөзбен жазыңыз"></textarea>
+      <div id="fb-actions"><button id="fb-send" onclick="fbSend()">Жіберу</button></div>
+    </div>
+    <p id="fb-thanks"><i class="ti ti-check" aria-hidden="true"></i> Рақмет, жауабың сақталды</p>
+  </div>
+</div>
+<script>
+(function () {
+  const ROOT = { schulte: 'schulte', remember_number: 'remember-number', field_of_vision: 'field-of-vision', reading: 'dashboard' };
+  const TITLE = { reading: 'Бүгінгі оқу қалай болды?' };
+  const GAP_MS = 30 * 60 * 1000;   // жаттығуларда: бір тренажерге 30 минутта бір рет қана сұрайды
+  const READ_MIN_WORDS = 300;      // кітап: кемінде ~1 бет оқылса, күніне бір рет
+  const IDLE_HIDE_MS = 45000;      // смайл басылмаса, карточка өздігінен жабылады
+  const st = { src: null, id: null, mood: null, tags: [], p: null, shownAt: 0, idle: null, watch: null };
+  const el = id => document.getElementById(id);
+  const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const uuid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+
+  function hide() {
+    clearTimeout(st.idle); clearInterval(st.watch);
+    el('fb-sheet').classList.remove('open');
+    st.src = null;
+  }
+  function open(src, ctx) {
+    st.src = src; st.ctx = ctx || ''; st.id = null; st.mood = null; st.tags = []; st.p = null; st.shownAt = Date.now();
+    el('fb-title').textContent = TITLE[src] || 'Бұл жаттығу қалай болды?';
+    el('fb-more').style.display = 'none';
+    el('fb-thanks').style.display = 'none';
+    el('fb-moods').style.display = 'flex';
+    el('fb-txt').value = '';
+    document.querySelectorAll('.fb-mood, .fb-chip').forEach(b => b.classList.remove('sel'));
+    el('fb-sheet').classList.add('open');
+    clearTimeout(st.idle);
+    st.idle = setTimeout(() => { if (!st.mood) hide(); }, IDLE_HIDE_MS);
+    // оқушы басқа экранға өтіп кетсе, карточка бұрынғы экранда қалып қоймайды
+    clearInterval(st.watch);
+    st.watch = setInterval(() => {
+      if (Date.now() - st.shownAt < 2500) return;
+      const root = el(ROOT[st.src]);
+      if (!root || getComputedStyle(root).display === 'none') hide();
+    }, 1000);
+  }
+
+  window.fbAsk = function (src, ctx) {
+    if (!ROOT[src] || typeof sb === 'undefined' || !sb || !authUser) return;
+    const last = +lsGet('fb_last_' + src) || 0;
+    if (Date.now() - last < GAP_MS) return;
+    lsSet('fb_last_' + src, String(Date.now()));
+    open(src, ctx);
+  };
+  window.fbAskReading = function () {
+    const words = window.fbReadWords || 0;
+    if (typeof sb === 'undefined' || !sb || !authUser) return;
+    if (words < READ_MIN_WORDS) return;
+    if (lsGet('fb_read_day') === todayStr()) return;
+    window.fbReadWords = 0;
+    lsSet('fb_read_day', todayStr());
+    open('reading', Math.round(words) + ' сөз');
+  };
+  window.fbClose = hide;
+
+  window.fbMood = function (m) {
+    if (!st.src) return;
+    st.mood = m;
+    clearTimeout(st.idle);
+    document.querySelectorAll('.fb-mood').forEach(b => b.classList.toggle('sel', b.dataset.m === m));
+    el('fb-more').style.display = 'block';
+    if (!st.id) {
+      st.id = uuid();
+      const row = { id: st.id, user_id: authUser.id, source: st.src, mood: m, context: st.ctx || null };
+      st.p = sb.from('feedback').insert(row).then(r => { if (r.error) { console.warn('feedback insert', r.error.message); st.id = null; } }, e => { st.id = null; });
+    } else {
+      const id = st.id;
+      st.p = Promise.resolve(st.p).then(() => sb.from('feedback').update({ mood: m }).eq('id', id)).catch(() => {});
+    }
+  };
+  window.fbChip = function (btn) {
+    btn.classList.toggle('sel');
+    const t = btn.textContent, i = st.tags.indexOf(t);
+    if (i > -1) st.tags.splice(i, 1); else st.tags.push(t);
+  };
+  window.fbSend = async function () {
+    if (!st.mood) return;
+    const comment = el('fb-txt').value.trim();
+    const tags = st.tags.slice();
+    const src = st.src, mood = st.mood, ctx = st.ctx;
+    el('fb-more').style.display = 'none';
+    el('fb-moods').style.display = 'none';
+    el('fb-thanks').style.display = 'block';
+    try {
+      await st.p;
+      if (st.id && (tags.length || comment)) {
+        await sb.from('feedback').update({ tags, comment: comment || null }).eq('id', st.id);
+      } else if (!st.id) {
+        await sb.from('feedback').insert({ user_id: authUser.id, source: src, mood, tags, comment: comment || null, context: ctx || null });
+      }
+    } catch (e) { console.warn('feedback send', e); }
+    setTimeout(hide, 1800);
+  };
+})();
+</script>
+
 </body>
 </html>
