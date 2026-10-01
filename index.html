@@ -4486,7 +4486,8 @@ if ('serviceWorker' in navigator) {
   const ROOT = { schulte: 'schulte', remember_number: 'remember-number', field_of_vision: 'field-of-vision', reading: 'dashboard' };
   const TITLE = { reading: 'Бүгінгі оқу қалай болды?' };
   const GAP_MS = 30 * 60 * 1000;   // жаттығуларда: бір тренажерге 30 минутта бір рет қана сұрайды
-  const READ_MIN_WORDS = 300;      // кітап: кемінде ~1 бет оқылса, күніне бір рет
+  const READ_MIN_WORDS = 1500;     // кітап: бір сессияда кемінде 5 бет (1 бет = 300 сөз, статистикамен бірдей)
+  const READ_MAX_PER_WEEK = 3;     // кітап: аптасына ең көбі 3 рет, күніне бір реттен көп емес
   const IDLE_HIDE_MS = 45000;      // смайл басылмаса, карточка өздігінен жабылады
   const TAGS = {
     good: ['Қызықты', 'Түсінікті', 'Пайдалы', 'Жылдам жұмыс істейді', 'Қолайлы'],
@@ -4534,14 +4535,21 @@ if ('serviceWorker' in navigator) {
     lsSet('fb_last_' + src, String(Date.now()));
     open(src, ctx);
   };
+  const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  const weekStartKey = () => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dayKey(d); };
+  function readLog() { try { const a = JSON.parse(lsGet('fb_read_log') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   window.fbAskReading = function () {
     const words = window.fbReadWords || 0;
+    window.fbReadWords = 0;          // сессия аяқталды: келесі оқу санағы нөлден басталады
     if (typeof sb === 'undefined' || !sb || !authUser) return;
     if (words < READ_MIN_WORDS) return;
-    if (lsGet('fb_read_day') === todayStr()) return;
-    window.fbReadWords = 0;
-    lsSet('fb_read_day', todayStr());
-    open('reading', Math.round(words) + ' сөз');
+    const today = todayStr(), wk = weekStartKey();
+    const log = readLog().filter(x => x.w === wk);   // тек осы аптадағы жазбалар (дүйсенбіден)
+    if (log.some(x => x.d === today)) return;        // бүгін сұралып қойған
+    if (log.length >= READ_MAX_PER_WEEK) return;     // апта лимиті
+    log.push({ d: today, w: wk });
+    lsSet('fb_read_log', JSON.stringify(log));
+    open('reading', Math.round(words / 300) + ' бет');
   };
   window.fbClose = hide;
 
