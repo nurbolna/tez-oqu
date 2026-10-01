@@ -290,7 +290,7 @@ async function loadContest() {
     const grow = growth == null ? 0 : Math.min(Math.max(growth, 0), 100);
     return {
       name: u.full_name || u.phone || '—', phone: u.phone || '', days, minutes: Number(u.total_minutes),
-      growth, flagged, nTests: ks.length, cons, grow,
+      growth, flagged, nTests: ks.length, cons, grow, t1: t[1]?.throughput, t2: t[2]?.throughput, t3: t[3]?.throughput,
       total: Math.round(CONTEST.wCons * cons + CONTEST.wGrow * grow)
     };
   });
@@ -314,23 +314,23 @@ function renderContest() {
       <h2 style="margin:26px 0 0">Челлендж рейтингі <span class="muted" style="font-size:14px">· ${esc(state)}</span></h2>
       <div class="periods"><button onclick="loadContest()">Жаңарту</button><button onclick="exportContest()">CSV ↓</button></div>
     </div>
-    <p class="muted" style="font-size:14px;margin:0 0 8px">${dday(CONTEST.start)} – ${dday(CONTEST.end)}. Белсенді күн: күніне ≥${CONTEST.minMinutes} минут ▶ оқу. Тұрақтылық ${CONTEST.days - CONTEST.passDays} күннен есептеледі (${CONTEST.passDays} демалыс күні рұқсат). Өсім: бірінші және соңғы тест қорытындысының айырмасы (0…100%). Жалпы ұпай = ${Math.round(CONTEST.wCons * 100)}% тұрақтылық + ${Math.round(CONTEST.wGrow * 100)}% өсім. «!» — күдікті тест, өсімге кірмейді.</p>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">${dday(CONTEST.start)} – ${dday(CONTEST.end)}. Белсенді күн: күніне ≥${CONTEST.minMinutes} минут ▶ оқу. Тұрақтылық ${CONTEST.days - CONTEST.passDays} күннен есептеледі (${CONTEST.passDays} демалыс күні рұқсат). Тесттер: 1 — кірген күні (${dday(CONTEST.start)}), 2 — 7 күннен кейін (${dday(addDays(CONTEST.start, 7))}), 3 — 14 күннен кейін (${dday(addDays(CONTEST.start, 14))}). Өсім: 1-тест пен ең соңғы тапсырылған тест қорытындысының (WPM × түсіну) айырмасы, 0…100%; 2-тестен кейін аралық өсім көрінеді. Жалпы ұпай = ${Math.round(CONTEST.wCons * 100)}% тұрақтылық + ${Math.round(CONTEST.wGrow * 100)}% өсім. «!» — күдікті тест, өсімге кірмейді.</p>
     <div class="detail" style="margin:0 0 12px">
       ${top('⭐ Жалпы чемпион', byTotal, u => u.total + ' ұпай')}
       ${top('🏆 Ең тұрақты', byCons, u => u.days + ' күн')}
       ${top('🚀 Ең үлкен өсім', byGrow, u => (u.growth > 0 ? '+' : '') + u.growth + '%')}
     </div>
     <div class="tablewrap"><table>
-      <thead><tr><th>#</th><th>Оқушы</th><th class="num">Белсенді күн</th><th class="num">Минут</th><th class="num">Өсім</th><th class="num">Тұрақтылық</th><th class="num">Өсім ұпайы</th><th class="num">Жалпы</th></tr></thead>
-      <tbody>${byTotal.map((u, i) => `<tr><td class="muted">${i + 1}</td><td>${esc(u.name)}</td><td class="num">${u.days} / ${CONTEST.days}</td><td class="num">${nf(Math.round(u.minutes))}</td><td class="num">${gfmt(u.growth)}${u.flagged ? ' <span class="err" title="Күдікті тест">!</span>' : ''}</td><td class="num">${u.cons}</td><td class="num">${u.grow}</td><td class="num"><b>${u.total}</b></td></tr>`).join('')
-        || '<tr><td colspan="8" class="muted">Әзірге оқушы жоқ</td></tr>'}</tbody>
+      <thead><tr><th>#</th><th>Оқушы</th><th class="num">Белсенді күн</th><th class="num">Минут</th><th class="num">Тест 1</th><th class="num">Тест 2</th><th class="num">Тест 3</th><th class="num">Өсім</th><th class="num">Тұрақтылық</th><th class="num">Өсім ұпайы</th><th class="num">Жалпы</th></tr></thead>
+      <tbody>${byTotal.map((u, i) => `<tr><td class="muted">${i + 1}</td><td>${esc(u.name)}</td><td class="num">${u.days} / ${CONTEST.days}</td><td class="num">${nf(Math.round(u.minutes))}</td><td class="num">${u.t1 ?? '<span class="muted">—</span>'}</td><td class="num">${u.t2 ?? '<span class="muted">—</span>'}</td><td class="num">${u.t3 ?? '<span class="muted">—</span>'}</td><td class="num">${gfmt(u.growth)}${u.flagged ? ' <span class="err" title="Күдікті тест">!</span>' : ''}</td><td class="num">${u.cons}</td><td class="num">${u.grow}</td><td class="num"><b>${u.total}</b></td></tr>`).join('')
+        || '<tr><td colspan="11" class="muted">Әзірге оқушы жоқ</td></tr>'}</tbody>
     </table></div>`;
 }
 
 function exportContest() {
-  downloadCsv('contest', [['Аты', 'Телефон', 'Белсенді күн', 'Минут', 'Өсім %', 'Тест саны', 'Күдікті', 'Тұрақтылық', 'Өсім ұпайы', 'Жалпы']]
+  downloadCsv('contest', [['Аты', 'Телефон', 'Белсенді күн', 'Минут', 'Тест 1', 'Тест 2', 'Тест 3', 'Өсім %', 'Тест саны', 'Күдікті', 'Тұрақтылық', 'Өсім ұпайы', 'Жалпы']]
     .concat(ctRanked.slice().sort((a, b) => b.total - a.total || b.minutes - a.minutes)
-      .map(u => [u.name, u.phone, u.days, Math.round(u.minutes), u.growth == null ? '' : u.growth, u.nTests, u.flagged ? 'иә' : '', u.cons, u.grow, u.total])));
+      .map(u => [u.name, u.phone, u.days, Math.round(u.minutes), u.t1 ?? '', u.t2 ?? '', u.t3 ?? '', u.growth == null ? '' : u.growth, u.nTests, u.flagged ? 'иә' : '', u.cons, u.grow, u.total])));
 }
 
 let blRows = [], blOpenNo = 0;
