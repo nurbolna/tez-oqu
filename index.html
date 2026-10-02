@@ -471,7 +471,7 @@
   /* нүкте экранның шетіне дейін барады: сахна = бүкіл экран (тек iPhone ойығын айналып өтеді) */
   #ew-stage { position: absolute; top: env(safe-area-inset-top); right: env(safe-area-inset-right); bottom: env(safe-area-inset-bottom); left: env(safe-area-inset-left); }
   #ew-target { position: absolute; top: 0; left: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--d-accent); will-change: transform, opacity; z-index: 2; }
-  #ew-close { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--d-border); background: rgba(255,255,255,.85); color: var(--d-text-2); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  #ew-close, #ew-info { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--d-border); background: rgba(255,255,255,.85); color: var(--d-text-2); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
   #ew-hud { position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 1; text-align: center; pointer-events: none; padding: 0 16px; }
   #ew-label { font-size: 14px; color: var(--d-text-3); min-height: 18px; }
   #ew-timer { font-size: 18px; font-weight: 600; color: var(--d-text-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
@@ -481,6 +481,29 @@
   #ew-intro-hint { font-size: 15px; color: var(--d-text-2); }
   #ew-intro-next { font-size: 13px; color: var(--d-text-3); margin-top: 18px; }
   #ew-done-text { font-size: 22px; font-weight: 600; margin-bottom: 16px; }
+  #ew-info { left: calc(60px + env(safe-area-inset-left)); }
+  /* ══ жаттығу онбордингі (жалпы: trainerIntroShow) ══ */
+  .tri-ov { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.45);
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color: #1F1E1B; }
+  .tri-card { position: relative; width: 100%; max-width: 380px; min-height: 440px; background: #fff; border-radius: 18px; display: flex; flex-direction: column; padding: 48px 22px 20px; }
+  .tri-skip { position: absolute; top: 16px; right: 18px; background: none; border: none; font: inherit; font-size: 14px; color: #8A8980; cursor: pointer; padding: 4px; }
+  .tri-slide { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .tri-ic { width: 64px; height: 64px; border-radius: 50%; background: #E6F0FB; color: #2A78D6; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 16px; }
+  .tri-slide h3 { font-size: 19px; font-weight: 600; margin: 0 0 10px; }
+  .tri-slide p, .tri-slide li { font-size: 15px; line-height: 1.5; color: #57564F; margin: 0; }
+  .tri-slide ul { text-align: left; padding-left: 20px; margin: 4px 0 0; }
+  .tri-slide li + li { margin-top: 6px; }
+  .tri-slide b { color: #1F1E1B; font-weight: 600; }
+  .tri-cycle { display: flex; gap: 8px; width: 100%; margin-top: 16px; }
+  .tri-cycle div { flex: 1; border: 1px solid #E4E3DD; border-radius: 10px; padding: 8px 4px; font-size: 13px; color: #57564F; }
+  .tri-cycle div.on { border: 2px solid #2A78D6; color: #1F63B8; font-weight: 600; }
+  .tri-cycle small { display: block; font-size: 11px; font-weight: 400; margin-top: 2px; }
+  .tri-dots { display: flex; gap: 6px; justify-content: center; margin: 18px 0 14px; }
+  .tri-dots i { width: 7px; height: 7px; border-radius: 4px; background: #D3D2C9; transition: width .2s; }
+  .tri-dots i.on { width: 20px; background: #2A78D6; }
+  .tri-check { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: #57564F; margin-bottom: 12px; cursor: pointer; user-select: none; }
+  .tri-check input { width: 18px; height: 18px; margin: 0; accent-color: #2A78D6; }
+  .tri-next { width: 100%; min-height: 46px; border: none; border-radius: 10px; background: #2A78D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 
   /* ══ pyramid text ══ */
   #pyramid {
@@ -1104,6 +1127,7 @@
 <div id="eyewarmup">
   <div id="ew-stage"><div id="ew-target"></div></div>
   <button id="ew-close" onclick="eyeWarmupSkip()" aria-label="Жабу" title="Дашбордқа оралу"><i class="ti ti-x"></i></button>
+  <button id="ew-info" onclick="eyeIntroReopen()" aria-label="Нұсқаулық" title="Нұсқаулық"><i class="ti ti-info-circle"></i></button>
   <div id="ew-hud">
     <div id="ew-label"></div>
     <div id="ew-timer">60с</div>
@@ -3022,6 +3046,54 @@ function showSchulte() {
   schultePickSize(4);
 }
 
+/* ── жаттығу онбордингі (жалпы) ──
+   trainerIntroShow({ key, slides: [{ icon, title, html }], startLabel, onDone, host })
+   host — жаттығу экраны: экран жасырылса, терезе де бірге жасырылады.
+   «Енді көрсетпеу» тек соңғы слайдта, әдепкі күйі — белгіленбеген; құрылғыда сақталады (sr5_intro_hidden_<key>). */
+function trainerIntroHidden(key) {
+  try { return localStorage.getItem('sr5_intro_hidden_' + key) === '1'; } catch (e) { return false; }
+}
+function trainerIntroSetHidden(key, on) {
+  try { on ? localStorage.setItem('sr5_intro_hidden_' + key, '1') : localStorage.removeItem('sr5_intro_hidden_' + key); } catch (e) {}
+}
+function trainerIntroShow(opt) {
+  const old = document.getElementById('tri-ov');
+  if (old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'tri-ov';
+  ov.className = 'tri-ov';
+  ov.innerHTML = '<div class="tri-card" role="dialog" aria-modal="true">' +
+    '<button class="tri-skip" type="button"></button><div class="tri-slide"></div>' +
+    '<div class="tri-dots">' + opt.slides.map(() => '<i></i>').join('') + '</div>' +
+    '<label class="tri-check"><input type="checkbox"><span></span></label>' +
+    '<button class="tri-next" type="button"></button></div>';
+  (opt.host || document.body).appendChild(ov);
+  const q = sel => ov.querySelector(sel);
+  const box = q('.tri-check input');
+  box.checked = trainerIntroHidden(opt.key);
+  q('.tri-check span').textContent = tr('Енді көрсетпеу');
+  q('.tri-skip').textContent = tr('Өткізу');
+  let i = 0;
+  const last = opt.slides.length - 1;
+  function render() {
+    const sl = opt.slides[i];
+    q('.tri-slide').innerHTML = '<div class="tri-ic"><i class="ti ti-' + sl.icon + '"></i></div><h3></h3>' + sl.html;
+    q('.tri-slide h3').textContent = sl.title;
+    ov.querySelectorAll('.tri-dots i').forEach((d, j) => d.classList.toggle('on', j === i));
+    q('.tri-check').style.visibility = i === last ? 'visible' : 'hidden';
+    q('.tri-skip').style.visibility = i === last ? 'hidden' : 'visible';
+    q('.tri-next').textContent = i === last ? (opt.startLabel || tr('Бастау')) : tr('Келесі');
+  }
+  q('.tri-skip').onclick = () => { i = last; render(); };
+  q('.tri-next').onclick = () => {
+    if (i < last) { i++; render(); return; }
+    trainerIntroSetHidden(opt.key, box.checked);
+    ov.remove();
+    if (opt.onDone) opt.onDone();
+  };
+  render();
+}
+
 /* ── eye warmup ── */
 // 3 нұсқа күн сайын кезектеседі (A → B → C → A…): әр жаттығу 3 күнде бір келеді, бір күні барлық оқушыда бірдей.
 // Жылдамдық = нүктенің бір шеттен екінші шетке жету уақыты (секунд), сондықтан телефонда да, үлкен экранда да бірдей сезіледі.
@@ -3093,9 +3165,65 @@ function eyeWarmupClearTimers() {
   eyeRun = null;
 }
 
+function eyeIntroSlides(idx) {
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const cyc = EYE_VARIANTS.map((v, j) => '<div' + (j === idx ? ' class="on"' : '') + '>' + esc(v.name) +
+    (j === idx ? '<small>' + esc(tr('бүгін')) + '</small>' : '') + '</div>').join('');
+  return [
+    { icon: 'eye', title: tr('Көз жаттығуы не үшін?'),
+      html: '<p>' + esc(tr('Оқығанда көз жол бойымен секіреді. 60 секундтық жаттығу көз бұлшықетін қыздырады: оқу жеңілдейді, көз аз шаршайды.')) + '</p>' },
+    { icon: 'mood-smile', title: tr('Қалай жасау керек'),
+      html: '<ul><li><b>' + esc(tr('Басыңызды қозғалтпаңыз')) + '</b> — ' + esc(tr('тек көз жүрсін')) + '</li>' +
+        '<li>' + esc(tr('Экраннан 40–60 см қашық отырыңыз')) + '</li>' +
+        '<li>' + esc(tr('Көзілдірік болса, тағыңыз')) + '</li>' +
+        '<li>' + esc(tr('Көз ауырса, ✕ басып тоқтатыңыз')) + '</li></ul>' },
+    { icon: 'refresh', title: tr('Күн сайын жаңа жаттығу'),
+      html: '<p>' + esc(tr('Үш жаттығу кезектеседі, әрқайсысы 3 күнде бір келеді.')) + '</p><div class="tri-cycle">' + cyc + '</div>' }
+  ];
+}
+
 function eyeWarmupStart(forceIdx) {
   eyeWarmupClearTimers();
   const idx = forceIdx != null ? forceIdx : eyeVariantIndex();
+  const stale = document.getElementById('tri-ov');                      // ⓘ ашық күйде экраннан шығып кетсе
+  if (stale) stale.remove();
+  if (trainerIntroHidden('eye')) { eyeWarmupBegin(idx); return; }
+  document.getElementById('ew-done').style.display = 'none';
+  document.getElementById('ew-intro').style.display = 'none';
+  document.getElementById('ew-label').textContent = '';
+  document.getElementById('ew-target').style.transform = 'translate(-100px,-100px)';
+  document.getElementById('ew-timer').textContent = EYE_VARIANTS[idx].phases.reduce((t, p) => t + p.dur, 0) + 'с';
+  trainerIntroShow({ key: 'eye', host: eyeHost(), slides: eyeIntroSlides(idx), onDone: () => eyeWarmupBegin(idx) });
+}
+
+// ⓘ: жаттығу кезінде нұсқаулықты қайта ашады, таймер кідіріп, жабылғанда сол жерінен жалғасады
+function eyeIntroReopen() {
+  const idx = eyeRun ? EYE_VARIANTS.indexOf(eyeRun.v) : eyeVariantIndex();
+  if (eyeRun) {
+    const run = eyeRun;
+    cancelAnimationFrame(eyeRaf); eyeRaf = 0;
+    const pausedAt = performance.now();
+    trainerIntroShow({ key: 'eye', host: eyeHost(), slides: eyeIntroSlides(idx), startLabel: tr('Жалғастыру'), onDone: () => {
+      if (eyeRun !== run) return;
+      const now = performance.now();
+      run.t0 += now - pausedAt; run.last = now;
+      eyeRaf = requestAnimationFrame(eyeWarmupFrame);
+    } });
+    return;
+  }
+  if (document.getElementById('ew-done').style.display === 'flex') {   // аяқталған соң: тек оқу үшін
+    trainerIntroShow({ key: 'eye', host: eyeHost(), slides: eyeIntroSlides(idx), startLabel: tr('Жабу') });
+    return;
+  }
+  eyeWarmupClearTimers();                                               // «Бүгін: …» экраны кезінде: басынан бастаймыз
+  document.getElementById('ew-intro').style.display = 'none';
+  trainerIntroShow({ key: 'eye', host: eyeHost(), slides: eyeIntroSlides(idx), onDone: () => eyeWarmupBegin(idx) });
+}
+
+function eyeHost() { return document.getElementById('eyewarmup'); }
+
+function eyeWarmupBegin(idx) {
+  eyeWarmupClearTimers();
   const v = EYE_VARIANTS[idx];
   const next = EYE_VARIANTS[(idx + 1) % EYE_VARIANTS.length];
   const total = v.phases.reduce((t, p) => t + p.dur, 0);
