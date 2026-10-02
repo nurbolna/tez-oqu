@@ -3041,8 +3041,8 @@ function schulteIntroSlides() {
 }
 function schulteIntroMaybeShow() {
   if (trainerIntroHidden('schulte')) return;
-  trainerIntroShow({ key: 'schulte', host: document.getElementById('schulte'), slides: schulteIntroSlides(),
-    onDone: () => { if (schultePhase === 'setup') schulteStart(); } });
+  // ойынды бастамайды: өлшем мен таңба осы экранда, «Бастау» алдында таңдалады
+  trainerIntroShow({ key: 'schulte', host: document.getElementById('schulte'), slides: schulteIntroSlides(), startLabel: tr('Түсінікті') });
 }
 function schulteIntroOpen() {                           // тақырыптағы ⓘ: тек оқу үшін, ойынды бастамайды
   trainerIntroShow({ key: 'schulte', host: document.getElementById('schulte'), slides: schulteIntroSlides(), startLabel: tr('Түсінікті') });
@@ -3057,7 +3057,7 @@ function showSchulte() {
   schulteSymbols = 'numbers';
   document.querySelectorAll('.schulte-symbols-btn').forEach(b => b.classList.toggle('active', b.dataset.symbols === 'numbers'));
   schultePickSize(4);
-  schulteIntroMaybeShow();                                          // кесте дайын болған соң: «Бастау» ойынды бірден қосады
+  schulteIntroMaybeShow();
 }
 
 /* ── жаттығу онбордингі (жалпы) ──
@@ -4860,7 +4860,8 @@ function fovIntroSlides() {
 }
 function fovIntroMaybeShow() {
   if (trainerIntroHidden('fov')) return;
-  trainerIntroShow({ key: 'fov', host: fovEl('field-of-vision'), slides: fovIntroSlides(), onDone: () => fovStart() });
+  // ойынды бастамайды: баптаулар (⚙) «Бастау» алдында таңдалады, тегін ойын да бекер жұмсалмайды
+  trainerIntroShow({ key: 'fov', host: fovEl('field-of-vision'), slides: fovIntroSlides(), startLabel: tr('Түсінікті') });
 }
 function fovIntroOpen() {                               // тақырыптағы ⓘ: тек оқу үшін, ойынды бастамайды
   if (fovRunning()) return;
@@ -5402,7 +5403,8 @@ function vpIntroSlides() {
 }
 function vpIntroMaybeShow() {
   if (trainerIntroHidden('vp')) return;
-  trainerIntroShow({ key: 'vp', host: vpEl('vertical-pacer'), slides: vpIntroSlides(), onDone: () => vpStart() });
+  // ойынды бастамайды: деңгей мен жылдамдық осы экранда, «Бастау» алдында таңдалады
+  trainerIntroShow({ key: 'vp', host: vpEl('vertical-pacer'), slides: vpIntroSlides(), startLabel: tr('Түсінікті') });
 }
 function vpIntroOpen() {                                // тақырыптағы ⓘ: тек оқу үшін, ойын кезінде ашылмайды
   if (vpRunning()) return;
