@@ -1074,7 +1074,7 @@
                 <div class="dash-trainer-card" id="trainer-eyewarmup" onclick="showEyeWarmup()">
                   <div class="dash-trainer-icon"><i class="ti ti-eye"></i></div>
                   <div class="dash-trainer-name">Көз жаттығулары</div>
-                  <div class="dash-trainer-sub">60–90 сек демалыс</div>
+                  <div class="dash-trainer-sub">60 сек демалыс</div>
                 </div>
                 <div class="dash-trainer-card" id="trainer-field-of-vision" onclick="showFieldOfVision()" data-session-done="fovFinish" data-session-sec="80">
                   <div class="dash-trainer-icon"><i class="ti ti-focus-2"></i></div>
@@ -3033,6 +3033,7 @@ function hideAllViews() {
   if (typeof fovStop === 'function') fovStop();
   if (typeof vpStop === 'function') vpStop();
   if (typeof pyStop === 'function') pyStop();
+  if (typeof rnStop === 'function') rnStop();
   try { if (window.TezOnboarding) window.TezOnboarding.close(); } catch (e) {}
 }
 
@@ -3934,6 +3935,16 @@ function showRememberNumber() {
   rnIntroMaybeShow();
 }
 
+// экраннан шыққанда ойынды тоқтатады (hideAllViews шақырады). rnGameOver-ды ШАҚЫРМАЙДЫ: оны сессия орайды,
+// ол тек ойын шын біткенде шақырылуы керек — әйтпесе тасталған ойын рекорд сақтап, сессия қадамын «орындалды» деп белгілейді
+function rnStop() {
+  rnGen++;
+  clearTimeout(rnFlashTimeout);
+  clearInterval(rnGameInterval);
+  if (rnPhase !== 'done') rnPhase = 'setup';
+  const inputEl = document.getElementById('remember-number-input');
+  if (inputEl) { inputEl.blur(); inputEl.classList.add('rn-hidden'); inputEl.style.display = 'none'; }
+}
 function rnResetTrainer() {
   rnGen++;
   clearTimeout(rnFlashTimeout);
