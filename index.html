@@ -524,6 +524,11 @@
   .tri-py > span.dot { position: absolute; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: rgba(29,158,117,.45); z-index: 0; transition: top .25s; }
   .tri-py div { position: relative; z-index: 1; text-align: center; font-size: 13px; line-height: 21px; color: #57564F; border-radius: 4px; white-space: nowrap; transition: background .2s; }
   .tri-py div.on { background: rgba(29,158,117,.12); color: #085041; }
+  .tri-rn { width: 210px; height: 96px; border: 1px solid #E4E3DD; border-radius: 12px; background: #F7F7F5; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 2px 0 12px; }
+  .tri-rn b { font-size: 34px; font-weight: 700; letter-spacing: 4px; min-height: 42px; }
+  .tri-rn b.inp { font-size: 26px; border-bottom: 2px solid #2A78D6; min-width: 120px; text-align: center; }
+  .tri-rn small { font-size: 12px; color: #8A8980; min-height: 16px; margin-top: 4px; }
+  .tri-rn small.ok { color: #3B6D11; }
   .tri-next { width: 100%; min-height: 46px; border: none; border-radius: 10px; background: #2A78D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 
   /* ══ pyramid text ══ */
@@ -589,6 +594,8 @@
   #remember-number-result { font-size: 15px; color: var(--d-text-2); text-align: center; min-height: 20px; }
   .remember-number-result-good { color: var(--d-accent) !important; font-weight: 600; }
   .remember-number-result-bad { color: var(--d-danger) !important; font-weight: 600; }
+  .rn-lives { color: #E24B4A; letter-spacing: 2px; }
+  #remember-number-digits.rn-feedback { font-size: 22px; font-weight: 600; letter-spacing: 1px; color: var(--d-danger); }
   #remember-number-restart { margin-top: 18px; }
   @media (max-width: 640px) { #remember-number-body { padding: 24px 16px 32px; } #remember-number-digits { font-size: 40px; } #remember-number-input { font-size: 26px; } }
 
@@ -1214,10 +1221,12 @@
     <i class="ti ti-arrow-left schulte-back" onclick="showDashboard()" title="Dashboard-қа оралу"></i>
     <span id="remember-number-title">Санды есте сақта</span>
     <span id="remember-number-energy" title="Бүгінгі қалған тегін ойын саны">⚡2</span>
+    <i class="ti ti-info-circle schulte-back" onclick="rnIntroOpen()" title="Нұсқаулық" aria-label="Нұсқаулық"></i>
   </div>
   <div id="remember-number-body">
     <div class="remember-number-stats">
       <div class="remember-number-stat"><div class="remember-number-stat-label">Уақыт</div><div class="remember-number-stat-value" id="remember-number-timer">45</div></div>
+      <div class="remember-number-stat"><div class="remember-number-stat-label">Өмір</div><div class="remember-number-stat-value rn-lives" id="remember-number-lives">♥♥♥</div></div>
       <div class="remember-number-stat"><div class="remember-number-stat-label">Рекорд</div><div class="remember-number-stat-value" id="remember-number-best">—</div></div>
     </div>
     <div id="remember-number-stage">
@@ -3890,8 +3899,10 @@ const RN_ROUNDS = [
   { digits: 4, delay: 1000 }, { digits: 4, delay: 800 }, { digits: 4, delay: 500 }, { digits: 4, delay: 200 },
   { digits: 5, delay: 800 }, { digits: 5, delay: 500 }, { digits: 5, delay: 200 }
 ];
-function rnRoundConfig(round) {
-  return RN_ROUNDS[Math.min(round - 1, RN_ROUNDS.length - 1)];
+// 3 өмір + бейімделу: деңгей = RN_ROUNDS индексі; қатарынан 2 дұрыс → қиындайды, қате → бір өмір кетеді және оңайлайды
+const RN_LIVES = 3, RN_STREAK_UP = 2, RN_FEEDBACK_MS = 1200;
+function rnRoundConfig(level) {
+  return RN_ROUNDS[Math.max(0, Math.min(level, RN_ROUNDS.length - 1))];
 }
 function rnGenerateNumber(digits) {
   let s = String(1 + Math.floor(Math.random() * 9));
@@ -3903,6 +3914,9 @@ let rnPhase = 'setup'; // setup | showing | input | done
 let rnRound = 0;
 let rnScore = 0;
 let rnMaxDigits = 3;
+let rnLives = RN_LIVES;
+let rnLevel = 0;
+let rnStreak = 0;
 let rnCurrentNumber = '';
 let rnGameStart = null;
 let rnGameInterval = null;
@@ -3915,6 +3929,9 @@ function showRememberNumber() {
   rnResetTrainer();
   rnLoadBest();
   rnRefreshEnergyUI();
+  const staleIntro = document.getElementById('tri-ov');            // ⓘ ашық күйде экраннан шығып кетсе
+  if (staleIntro) staleIntro.remove();
+  rnIntroMaybeShow();
 }
 
 function rnResetTrainer() {
@@ -3925,6 +3942,8 @@ function rnResetTrainer() {
   rnRound = 0;
   rnScore = 0;
   rnMaxDigits = 3;
+  rnLives = RN_LIVES; rnLevel = 0; rnStreak = 0;
+  rnRenderLives();
   rnCurrentNumber = '';
   document.getElementById('remember-number-timer').textContent = '45';
   const resultEl = document.getElementById('remember-number-result');
@@ -3943,6 +3962,46 @@ function rnResetTrainer() {
   startBtn.textContent = tr('Бастау');
 }
 
+/* ── онбординг (жалпы trainerIntroShow; ойынды бастамайды — iOS пернетақтасы «Бастау» басқанда ғана ашылады) ── */
+function rnIntroSlides() {
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  return [
+    { icon: '123', title: tr('Санды есте сақта не үшін?'),
+      html: '<p>' + esc(tr('Көз бір қарағанда бірнеше таңбаны көріп, ми оны есте ұстауға үйренеді. Тез оқыған кезде сөзді әріптеп емес, тұтас тануға дәл осы дағды керек.')) + '</p>' },
+    { icon: 'eye', title: tr('Көр → есте сақта → жаз'),
+      html: '<div class="tri-rn"><b></b><small></small></div><ul><li>' + esc(tr('Сан бір сәтке жарқ етіп, жоғалады')) + '</li>' +
+        '<li>' + esc(tr('Оны пернетақтадан теріп жазыңыз')) + '</li></ul>',
+      onShow: el => {                                   // сан жарқ етеді → жоғалады → теріледі
+        const b = el.querySelector('.tri-rn b'), sm = el.querySelector('.tri-rn small'), nums = ['472', '8051', '36914'];
+        let k = 0, timers = [];
+        const later = (f, ms) => timers.push(setTimeout(() => { if (el.isConnected) f(); }, ms));
+        const cycle = () => {
+          const n = nums[k++ % nums.length];
+          b.className = ''; b.textContent = n; sm.className = ''; sm.textContent = tr('қараңыз');
+          later(() => {
+            b.className = 'inp'; b.textContent = ''; sm.textContent = tr('жазыңыз');
+            n.split('').forEach((d, j) => later(() => { b.textContent += d; }, 400 + j * 260));
+            later(() => { sm.className = 'ok'; sm.textContent = tr('дұрыс ✓'); later(cycle, 900); }, 400 + n.length * 260);
+          }, 900);
+        };
+        cycle();
+        return () => timers.forEach(clearTimeout);
+      } },
+    { icon: 'heart', title: tr('Ойын ережесі'),
+      html: '<ul><li>' + esc(tr('45 секунд. Нәтиже — дұрыс тапқан сан саны')) + '</li>' +
+        '<li>' + esc(tr('3 өмір бар: қате жіберсеңіз, бір өмір кетеді, ал 3 өмір біткенде ойын бітеді')) + '</li>' +
+        '<li>' + esc(tr('Қатарынан 2 рет дұрыс тапсаңыз, сан ұзарады не тезірек жоғалады; қатеден кейін оңайлайды')) + '</li>' +
+        '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li></ul>' }
+  ];
+}
+function rnIntroMaybeShow() {
+  if (trainerIntroHidden('rn')) return;
+  trainerIntroShow({ key: 'rn', host: document.getElementById('remember-number'), slides: rnIntroSlides(), startLabel: tr('Түсінікті') });
+}
+function rnIntroOpen() {                               // тақырыптағы ⓘ: ойын кезінде ашылмайды
+  if (rnPhase !== 'setup' && rnPhase !== 'done') return;
+  trainerIntroShow({ key: 'rn', host: document.getElementById('remember-number'), slides: rnIntroSlides(), startLabel: tr('Түсінікті') });
+}
 function rnNewGame() {
   rnResetTrainer();
   rnRefreshEnergyUI();
@@ -3977,6 +4036,8 @@ async function rnStart() {
   rnRound = 0;
   rnScore = 0;
   rnMaxDigits = 3;
+  rnLives = RN_LIVES; rnLevel = 0; rnStreak = 0;
+  rnRenderLives();
   rnGameStart = performance.now();
   document.getElementById('remember-number-timer').textContent = '45';
   rnGameInterval = setInterval(() => rnGameTick(gen), 200);
@@ -3994,7 +4055,7 @@ function rnGameTick(gen) {
 function rnNextRound(gen) {
   if (gen !== rnGen) return;
   rnRound++;
-  const cfg = rnRoundConfig(rnRound);
+  const cfg = rnRoundConfig(rnLevel);
   rnMaxDigits = Math.max(rnMaxDigits, cfg.digits);
   rnCurrentNumber = rnGenerateNumber(cfg.digits);
   rnPhase = 'showing';
@@ -4006,6 +4067,7 @@ function rnNextRound(gen) {
   inputEl.value = '';
   if (document.activeElement !== inputEl) inputEl.focus();
   digitsEl.style.display = 'block';
+  digitsEl.classList.remove('rn-feedback');
   digitsEl.textContent = rnCurrentNumber;
 
   clearTimeout(rnFlashTimeout);
@@ -4026,7 +4088,7 @@ function rnRevealInput(gen) {
 
 function rnCheckAnswer() {
   const inputEl = document.getElementById('remember-number-input');
-  if (rnPhase !== 'input') { inputEl.value = ''; return; } // digits still on screen: ignore typing
+  if (rnPhase !== 'input') { inputEl.value = ''; return; } // digits / feedback still on screen: ignore typing
   const digitsOnly = inputEl.value.replace(/\D/g, '');
   if (digitsOnly !== inputEl.value) inputEl.value = digitsOnly;
   if (digitsOnly.length < rnCurrentNumber.length) return;
@@ -4034,10 +4096,29 @@ function rnCheckAnswer() {
   const gen = rnGen;
   if (digitsOnly === rnCurrentNumber) {
     rnScore++;
+    if (++rnStreak >= RN_STREAK_UP) { rnLevel = Math.min(rnLevel + 1, RN_ROUNDS.length - 1); rnStreak = 0; }
     rnNextRound(gen);
-  } else {
-    rnGameOver(gen, false);
+    return;
   }
+  rnLives--;
+  rnStreak = 0;
+  rnLevel = Math.max(0, rnLevel - 1);
+  rnRenderLives();
+  if (rnLives <= 0) { rnGameOver(gen, false); return; }   // rnGameOver-ды сессия орайды — тек ойын шын біткенде шақырамыз
+  // қате: дұрыс санды қысқа көрсетіп, келесі раундқа (пернетақта iOS-та жабылмас үшін input фокуста қалады)
+  rnPhase = 'feedback';
+  inputEl.value = '';
+  inputEl.classList.add('rn-hidden');
+  const digitsEl = document.getElementById('remember-number-digits');
+  digitsEl.classList.add('rn-feedback');
+  digitsEl.textContent = tr('Дұрысы: {n}', { n: rnCurrentNumber });
+  digitsEl.style.display = 'block';
+  clearTimeout(rnFlashTimeout);
+  rnFlashTimeout = setTimeout(() => rnNextRound(gen), RN_FEEDBACK_MS);
+}
+function rnRenderLives() {
+  const el = document.getElementById('remember-number-lives');
+  if (el) el.textContent = '♥'.repeat(Math.max(0, rnLives)) + '♡'.repeat(Math.max(0, RN_LIVES - rnLives));
 }
 
 function rnGameOver(gen, timedOut) {
@@ -4046,7 +4127,9 @@ function rnGameOver(gen, timedOut) {
   clearTimeout(rnFlashTimeout);
   clearInterval(rnGameInterval);
   rnPhase = 'done';
-  document.getElementById('remember-number-digits').style.display = 'none';
+  const doneDigits = document.getElementById('remember-number-digits');
+  doneDigits.style.display = 'none';
+  doneDigits.classList.remove('rn-feedback');
   const doneInput = document.getElementById('remember-number-input');
   doneInput.blur();
   doneInput.classList.add('rn-hidden');
