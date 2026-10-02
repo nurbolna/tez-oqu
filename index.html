@@ -452,12 +452,6 @@
   .schulte-cell.wrong { background: #FBEAEA; border-color: var(--d-danger); }
   .schulte-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; display: flex; align-items: center; justify-content: center; }
   .schulte-center-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--d-danger); }
-  .schulte-intro-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; align-items: center; justify-content: center; }
-  .schulte-intro-overlay.open { display: flex; }
-  .schulte-intro-card { background: var(--d-panel); border-radius: 16px; padding: 28px 24px; max-width: 340px; text-align: center; }
-  .schulte-intro-card h3 { margin: 0 0 10px; font-size: 18px; }
-  .schulte-intro-card p { color: var(--d-text-2); font-size: 14px; margin: 0 0 14px; }
-  .schulte-intro-card ul { text-align: left; font-size: 13px; color: var(--d-text-2); padding-left: 18px; margin: 0 0 18px; }
   @media (max-width: 640px) { #schulte-sizes { flex-wrap: wrap; } #schulte-body { padding: 24px 16px 32px; } }
 
   /* ══ eye warmup ══ */
@@ -503,6 +497,12 @@
   .tri-dots i.on { width: 20px; background: #2A78D6; }
   .tri-check { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: #57564F; margin-bottom: 12px; cursor: pointer; user-select: none; }
   .tri-check input { width: 18px; height: 18px; margin: 0; accent-color: #2A78D6; }
+  .tri-grid { position: relative; display: grid; grid-template-columns: repeat(4, 38px); gap: 4px; margin: 2px 0 12px; }
+  .tri-grid div { height: 38px; border: 1px solid #D3D2C9; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: background .2s; }
+  .tri-grid div.hit { background: #EAF3DE; color: #3B6D11; border-color: #C0DD97; }
+  .tri-grid span { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #E24B4A; }
+  .tri-opts { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+  .tri-opts span { border: 1px solid #D3D2C9; border-radius: 8px; padding: 5px 12px; font-size: 14px; color: #57564F; }
   .tri-next { width: 100%; min-height: 46px; border: none; border-radius: 10px; background: #2A78D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 
   /* ══ pyramid text ══ */
@@ -1109,18 +1109,6 @@
     </div>
     <div id="schulte-grid"></div>
     <button id="schulte-restart" class="dash-btn-primary" onclick="schulteNewGame()"><i class="ti ti-refresh"></i> Қайта бастау</button>
-  </div>
-  <div id="schulte-intro" class="schulte-intro-overlay">
-    <div class="schulte-intro-card">
-      <h3>Таблица Шульте</h3>
-      <p>Перифериялық көру жаттығуы.</p>
-      <ul>
-        <li>Ортадағы қызыл нүктеге қараңыз</li>
-        <li>Сандарды/әріптерді өсу ретімен басыңыз</li>
-        <li>Экранды көзден кемінде 40 см қашықтықта ұстаңыз</li>
-      </ul>
-      <button class="dash-btn-primary" onclick="schulteIntroClose()">Түсінікті</button>
-    </div>
   </div>
 </div>
 
@@ -3024,30 +3012,59 @@ function schulteFormatTime(ms) {
   return mm + ':' + ss;
 }
 
+// Онбординг: көз жаттығуындағы жалпы trainerIntroShow; ескі sr5_schulte_intro_seen әдейі ескерілмейді — жаңа мазмұн бәріне қайта шығады
+const SCHULTE_DEMO = [7, 12, 3, 9, 14, 1, 16, 5, 10, 4, 13, 2, 8, 15, 6, 11];
+function schulteIntroSlides() {
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  return [
+    { icon: 'scan-eye', title: tr('Шульте кестесі не үшін?'),
+      html: '<p>' + esc(tr('Перифериялық көруді — бір қарағанда кең аймақты көру қабілетін дамытады. Көз жолға аз тоқтайды, сондықтан оқу жылдамдайды.')) + '</p>' },
+    { icon: 'hand-finger', title: tr('Қалай ойнау керек'),
+      html: '<div class="tri-grid">' + SCHULTE_DEMO.map(n => '<div>' + n + '</div>').join('') + '<span></span></div>' +
+        '<ul><li><b>' + esc(tr('Ортадағы қызыл нүктеге')) + '</b> ' + esc(tr('қараңыз')) + '</li>' +
+        '<li>' + esc(tr('Сандарды 1-ден бастап ретімен басыңыз, көзді жылжытпаңыз')) + '</li>' +
+        '<li>' + esc(tr('Экраннан 40 см қашық отырыңыз')) + '</li></ul>',
+      onShow: el => {                                   // сандар ретімен жанады
+        const cells = el.querySelectorAll('.tri-grid div');
+        let k = 1;
+        const t = setInterval(() => {
+          if (!el.isConnected) { clearInterval(t); return; }             // терезе жабылмай экраннан шығып кетсе
+          if (k > SCHULTE_DEMO.length) { cells.forEach(c => c.classList.remove('hit')); k = 1; return; }
+          cells[SCHULTE_DEMO.indexOf(k)].classList.add('hit');
+          k++;
+        }, 450);
+        return () => clearInterval(t);
+      } },
+    { icon: 'adjustments', title: tr('Деңгейді өзіңіз таңдайсыз'),
+      html: '<p>' + esc(tr('Оңай болса, үлкенірек кестеге көшіңіз. Әріптермен ойнау қиынырақ.')) + '</p>' +
+        '<div class="tri-opts"><span>3×3</span><span>4×4</span><span>5×5</span></div>' +
+        '<div class="tri-opts"><span>123</span><span>АБВ</span></div>' }
+  ];
+}
 function schulteIntroMaybeShow() {
-  if (localStorage.getItem('sr5_schulte_intro_seen')) return;
-  document.getElementById('schulte-intro').classList.add('open');
+  if (trainerIntroHidden('schulte')) return;
+  trainerIntroShow({ key: 'schulte', host: document.getElementById('schulte'), slides: schulteIntroSlides(),
+    onDone: () => { if (schultePhase === 'setup') schulteStart(); } });
 }
-function schulteIntroOpen() {
-  document.getElementById('schulte-intro').classList.add('open');
-}
-function schulteIntroClose() {
-  localStorage.setItem('sr5_schulte_intro_seen', '1');
-  document.getElementById('schulte-intro').classList.remove('open');
+function schulteIntroOpen() {                           // тақырыптағы ⓘ: тек оқу үшін, ойынды бастамайды
+  trainerIntroShow({ key: 'schulte', host: document.getElementById('schulte'), slides: schulteIntroSlides(), startLabel: tr('Түсінікті') });
 }
 
 function showSchulte() {
   hideAllViews();
   document.getElementById('schulte').style.display = 'block';
-  schulteIntroMaybeShow();
+  const staleIntro = document.getElementById('tri-ov');            // ⓘ ашық күйде экраннан шығып кетсе
+  if (staleIntro) staleIntro.remove();
   // Әрбір кіруде әдепкі күйге (сандар + 4×4) қайтарамыз — соңғы таңдалғанды есте сақтамаймыз
   schulteSymbols = 'numbers';
   document.querySelectorAll('.schulte-symbols-btn').forEach(b => b.classList.toggle('active', b.dataset.symbols === 'numbers'));
   schultePickSize(4);
+  schulteIntroMaybeShow();                                          // кесте дайын болған соң: «Бастау» ойынды бірден қосады
 }
 
 /* ── жаттығу онбордингі (жалпы) ──
-   trainerIntroShow({ key, slides: [{ icon, title, html }], startLabel, onDone, host })
+   trainerIntroShow({ key, slides: [{ icon, title, html, onShow }], startLabel, onDone, host })
+   onShow(slideEl) — слайд көрсетілгенде (мыс. анимация); қайтарған функциясы слайд ауысқанда шақырылады.
    host — жаттығу экраны: экран жасырылса, терезе де бірге жасырылады.
    «Енді көрсетпеу» тек соңғы слайдта, әдепкі күйі — белгіленбеген; құрылғыда сақталады (sr5_intro_hidden_<key>). */
 function trainerIntroHidden(key) {
@@ -3073,9 +3090,11 @@ function trainerIntroShow(opt) {
   box.checked = trainerIntroHidden(opt.key);
   q('.tri-check span').textContent = tr('Енді көрсетпеу');
   q('.tri-skip').textContent = tr('Өткізу');
-  let i = 0;
+  let i = 0, cleanup = null;
   const last = opt.slides.length - 1;
+  function stop() { if (cleanup) { cleanup(); cleanup = null; } }
   function render() {
+    stop();
     const sl = opt.slides[i];
     q('.tri-slide').innerHTML = '<div class="tri-ic"><i class="ti ti-' + sl.icon + '"></i></div><h3></h3>' + sl.html;
     q('.tri-slide h3').textContent = sl.title;
@@ -3083,11 +3102,13 @@ function trainerIntroShow(opt) {
     q('.tri-check').style.visibility = i === last ? 'visible' : 'hidden';
     q('.tri-skip').style.visibility = i === last ? 'hidden' : 'visible';
     q('.tri-next').textContent = i === last ? (opt.startLabel || tr('Бастау')) : tr('Келесі');
+    if (sl.onShow) cleanup = sl.onShow(q('.tri-slide')) || null;
   }
   q('.tri-skip').onclick = () => { i = last; render(); };
   q('.tri-next').onclick = () => {
     if (i < last) { i++; render(); return; }
     trainerIntroSetHidden(opt.key, box.checked);
+    stop();
     ov.remove();
     if (opt.onDone) opt.onDone();
   };
