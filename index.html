@@ -4,6 +4,111 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Жылдам оқу — Speed Reader</title>
+<script>
+/* ═══ I18N — қазақша (бастапқы тіл) ↔ орысша ═══
+   • Кілт = қазақша мәтіннің өзі: tr('Жалғастыру'), tr('{n} бет', {n: 5}). Қосымша tr() — қысқа атау, өйткені кодта жергілікті `t` айнымалылары көп.
+   • Орысша сөздік i18n.ru.js (Орысша аударма — интерфейс.md → tools/build_i18n.py). Сөздікте жоқ жол — қазақша көрінеді, ештеңе бұзылмайды.
+   • Көпше түр: сөздік мәні [бір, бірнеше, көп] массиві болса, params.n бойынша таңдалады (орысша: 1 страница / 2 страницы / 5 страниц).
+   • Тіл ауысқанда бет қайта жүктеледі (I18N.set). Статикалық HTML: I18N.apply() — мәтін түйіндері, placeholder/title/aria-label, [data-i18n-html]. */
+(function () {
+  var KEY = 'sr5_lang', lang = 'kk';
+  try {
+    var q = new URLSearchParams(location.search).get('lang');   // ?lang=ru — орысша сілтеме
+    if (q === 'ru' || q === 'kk') {
+      lang = q;
+      try { localStorage.setItem(KEY, q); } catch (e) {}
+      var u = new URL(location.href); u.searchParams.delete('lang');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);   // әйтпесе тілді кейін қолмен ауыстыру қайта орысшаға қайтарады
+    } else {
+      var s = localStorage.getItem(KEY);
+      if (s === 'ru' || s === 'kk') lang = s;
+    }
+  } catch (e) {}
+  var dict = {};
+  function plural(n) {                               // орыс тілі: 0 — бір (1, 21…), 1 — бірнеше (2–4, 22…), 2 — көп (0, 5–20…)
+    n = Math.abs(Number(n));
+    if (!isFinite(n)) return 2;
+    n = Math.round(n);                               // сан жолда дөңгелектеліп көрсетіледі (74,9999 → 75), форма да соған сай
+    var a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) return 0;
+    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return 1;
+    return 2;
+  }
+  function tr(key, p) {
+    var v = dict[key];
+    if (v === undefined) v = key;
+    else if (Array.isArray(v)) v = v[plural(p && p.n)];
+    if (!p) return v;
+    return v.replace(/\{(\w+)\}/g, function (m, k) { return p[k] !== undefined ? p[k] : m; });
+  }
+  function norm(s) { return s.replace(/\s+/g, ' ').trim(); }
+  var CYR = /[Ѐ-ӿ]/;
+  window.tr = tr;
+  window.I18N = {
+    lang: lang,
+    locale: lang === 'ru' ? 'ru-RU' : 'kk-KZ',
+    dict: dict,
+    add: function (d) { for (var k in d) dict[k] = d[k]; },
+    set: function (l) {
+      if (l !== 'kk' && l !== 'ru') return;
+      var saved = true;
+      try { localStorage.setItem(KEY, l); } catch (e) { saved = false; }
+      if (saved) location.reload();
+      else { var u = new URL(location.href); u.searchParams.set('lang', l); location.href = u.href; }
+    },
+    num: function (n) { return Number(n).toLocaleString(this.locale); },
+    dec: function (x) { return lang === 'ru' ? String(x).replace('.', ',') : String(x); },   // ондық бөлшек: орысшада үтір (0,7), қазақшада бұрынғыдай нүкте
+    pick: function (kk, ru) { return lang === 'ru' && ru ? ru : kk; },   // ұзын мәтіндер: орысша нұсқа болмаса қазақша қалады
+    apply: function (root) {
+      var els = document.querySelectorAll('[data-setlang]'), i;
+      for (i = 0; i < els.length; i++) {
+        var on = els[i].getAttribute('data-setlang') === lang;
+        els[i].classList.toggle('on', on);
+        els[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+      if (lang === 'kk') return;
+      root = root || document.body;
+      if (!root) return;
+      var v, rich = root.querySelectorAll('[data-i18n-html]');
+      for (i = 0; i < rich.length; i++) {
+        v = dict[norm(rich[i].innerHTML)];
+        if (typeof v === 'string') rich[i].innerHTML = v;
+      }
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), nodes = [], nd;
+      while ((nd = w.nextNode())) nodes.push(nd);
+      for (i = 0; i < nodes.length; i++) {
+        nd = nodes[i];
+        var p = nd.parentNode, raw = nd.nodeValue;
+        if (!p || !raw || !CYR.test(raw)) continue;
+        var tag = p.nodeName;
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || tag === 'NOSCRIPT') continue;
+        v = dict[(p.getAttribute && p.getAttribute('data-i18n')) || norm(raw)];   // data-i18n="кілт" — бір қазақша сөздің екі түрлі орысша аудармасы болғанда
+        if (typeof v !== 'string') continue;
+        if (p.closest && p.closest('[data-i18n-html]')) continue;
+        nd.nodeValue = raw.match(/^\s*/)[0] + v + raw.match(/\s*$/)[0];
+      }
+      var attrs = ['placeholder', 'title', 'aria-label', 'alt'];
+      var tagged = root.querySelectorAll('[placeholder],[title],[aria-label],[alt]');
+      for (i = 0; i < tagged.length; i++) {
+        for (var j = 0; j < attrs.length; j++) {
+          var a = tagged[i].getAttribute(attrs[j]);
+          if (a && CYR.test(a) && typeof dict[norm(a)] === 'string') tagged[i].setAttribute(attrs[j], dict[norm(a)]);
+        }
+      }
+    }
+  };
+  document.documentElement.lang = lang;
+  if (lang === 'ru') document.write('<script src="i18n.ru.js"><\/script><script src="texts.ru.js"><\/script>');   // сөздік + ұзын мәтіндер (оқу мәтіндері, өлшем тесті)
+  document.addEventListener('click', function (e) {          // тіл ауыстырғыш батырмалары: [data-setlang="kk|ru"]
+    var b = e.target && e.target.closest && e.target.closest('[data-setlang]');
+    if (b) window.I18N.set(b.getAttribute('data-setlang'));
+  });
+  document.addEventListener('DOMContentLoaded', function () {
+    document.title = tr(document.title);
+    window.I18N.apply();
+  });
+})();
+</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2A78D6">
 <meta name="mobile-web-app-capable" content="yes">
@@ -236,6 +341,18 @@
   #auth-error { display: none; margin-top: 14px; font-size: 12px; color: #8B2000; background: #FFE8E0; border: 1px solid #D4806A; border-radius: 6px; padding: 8px 10px; text-align: left; }
   #auth-close { position: absolute; top: 10px; right: 14px; cursor: pointer; color: #8B6A3A; font-size: 18px; line-height: 1; }
   @media (hover: hover) { #auth-close:hover { color: #2C1A0E; } }
+
+  /* ══ тіл ауыстырғыш: ҚАЗ | РУС (data-setlang, I18N.apply белсенді батырманы .on қылады) ══ */
+  .lang-switch { display: inline-flex; flex-shrink: 0; border: 1px solid #C9B98A; border-radius: 7px; overflow: hidden; }
+  .lang-switch button { font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: .04em; padding: 6px 9px; border: 0; background: transparent; color: #8B6A3A; cursor: pointer; }
+  .lang-switch button.on { background: #8B5E3C; color: #F5EDD6; cursor: default; }
+  @media (hover: hover) { .lang-switch button:not(.on):hover { background: rgba(44,26,14,0.07); } }
+  #auth-box > .lang-switch { position: absolute; top: 10px; left: 14px; }
+  #dash-user-chip .lang-switch, #pf-lang-card .lang-switch { border-color: var(--d-border-strong); }
+  #dash-user-chip .lang-switch button, #pf-lang-card .lang-switch button { color: var(--d-text-2); }
+  #dash-user-chip .lang-switch button.on, #pf-lang-card .lang-switch button.on { background: var(--d-accent); color: #fff; }
+  @media (hover: hover) { #dash-user-chip .lang-switch button:not(.on):hover, #pf-lang-card .lang-switch button:not(.on):hover { background: var(--d-tile-strong); } }
+  #pf-lang-card .lang-switch button { font-size: 13px; padding: 10px 18px; }
 
   /* ══ dashboard (modern) ══ */
   #dashboard {
@@ -800,6 +917,7 @@
           </nav>
         </div>
         <div id="dash-user-chip">
+          <div class="lang-switch" role="group" aria-label="Тіл / Язык"><button type="button" data-setlang="kk">ҚАЗ</button><button type="button" data-setlang="ru">РУС</button></div>
           <i class="ti ti-brand-telegram" aria-hidden="true"></i> <span id="dash-phone"></span>
           <a id="dash-admin" href="admin.html" title="Админ панель" style="display:none"><i class="ti ti-shield-lock"></i></a>
           <span id="dash-signout" onclick="signOut()" title="Шығу"><i class="ti ti-logout"></i></span>
@@ -828,6 +946,10 @@
           <div class="pf-card-title">Рекордтар</div>
           <div class="pf-row"><span class="pf-row-label">Санды есте сақта</span><span class="pf-row-value" id="pf-rec-rn">—</span></div>
           <div id="pf-rec-schulte"></div>
+        </div>
+        <div class="pf-card" id="pf-lang-card">
+          <div class="pf-card-title">Тіл / Язык</div>
+          <div class="lang-switch" role="group" aria-label="Тіл / Язык"><button type="button" data-setlang="kk">Қазақша</button><button type="button" data-setlang="ru">Русский</button></div>
         </div>
         <div class="pf-card" id="pf-install-card">
           <div class="pf-card-title">Қолданба ретінде орнату</div>
@@ -1165,6 +1287,7 @@
 
 <div id="auth-overlay">
   <div id="auth-box">
+    <div class="lang-switch" role="group" aria-label="Тіл / Язык"><button type="button" data-setlang="kk">ҚАЗ</button><button type="button" data-setlang="ru">РУС</button></div>
     <div id="auth-step-start">
       <h2>Тез Оқу</h2>
       <p class="auth-hint" style="text-align:center;">Жылдам оқуды үйреніңіз</p>
@@ -1191,7 +1314,7 @@
     </div>
     <div id="auth-step-wait" style="display:none;">
       <h2>Ботта растаңыз</h2>
-      <p class="auth-hint" style="line-height:1.6;">1. Ботта <b>Start</b> басыңыз.<br>2. «Нөмірімді бөлісу» түймесін басыңыз.<br>3. Осы бетке оралыңыз: растау автоматты түрде болады.</p>
+      <p class="auth-hint" style="line-height:1.6;" data-i18n-html>1. Ботта <b>Start</b> басыңыз.<br>2. «Нөмірімді бөлісу» түймесін басыңыз.<br>3. Осы бетке оралыңыз: растау автоматты түрде болады.</p>
       <a id="tg-reopen-btn" class="auth-big" href="https://t.me/TezOqu_Bot" target="_blank" rel="noopener"><i class="ti ti-brand-telegram"></i> Ботты қайта ашу</a>
       <div id="tg-wait-dots">Растауды күтіп тұрмын…</div>
       <div class="auth-link" onclick="cancelTgLogin()">← Бас тарту</div>
@@ -1274,6 +1397,7 @@
   </div>
 </div>
 
+<script>I18N.apply();   /* статикалық HTML-дің орысша аудармасы: негізгі скрипттер DOM-дағы мәтінді оқымай тұрып */</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1858,7 +1982,7 @@ function scrubPreview(pct) {
   document.getElementById('scrub-thumb').style.left = (pct * 100).toFixed(1) + '%';
   if (words.length && pages.length && !paginating) {
     const p = pageOf(Math.round(pct * (words.length - 1)));
-    document.getElementById('scrub-label').textContent = Math.round(pct * 100) + '% · ' + (p + 1) + ' / ' + pages.length + ' бет';
+    document.getElementById('scrub-label').textContent = tr('{pct}% · {p} / {total} бет', { pct: Math.round(pct * 100), p: p + 1, total: pages.length });
   }
 }
 function scrubCommit(pct) {
@@ -1940,7 +2064,7 @@ function updateUI() {
     document.getElementById('scrub-thumb').style.left = clamped.toFixed(1) + '%';
   }
   document.getElementById('scrub-label').textContent = pages.length
-    ? Math.round(clamped) + '% · ' + (currentPage + 1) + ' / ' + (paginating ? '…' : pages.length) + ' бет · ~' + mins + ' мин'
+    ? tr('{pct}% · {p} / {total} бет · ~{mins} мин', { pct: Math.round(clamped), p: currentPage + 1, total: paginating ? '…' : pages.length, mins })
     : '—';
 }
 
@@ -2088,13 +2212,13 @@ function loadLocalStats() {
 
 function openLocalStats() {
   const s = loadLocalStats();
-  document.getElementById('local-week-pages').textContent = s.weekPages + ' бет';
-  document.getElementById('local-week-minutes').textContent = '~' + s.weekMinutes + ' мин · ' + s.weekWords.toLocaleString('kk-KZ') + ' сөз';
-  document.getElementById('local-month-pages').textContent = s.monthPages + ' бет';
-  document.getElementById('local-month-minutes').textContent = '~' + s.monthMinutes + ' мин · ' + s.monthWords.toLocaleString('kk-KZ') + ' сөз';
+  document.getElementById('local-week-pages').textContent = tr('{n} бет', { n: s.weekPages });
+  document.getElementById('local-week-minutes').textContent = tr('~{mins} мин · {num} сөз', { mins: s.weekMinutes, num: I18N.num(s.weekWords), n: s.weekWords });
+  document.getElementById('local-month-pages').textContent = tr('{n} бет', { n: s.monthPages });
+  document.getElementById('local-month-minutes').textContent = tr('~{mins} мин · {num} сөз', { mins: s.monthMinutes, num: I18N.num(s.monthWords), n: s.monthWords });
   const rate = deriveRate(s.monthWords, s.monthMinutes);
-  document.getElementById('local-wpm').textContent = rate.avgWpm ? rate.avgWpm + ' сөз/мин' : '—';
-  document.getElementById('local-ppm').textContent = rate.avgPagesPerMin ? '~' + rate.avgPagesPerMin + ' бет/мин' : '';
+  document.getElementById('local-wpm').textContent = rate.avgWpm ? tr('{n} сөз/мин', { n: rate.avgWpm }) : '—';
+  document.getElementById('local-ppm').textContent = rate.avgPagesPerMin ? tr('~{n} бет/мин', { n: I18N.dec(rate.avgPagesPerMin) }) : '';
   renderLocalChart(s.daily);
   document.getElementById('local-stats-overlay').style.display = 'flex';
 }
@@ -2220,13 +2344,13 @@ async function renderPrivateBooksList() {
     card.innerHTML = '<div style="flex:1;min-width:0;">' +
       '<div class="dash-book-title">' + escapeHtml(name) + '</div>' +
       '<div class="dash-book-progress-track"><div class="dash-book-progress-fill" style="width:' + pct + '%;"></div></div>' +
-      '<div class="dash-book-meta">' + pct + '% оқылды' + (hasText ? '' : ' · файл табылмады, қайта жүктеңіз') + '</div></div>' +
-      (hasText ? '<button class="dash-continue-btn">Жалғастыру <i class="ti ti-arrow-right"></i></button>' : '') +
-      '<i class="ti ti-trash dash-book-delete" title="Жою"></i>';
+      '<div class="dash-book-meta">' + tr('{pct}% оқылды', { pct }) + (hasText ? '' : ' · ' + tr('файл табылмады, қайта жүктеңіз')) + '</div></div>' +
+      (hasText ? '<button class="dash-continue-btn">' + tr('Жалғастыру') + ' <i class="ti ti-arrow-right"></i></button>' : '') +
+      '<i class="ti ti-trash dash-book-delete" title="' + tr('Жою') + '"></i>';
     if (hasText) card.querySelector('.dash-continue-btn').onclick = () => loadFromCache(name);
     card.querySelector('.ti-trash').onclick = (e) => {
       e.stopPropagation();
-      if (confirm('"' + name + '" жоясыз ба?')) {
+      if (confirm(tr('"{name}" жоясыз ба?', { name }))) {
         localStorage.removeItem(LS + name);
         idbDeleteText(name);
         renderPrivateBooksList();
@@ -2238,7 +2362,7 @@ async function renderPrivateBooksList() {
 
 async function loadFromCache(fileName) {
   const text = await lsLoadText(fileName);
-  if (!text) { alert('Мәтін сақталмаған, файлды қайта жүктеңіз'); return; }
+  if (!text) { alert(tr('Мәтін сақталмаған, файлды қайта жүктеңіз')); return; }
   showReaderView();
   loadWords(text, fileName, lsLoadProgress(fileName));
   if (authUser) reconnectCloudBook(fileName);
@@ -2286,7 +2410,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   document.getElementById('col2').innerHTML = '';
 
   const resumeAt = (savedProgress && savedProgress.total === words.length && savedProgress.pos > 0) ? savedProgress.pos : 0;
-  document.getElementById('col1').innerHTML = '<div id="placeholder">Беттер дайындалуда…</div>';
+  document.getElementById('col1').innerHTML = '<div id="placeholder">' + tr('Беттер дайындалуда…') + '</div>';
   setTimeout(async () => {
     await measureWordsPerPage(resumeAt);
     if (!pages.length) { await new Promise(r => setTimeout(r, 120)); await measureWordsPerPage(resumeAt); }
@@ -2380,8 +2504,8 @@ function openSaveChoice(file) {
   const privSub = document.getElementById('save-choice-private-sub');
   privRow.style.opacity = atCap ? '0.5' : '1';
   privSub.textContent = atCap
-    ? 'Бір мезгілде тек 3 кітап — алдымен бірін өшіріңіз'
-    : 'Кітап аты ешкімге көрінбейді, серверге жүктелмейді';
+    ? tr('Бір мезгілде тек 3 кітап — алдымен бірін өшіріңіз')
+    : tr('Кітап аты ешкімге көрінбейді, серверге жүктелмейді');
   document.getElementById('save-choice-overlay').style.display = 'flex';
 }
 
@@ -2393,7 +2517,7 @@ function cancelSaveChoice() {
 
 async function confirmSaveChoice(wantsPrivate) {
   if (wantsPrivate && countPrivateBooks() >= 3) {
-    alert('Жеке оқу режимінде бір мезгілде тек 3 кітап сақтауға болады. Жаңасын қосу үшін алдымен бірін өшіріңіз.');
+    alert(tr('Жеке оқу режимінде бір мезгілде тек 3 кітап сақтауға болады. Жаңасын қосу үшін алдымен бірін өшіріңіз.'));
     return;
   }
   const file = pendingUploadFile;
@@ -2661,12 +2785,12 @@ function loadBookmark(fileName) {
 
 function timeAgoShort(ts) {
   const mins = Math.round((Date.now() - ts) / 60000);
-  if (mins < 1) return 'дәл қазір';
-  if (mins < 60) return mins + ' мин бұрын';
+  if (mins < 1) return tr('дәл қазір');
+  if (mins < 60) return tr('{n} мин бұрын', { n: mins });
   const hrs = Math.round(mins / 60);
-  if (hrs < 24) return hrs + ' сағат бұрын';
+  if (hrs < 24) return tr('{n} сағат бұрын', { n: hrs });
   const days = Math.round(hrs / 24);
-  return days === 1 ? 'кеше' : days + ' күн бұрын';
+  return days === 1 ? tr('кеше') : tr('{n} күн бұрын', { n: days });
 }
 
 function renderBookmarksPanel() {
@@ -2675,7 +2799,7 @@ function renderBookmarksPanel() {
   if (!list) return;
   count.textContent = bookmarks.length;
   if (!bookmarks.length) {
-    list.innerHTML = '<div style="padding:14px 6px;color:var(--rt-text-faint);font-size:12px;font-style:italic;">Бетбелгі жоқ</div>';
+    list.innerHTML = '<div style="padding:14px 6px;color:var(--rt-text-faint);font-size:12px;font-style:italic;">' + tr('Бетбелгі жоқ') + '</div>';
     return;
   }
   list.innerHTML = bookmarks.map(b => {
@@ -2684,8 +2808,8 @@ function renderBookmarksPanel() {
     return '<div class="bm-row">' +
       '<i class="ti ti-bookmark-filled" aria-hidden="true"></i>' +
       '<div class="bm-row-info"><div class="bm-snippet">“' + escapeHtml(b.snippet || '') + '…”</div>' +
-      '<div class="bm-meta">' + pg + ' бет · ' + pct + '% · ' + timeAgoShort(b.createdAt) + '</div></div>' +
-      '<button class="bm-goto" data-pos="' + b.pos + '">Көрсету</button>' +
+      '<div class="bm-meta">' + tr('{p} бет · {pct}% · {ago}', { p: pg, pct, ago: timeAgoShort(b.createdAt) }) + '</div></div>' +
+      '<button class="bm-goto" data-pos="' + b.pos + '">' + tr('Көрсету') + '</button>' +
       '<i class="ti ti-trash bm-del" data-pos="' + b.pos + '" aria-hidden="true"></i>' +
       '</div>';
   }).join('');
@@ -2739,7 +2863,7 @@ function startTimer() {
 
   const btn = document.getElementById('timer-start-btn');
   btn.classList.add('active');
-  btn.innerHTML = '<i class="ti ti-clock-stop"></i> Тоқтату';
+  btn.innerHTML = '<i class="ti ti-clock-stop"></i> ' + tr('Тоқтату');
 
   const display = document.getElementById('timer-display');
   display.style.display = 'inline-block';
@@ -2764,7 +2888,7 @@ function stopTimer(done) {
 
   const btn = document.getElementById('timer-start-btn');
   btn.classList.remove('active');
-  btn.innerHTML = '<i class="ti ti-clock"></i> Таймер';
+  btn.innerHTML = '<i class="ti ti-clock"></i> ' + tr('Таймер');
 
   const display = document.getElementById('timer-display');
   display.style.display = 'none';
@@ -2790,7 +2914,7 @@ function stopTimer(done) {
     const wordsRead = pos - timerStartPos;
     const mins = parseInt(document.getElementById('timer-select').value);
     document.getElementById('timer-stats-msg').textContent =
-      mins + ' минутта ' + wordsRead + ' сөз оқыдыңыз!';
+      tr('{mins} минутта {n} сөз оқыдыңыз!', { mins, n: wordsRead });
     document.getElementById('timer-overlay').classList.add('show');
   }
 }
@@ -2894,10 +3018,10 @@ function showSchulte() {
 
 /* ── eye warmup ── */
 const EYE_PHASES = [
-  { cls: 'phase-h', label: 'Нүктені көзбен қуалаңыз — солдан оңға', dur: 20 },
-  { cls: 'phase-v', label: 'Нүктені көзбен қуалаңыз — жоғары-төмен', dur: 20 },
-  { cls: 'phase-d', label: 'Алыс-жақынға фокустаныңыз', dur: 20 },
-  { cls: 'phase-b', label: 'Жайлап жыпылықтатыңыз', dur: 15 }
+  { cls: 'phase-h', label: tr('Нүктені көзбен қуалаңыз — солдан оңға'), dur: 20 },
+  { cls: 'phase-v', label: tr('Нүктені көзбен қуалаңыз — жоғары-төмен'), dur: 20 },
+  { cls: 'phase-d', label: tr('Алыс-жақынға фокустаныңыз'), dur: 20 },
+  { cls: 'phase-b', label: tr('Жайлап жыпылықтатыңыз'), dur: 15 }
 ];
 let eyeTimeouts = [];
 let eyeStart = null;
@@ -2922,7 +3046,7 @@ function eyeWarmupStart() {
   target.id = 'ew-target';
   document.getElementById('ew-done').style.display = 'none';
   document.getElementById('ew-skip').style.display = 'inline-flex';
-  document.getElementById('ew-label').textContent = 'Дайындалыңыз...';
+  document.getElementById('ew-label').textContent = tr('Дайындалыңыз...');
   let elapsedBefore = 0;
   EYE_PHASES.forEach(p => {
     const t = setTimeout(() => {
@@ -2945,7 +3069,7 @@ function eyeWarmupStart() {
 function eyeWarmupFinish() {
   eyeWarmupClearTimers();
   document.getElementById('ew-target').className = '';
-  document.getElementById('ew-label').textContent = 'Дайын!';
+  document.getElementById('ew-label').textContent = tr('Дайын!');
   document.getElementById('ew-timer').textContent = '0с';
   document.getElementById('ew-done').style.display = 'block';
   document.getElementById('ew-skip').style.display = 'none';
@@ -2957,7 +3081,7 @@ function eyeWarmupSkip() {
 }
 
 /* ── pyramid text ── */
-const PYRAMID_TEXTS = [
+const PYRAMID_TEXTS_KK = [
   'Кітап оқу — ойды дамытатын, дүниетанымды кеңейтетін, сөздік қорды байытатын үздіксіз жаттығу. Әр жаңа кітап жаңа әлем, жаңа тәжірибе, жаңа ой әкеледі. Тез әрі саналы оқу дағдысы адамға уақытты үнемдеп, көбірек біліммен қаруланғанға көмектеседі. Көзді бір нүктеге бекітіп, айналасындағы сөздерді де қатар қабылдауды үйрену жылдам оқудың негізгі құпияларының бірі саналады.',
   'Адам миы — ғаламдағы ең күрделі құрылымдардың бірі. Ол шамамен сексен алты миллиард нейроннан тұрады, және әр нейрон мыңдаған басқа жасушалармен байланыс орнатады. Осы байланыстар арқылы біз үйренеміз, есте сақтаймыз және шешім қабылдаймыз. Есте сақтау — жалғыз процесс емес, керісінше бірнеше кезеңнен тұратын күрделі тізбек: қабылдау, кодтау, сақтау және қайта жаңғырту. Ақпарат алдымен қысқа мерзімді жадта бірнеше секундтан бірнеше минутқа дейін ғана сақталады. Егер ол қайталанбаса немесе маңызды деп танылмаса, тез ұмытылады. Ал ұзақ мерзімді жадқа өту үшін ақпарат бірнеше рет қайталануы, эмоциямен байланысуы немесе бұрынғы білімге сүйенуі керек. Ғалымдар ұйқының есте сақтау процесінде шешуші рөл атқаратынын анықтады: түн ішінде ми күндізгі оқиғаларды сұрыптап, маңыздысын ұзақ мерзімді жадқа тасымалдайды. Есте сақтау қабілетін жақсартудың бірнеше дәлелденген әдісі бар: ақпаратты аралықпен қайталау, жаңа ақпаратты бұрыннан білетін нәрсемен байланыстыру, тек қайта оқымай, ақпаратты жадыдан өз бетінше шығарып көру.',
   'Ұйқы — тыныштық емес, миымыз бен денеміз үшін аса белсенді жұмыс кезеңі. Түнгі ұйқы кезінде бірнеше кезең бір-бірін алмастырып отырады: жеңіл ұйқы, терең ұйқы және жылдам көз қозғалысы кезеңі. Терең ұйқы кезінде дене жасушаларды жаңартады, бұлшықеттерді қалпына келтіреді және иммундық жүйені нығайтады. Жылдам көз қозғалысы кезеңінде ми күндізгі ақпаратты өңдеп, түс көреді, ал бұл эмоционалды тепе-теңдікті сақтауға көмектеседі. Жеткілікті ұйықтамаған адамның зейіні бөлінеді, реакция жылдамдығы төмендейді, ал шешім қабылдау қабілеті нашарлайды. Ересек адамға орта есеппен түнде жеті-тоғыз сағат ұйқы қажет. Ұйқы сапасын жақсартудың бірнеше қарапайым жолы бар: күн сайын бір мезгілде ұйықтап, бір мезгілде ояну; ұйықтар алдында жарық шығаратын экрандардан бас тарту; бөлмедегі температураны сәл салқын ұстау. Жаңа материалды үйренгеннен кейінгі түнде жақсы ұйықтаған адам сол ақпаратты келесі күні әлдеқайда жақсы есте сақтайды, өйткені ми ұйқы кезінде жаңа білімді бұрынғы білім желісіне біріктіреді.',
@@ -2979,6 +3103,7 @@ const PYRAMID_TEXTS = [
   'Дүниежүзілік мұхит жер бетінің жетпіс пайызынан астамын алып жатыр, бірақ оның терең қабаттары адамзат үшін Айдың бетінен де аз зерттелген. Мұхиттың ең терең нүктесі — Тынық мұхитындағы Марианна ойпаңы, оның тереңдігі он бір километрден асады. Терең суда жарық енбейтіндіктен, ол жерде мекендейтін жәндіктер мүлде басқа тіршілік стратегиясын қалыптастырған: көптеген түр өз денесінде жарық шығаратын қабілетін дамытқан. Мұхит тек тіршілік ортасы ғана емес, планетаның климатын реттеуде де шешуші рөл атқарады: ол атмосферадан үлкен мөлшерде жылу мен көмірқышқыл газын сіңіріп, жаһандық температураны тұрақтандыруға көмектеседі. Соңғы онжылдықтарда мұхиттың қышқылдануы мен қызуы теңіз экожүйелеріне қатты қысым түсіруде — маржан рифтерінің ағаруы осының айқын мысалы. Пластик қалдықтарының мұхитқа түсуі де үлкен алаңдаушылық тудырады.',
   'Стресс — қауіп-қатерге организмнің табиғи жауабы, қысқа мерзімде ол тіпті пайдалы болуы мүмкін. Бірақ стресс ұзаққа созылғанда, ол денсаулыққа нақты зиян келтіре бастайды — қан қысымын арттырады, иммундық жүйені әлсіретеді, ұйқы мен ас қорыту жүйесін бұзады. Стресспен күресудің ең тиімді әдістерінің бірі — тыныс алу жаттығулары: баяу, терең тыныс алу жүйке жүйесінің тыныштандыратын бөлігін іске қосып, жүрек соғысын бәсеңдетеді. Дене белсенділігі де қуатты құрал болып табылады — жаттығу кезінде бөлінетін эндорфин стресс гормондарының әсерін бәсеңдетеді. Ойлау тәсілін өзгерту де көмектеседі: жағдайды толығымен бақылауға тырысудың орнына, нақты не істеуге болатынына назар аудару пайдалырақ. Әлеуметтік қолдау — жақындарыңызбен алаңдаушылықты бөлісу — стресстің физиологиялық әсерін бәсеңдететіні дәлелденген.'
 ];
+const PYRAMID_TEXTS = I18N.pick(PYRAMID_TEXTS_KK, window.TEXTS_RU && Array.isArray(TEXTS_RU.pyramid) && TEXTS_RU.pyramid.length ? TEXTS_RU.pyramid : null);   // орысша мәтіндер: texts.ru.js (жоқ болса қазақша)
 
 function buildPyramidLines(text, maxLines, step) {
   const words = text.split(/\s+/).filter(Boolean);
@@ -3064,7 +3189,7 @@ function schulteNewGame() {
   const startBtn = document.createElement('button');
   startBtn.id = 'schulte-start-btn';
   startBtn.className = 'dash-btn-primary';
-  startBtn.textContent = 'Бастау';
+  startBtn.textContent = tr('Бастау');
   startBtn.onclick = schulteStart;
   center.appendChild(startBtn);
   grid.appendChild(center);
@@ -3078,7 +3203,7 @@ async function schulteStart() {
   const gen = schulteGen;
   schultePhase = 'starting';
   const startBtnEl = document.getElementById('schulte-start-btn');
-  if (startBtnEl) { startBtnEl.disabled = true; startBtnEl.textContent = 'Жүктелуде...'; }
+  if (startBtnEl) { startBtnEl.disabled = true; startBtnEl.textContent = tr('Жүктелуде...'); }
 
   const consumed = await schulteConsumePlay(); // бір ғана желі дөңгелегі (оқу+жазу) — бұрын 2 бөлек шақыру еді
   if (gen !== schulteGen) return; // осы уақытта жаңа ойын басталып кетті — тоқтаймыз
@@ -3120,7 +3245,7 @@ function schulteClick(n, cell) {
     clearInterval(schulteTimerInterval);
     const elapsedMs = Math.round(performance.now() - schulteStartTime);
     document.getElementById('schulte-timer').textContent = schulteFormatTime(elapsedMs);
-    document.getElementById('schulte-status').textContent = 'Дайын!';
+    document.getElementById('schulte-status').textContent = tr('Дайын!');
     schultePhase = 'done';
     schulteSaveBest(schulteSize, schulteSymbols, elapsedMs);
     try { fbAsk('schulte', schulteSize + '×' + schulteSize + ' ' + (schulteSymbols === 'letters' ? 'әріп' : 'сан') + ', ' + schulteFormatTime(elapsedMs)); } catch (e) {}
@@ -3163,7 +3288,7 @@ async function schulteSaveBest(sizeVal, symbolsVal, elapsedMs) {
     if (writeError) return;
     if (sizeVal === schulteSize && symbolsVal === schulteSymbols) {
       document.getElementById('schulte-best').textContent = schulteFormatTime(elapsedMs);
-      document.getElementById('schulte-status').textContent = 'Жаңа рекорд!';
+      document.getElementById('schulte-status').textContent = tr('Жаңа рекорд!');
     }
   } catch(e) {}
 }
@@ -3227,8 +3352,8 @@ async function schulteRefreshEnergyUI() {
   if (energyEl) energyEl.textContent = '⚡' + energyText(remaining);
   const startBtn = document.getElementById('schulte-start-btn');
   if (startBtn) {
-    if (remaining <= 0) { startBtn.textContent = 'Ертең қайта келіңіз'; startBtn.disabled = true; }
-    else { startBtn.textContent = 'Бастау'; startBtn.disabled = false; }
+    if (remaining <= 0) { startBtn.textContent = tr('Ертең қайта келіңіз'); startBtn.disabled = true; }
+    else { startBtn.textContent = tr('Бастау'); startBtn.disabled = false; }
   }
 }
 
@@ -3288,7 +3413,7 @@ function rnResetTrainer() {
   const startBtn = document.getElementById('remember-number-start-btn');
   startBtn.style.display = 'inline-flex';
   startBtn.disabled = false;
-  startBtn.textContent = 'Бастау';
+  startBtn.textContent = tr('Бастау');
 }
 
 function rnNewGame() {
@@ -3301,7 +3426,7 @@ async function rnStart() {
   const gen = rnGen;
   const startBtn = document.getElementById('remember-number-start-btn');
   startBtn.disabled = true;
-  startBtn.textContent = 'Жүктелуде...';
+  startBtn.textContent = tr('Жүктелуде...');
 
   // iOS only opens the keyboard for focus() called synchronously inside the tap,
   // so focus the (invisible) answer input now, before any await.
@@ -3316,7 +3441,7 @@ async function rnStart() {
     inputEl.blur();
     inputEl.style.display = 'none';
     startBtn.disabled = false;
-    startBtn.textContent = 'Бастау';
+    startBtn.textContent = tr('Бастау');
     rnRefreshEnergyUI();
     return;
   }
@@ -3403,7 +3528,7 @@ function rnGameOver(gen, timedOut) {
 
   const finalScore = rnScore + rnMaxDigits;
   const resultEl = document.getElementById('remember-number-result');
-  resultEl.textContent = rnScore + ' сан тапты';
+  resultEl.textContent = tr('{n} сан тапты', { n: rnScore });
   resultEl.className = timedOut ? 'remember-number-result-good' : 'remember-number-result-bad';
   document.getElementById('remember-number-restart').style.display = 'inline-flex';
 
@@ -3460,8 +3585,8 @@ async function rnRefreshEnergyUI() {
   if (energyEl) energyEl.textContent = '⚡' + energyText(remaining);
   const startBtn = document.getElementById('remember-number-start-btn');
   if (startBtn && rnPhase === 'setup') {
-    if (remaining <= 0) { startBtn.textContent = 'Ертең қайта келіңіз'; startBtn.disabled = true; }
-    else { startBtn.textContent = 'Бастау'; startBtn.disabled = false; }
+    if (remaining <= 0) { startBtn.textContent = tr('Ертең қайта келіңіз'); startBtn.disabled = true; }
+    else { startBtn.textContent = tr('Бастау'); startBtn.disabled = false; }
   }
 }
 
@@ -3534,10 +3659,10 @@ function fillRegisterForm() {
 }
 function readRegisterForm() {
   const name = document.getElementById('auth-name-input').value.trim().replace(/\s+/g, ' ');
-  if (name.length < 2 || !/[A-Za-z\u0400-\u04FF]/.test(name)) { authShowError('Аты-жөніңізді жазыңыз'); return false; }
+  if (name.length < 2 || !/[A-Za-z\u0400-\u04FF]/.test(name)) { authShowError(tr('Аты-жөніңізді жазыңыз')); return false; }
   const rawPhone = document.getElementById('reg-phone-input').value;
   const phone = normalizePhone(rawPhone);
-  if (!phoneOk(phone)) { authShowError('Телефон нөмірін толық енгізіңіз'); return false; }
+  if (!phoneOk(phone)) { authShowError(tr('Телефон нөмірін толық енгізіңіз')); return false; }
   authRegName = name; authRegPhone = phone;
   try { localStorage.setItem('tez_reg_form', JSON.stringify({ name, phone: rawPhone })); } catch (e) {}
   return true;
@@ -3644,20 +3769,20 @@ async function pollTgLogin() {
         stopTgPolling();
         authLoginToken = null;
         showAuthStep('register');
-        authShowError('Telegram-дағы нөміріңіз (' + formatPhoneShort(normalizePhone(r.phone)) + ') жазған нөміріңізге сәйкес келмейді. Нөмірді тексеріп, қайта көріңіз.');
+        authShowError(tr('Telegram-дағы нөміріңіз ({phone}) жазған нөміріңізге сәйкес келмейді. Нөмірді тексеріп, қайта көріңіз.', { phone: formatPhoneShort(normalizePhone(r.phone)) }));
         return;
       }
       authOtpRequested = true;
       const { error } = await sb.auth.signInWithOtp({ phone: r.phone });
-      if (error) { showAuthStep(authBackStep()); authShowError('Кіру мүмкін болмады. Қайтадан көріңіз.'); }
+      if (error) { showAuthStep(authBackStep()); authShowError(tr('Кіру мүмкін болмады. Қайтадан көріңіз.')); }
     } else if (r.status === 'otp_ready') {
       stopTgPolling();
       const { data, error } = await sb.auth.verifyOtp({ phone: r.phone, token: r.otp, type: 'sms' });
-      if (error) { showAuthStep(authBackStep()); authShowError('Кіру мүмкін болмады. Қайтадан көріңіз.'); }
+      if (error) { showAuthStep(authBackStep()); authShowError(tr('Кіру мүмкін болмады. Қайтадан көріңіз.')); }
       else await finishLogin(data.user, r.first_name);
     } else if (r.status === 'expired') {
       showAuthStep(authBackStep());
-      authShowError('Уақыт өтіп кетті. «Нөмірімді бөлісу» түймесін қайта басыңыз.');
+      authShowError(tr('Уақыт өтіп кетті. «Нөмірімді бөлісу» түймесін қайта басыңыз.'));
     }
   } catch(e) {
   } finally {
@@ -3684,24 +3809,24 @@ async function finishLogin(user, firstName) {
 
 function setPassErrorText(error) {
   const m = String((error && error.message) || '').toLowerCase();
-  if (m.includes('different from the old')) return 'Жаңа құпия сөз ескісінен өзгеше болуы керек';
-  if (m.includes('weak') || m.includes('at least') || m.includes('characters')) return 'Құпия сөз тым қарапайым. Кемінде 6 таңба, әріп пен санды араластырыңыз';
-  if (m.includes('session')) return 'Сессия аяқталды. Қайтадан кіріңіз';
-  return 'Құпия сөзді сақтау мүмкін болмады, қайталап көріңіз';
+  if (m.includes('different from the old')) return tr('Жаңа құпия сөз ескісінен өзгеше болуы керек');
+  if (m.includes('weak') || m.includes('at least') || m.includes('characters')) return tr('Құпия сөз тым қарапайым. Кемінде 6 таңба, әріп пен санды араластырыңыз');
+  if (m.includes('session')) return tr('Сессия аяқталды. Қайтадан кіріңіз');
+  return tr('Құпия сөзді сақтау мүмкін болмады, қайталап көріңіз');
 }
 async function submitSetPassword() {
-  if (!sb || !authUser) { showAuthStep('start'); authShowError('Сессия аяқталды. Қайтадан кіріңіз'); return; }
+  if (!sb || !authUser) { showAuthStep('start'); authShowError(tr('Сессия аяқталды. Қайтадан кіріңіз')); return; }
   const p1 = document.getElementById('setpass-password-input').value;
   const p2 = document.getElementById('setpass-confirm-input').value;
-  if (p1.length < 6) { authShowError('Құпия сөз кемінде 6 таңбадан тұруы керек'); return; }
-  if (p1 !== p2) { authShowError('Құпия сөздер сәйкес келмейді'); return; }
+  if (p1.length < 6) { authShowError(tr('Құпия сөз кемінде 6 таңбадан тұруы керек')); return; }
+  if (p1 !== p2) { authShowError(tr('Құпия сөздер сәйкес келмейді')); return; }
   const btn = document.getElementById('setpass-btn');
-  btn.disabled = true; btn.textContent = 'Сақталуда...';
+  btn.disabled = true; btn.textContent = tr('Сақталуда...');
   const payload = { password: p1, data: { has_password: true } };
   if (authMode === 'register' && authRegName) payload.data.full_name = authRegName;
   let res;
   try { res = await sb.auth.updateUser(payload); } catch (e) { res = { error: e }; }
-  btn.disabled = false; btn.textContent = 'Сақтау';
+  btn.disabled = false; btn.textContent = tr('Сақтау');
   if (res.error) { authShowError(setPassErrorText(res.error)); return; }
   if (res.data && res.data.user) authUser = res.data.user;
   document.getElementById('setpass-password-input').value = '';
@@ -3715,46 +3840,46 @@ async function submitSetPassword() {
 
 /* ── typed number: code goes to the Telegram chat, user types it ── */
 async function requestOtp() {
-  if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
+  if (!sb) { authShowError(tr('Байланыс орнатылмады, парақты қайта жүктеңіз')); return; }
   const phone = normalizePhone(document.getElementById('auth-phone-input').value);
-  if (!phoneOk(phone)) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
+  if (!phoneOk(phone)) { authShowError(tr('Телефон нөмірін толық енгізіңіз')); return; }
   authPhone = phone;
   const btn = document.getElementById('auth-send-btn');
-  btn.disabled = true; btn.textContent = 'Жіберілуде...';
+  btn.disabled = true; btn.textContent = tr('Жіберілуде...');
   const { error } = await sb.auth.signInWithOtp({ phone });
-  btn.disabled = false; btn.textContent = 'Кодты алу';
+  btn.disabled = false; btn.textContent = tr('Кодты алу');
   if (error) {
-    authShowError('Бұл нөмір ботпен әлі байланбаған. Жоғарыдағы «Нөмірімді бөлісу (Telegram)» түймесін басыңыз.');
+    authShowError(tr('Бұл нөмір ботпен әлі байланбаған. Жоғарыдағы «Нөмірімді бөлісу (Telegram)» түймесін басыңыз.'));
     return;
   }
   showAuthStep('otp');
 }
 
 async function verifyOtpCode() {
-  if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
+  if (!sb) { authShowError(tr('Байланыс орнатылмады, парақты қайта жүктеңіз')); return; }
   const token = document.getElementById('auth-otp-input').value.trim();
-  if (token.length !== 6) { authShowError('6 таңбалы кодты енгізіңіз'); return; }
+  if (token.length !== 6) { authShowError(tr('6 таңбалы кодты енгізіңіз')); return; }
   const btn = document.getElementById('auth-verify-btn');
-  btn.disabled = true; btn.textContent = 'Тексерілуде...';
+  btn.disabled = true; btn.textContent = tr('Тексерілуде...');
   const { data, error } = await sb.auth.verifyOtp({ phone: authPhone, token, type: 'sms' });
-  btn.disabled = false; btn.textContent = 'Растау';
-  if (error) { authShowError('Код қате немесе мерзімі өткен'); return; }
+  btn.disabled = false; btn.textContent = tr('Растау');
+  if (error) { authShowError(tr('Код қате немесе мерзімі өткен')); return; }
   await finishLogin(data.user, '');
 }
 
 async function signInPassword() {
-  if (!sb) { authShowError('Байланыс орнатылмады, парақты қайта жүктеңіз'); return; }
+  if (!sb) { authShowError(tr('Байланыс орнатылмады, парақты қайта жүктеңіз')); return; }
   const raw = document.getElementById('login-phone-input').value;
   const phone = normalizePhone(raw);
-  if (!phoneOk(phone)) { authShowError('Телефон нөмірін толық енгізіңіз'); return; }
+  if (!phoneOk(phone)) { authShowError(tr('Телефон нөмірін толық енгізіңіз')); return; }
   const password = document.getElementById('login-password-input').value;
-  if (!password) { authShowError('Құпия сөзді енгізіңіз'); return; }
+  if (!password) { authShowError(tr('Құпия сөзді енгізіңіз')); return; }
   const btn = document.getElementById('login-btn');
-  btn.disabled = true; btn.textContent = 'Кіру...';
+  btn.disabled = true; btn.textContent = tr('Кіру...');
   const { data, error } = await sb.auth.signInWithPassword({ phone, password });
-  btn.disabled = false; btn.textContent = 'Кіру';
+  btn.disabled = false; btn.textContent = tr('Кіру');
   if (error) {
-    authShowError('Телефон немесе құпия сөз қате. Құпия сөзді ұмытсаңыз немесе әлі қоймаған болсаңыз, «Құпия сөзді ұмыттыңыз ба?» сілтемесін басыңыз.');
+    authShowError(tr('Телефон немесе құпия сөз қате. Құпия сөзді ұмытсаңыз немесе әлі қоймаған болсаңыз, «Құпия сөзді ұмыттыңыз ба?» сілтемесін басыңыз.'));
     return;
   }
   authUser = data.user;
@@ -3796,7 +3921,7 @@ function hasPrivateLocalBooks() {
   return false;
 }
 async function signOut() {
-  if (hasPrivateLocalBooks() && !confirm('Жеке оқу кітаптары тек осы құрылғыда сақталған — шыққанда олар өшеді. Шығасыз ба?')) return;
+  if (hasPrivateLocalBooks() && !confirm(tr('Жеке оқу кітаптары тек осы құрылғыда сақталған — шыққанда олар өшеді. Шығасыз ба?'))) return;
   stop();
   clearTimeout(autoSaveTimer);
   currentFileName = ''; // кейінгі lsSave (pagehide т.б.) өшірілген деректі қайта жазбасын
@@ -3848,7 +3973,7 @@ async function initAuth() {
       document.getElementById('dashboard').style.display = 'block';
       const loading = document.getElementById('dashboard-loading');
       loading.style.display = 'block';
-      loading.textContent = 'Дашбордты көрсету кезінде қате шықты. Бетті жаңартып көріңіз.';
+      loading.textContent = tr('Дашбордты көрсету кезінде қате шықты. Бетті жаңартып көріңіз.');
     }
     return;
   }
@@ -3884,7 +4009,7 @@ async function showDashboard() {
   }
   const displayName = authUser.user_metadata && authUser.user_metadata.full_name || '';
   document.getElementById('dash-phone').textContent = displayName || (authUser.phone ? formatPhoneShort(authUser.phone) : '');
-  document.getElementById('dash-greeting').textContent = displayName ? ('Қош келдіңіз, ' + displayName + '!') : 'Қайта келдіңіз!';
+  document.getElementById('dash-greeting').textContent = displayName ? tr('Қош келдіңіз, {name}!', { name: displayName }) : tr('Қайта келдіңіз!');
 
   const [statsData, booksData] = await Promise.all([loadStats(), loadCloudBooks()]);
   if (runId !== dashRunId) return; // жаңа showDashboard() шақырылды — ескі жауап қажет емес
@@ -3977,18 +4102,18 @@ async function loadStats() {
 }
 
 function renderStats(s) {
-  document.getElementById('dash-week-pages').textContent = s.weekPages + ' бет';
-  document.getElementById('dash-week-words').textContent = s.weekWords.toLocaleString('kk-KZ') + ' сөз' + (s.weekMinutes ? ' · ~' + s.weekMinutes + ' мин' : '');
-  document.getElementById('dash-month-pages').textContent = s.monthPages + ' бет';
-  document.getElementById('dash-month-words').textContent = s.monthWords.toLocaleString('kk-KZ') + ' сөз' + (s.monthMinutes ? ' · ~' + s.monthMinutes + ' мин' : '');
-  document.getElementById('dash-wpm').textContent = s.avgWpm ? s.avgWpm + ' сөз/мин' : '—';
-  document.getElementById('dash-ppm').textContent = s.avgPagesPerMin ? '~' + s.avgPagesPerMin + ' бет/мин' : '';
+  document.getElementById('dash-week-pages').textContent = tr('{n} бет', { n: s.weekPages });
+  document.getElementById('dash-week-words').textContent = tr('{num} сөз', { num: I18N.num(s.weekWords), n: s.weekWords }) + (s.weekMinutes ? ' · ~' + s.weekMinutes + ' мин' : '');
+  document.getElementById('dash-month-pages').textContent = tr('{n} бет', { n: s.monthPages });
+  document.getElementById('dash-month-words').textContent = tr('{num} сөз', { num: I18N.num(s.monthWords), n: s.monthWords }) + (s.monthMinutes ? ' · ~' + s.monthMinutes + ' мин' : '');
+  document.getElementById('dash-wpm').textContent = s.avgWpm ? tr('{n} сөз/мин', { n: s.avgWpm }) : '—';
+  document.getElementById('dash-ppm').textContent = s.avgPagesPerMin ? tr('~{n} бет/мин', { n: I18N.dec(s.avgPagesPerMin) }) : '';
 }
 
 function renderChartBars(daily, barsWrap, labelWrap, colorToday, colorRest) {
   colorToday = colorToday || '#8B5E3C';
   colorRest = colorRest || '#C9A84C';
-  const labels = ['Дс','Сс','Ср','Бс','Жм','Сб','Жс'];
+  const labels = [tr('Дс'), tr('Сс'), tr('Ср'), tr('Бс'), tr('Жм'), tr('Сб'), tr('Жс')];
   const max = Math.max(1, ...daily);
   barsWrap.innerHTML = '';
   labelWrap.innerHTML = '';
@@ -4039,10 +4164,10 @@ async function loadCloudBooks() {
 function timeAgoKk(dateStr) {
   const d = new Date(dateStr);
   const days = Math.floor((Date.now() - d.getTime()) / 86400000);
-  if (days <= 0) return 'бүгін';
-  if (days === 1) return 'кеше';
-  if (days < 7) return days + ' күн бұрын';
-  return Math.floor(days / 7) + ' апта бұрын';
+  if (days <= 0) return tr('бүгін');
+  if (days === 1) return tr('кеше');
+  if (days < 7) return tr('{n} күн бұрын', { n: days });
+  return tr('{n} апта бұрын', { n: Math.floor(days / 7) });
 }
 
 function escapeHtml(s) {
@@ -4055,7 +4180,7 @@ function renderBooksGrid(books) {
   const wrap = document.getElementById('dash-books-list');
   wrap.innerHTML = '';
   if (!books.length) {
-    wrap.innerHTML = '<div style="color:var(--d-text-3);padding:16px 0;">Әлі кітап жоқ — жаңасын жүктеңіз</div>';
+    wrap.innerHTML = '<div style="color:var(--d-text-3);padding:16px 0;">' + tr('Әлі кітап жоқ — жаңасын жүктеңіз') + '</div>';
     return;
   }
   books.forEach(b => {
@@ -4066,8 +4191,8 @@ function renderBooksGrid(books) {
     card.innerHTML = '<div style="flex:1;min-width:0;">' +
       '<div class="dash-book-title">' + escapeHtml(b.filename) + '</div>' +
       '<div class="dash-book-progress-track"><div class="dash-book-progress-fill" style="width:' + pct + '%;"></div></div>' +
-      '<div class="dash-book-meta">' + pct + '% оқылды' + (prog ? ' · ' + timeAgoKk(prog.updated_at) : '') + '</div></div>' +
-      '<button class="dash-continue-btn">Жалғастыру <i class="ti ti-arrow-right"></i></button>';
+      '<div class="dash-book-meta">' + tr('{pct}% оқылды', { pct }) + (prog ? ' · ' + timeAgoKk(prog.updated_at) : '') + '</div></div>' +
+      '<button class="dash-continue-btn">' + tr('Жалғастыру') + ' <i class="ti ti-arrow-right"></i></button>';
     card.querySelector('.dash-continue-btn').onclick = () => openCloudBook(b);
     wrap.appendChild(card);
   });
@@ -4080,7 +4205,7 @@ document.getElementById('dash-upload-btn').addEventListener('click', () => {
 /* ── cloud book open/upload ── */
 async function openCloudBook(book) {
   showReaderView();
-  document.getElementById('col1').innerHTML = '<div id="placeholder">Кітап жүктелуде…</div>';
+  document.getElementById('col1').innerHTML = '<div id="placeholder">' + tr('Кітап жүктелуде…') + '</div>';
   document.getElementById('col2').innerHTML = '';
   try {
     const prog = Array.isArray(book.reading_progress) ? book.reading_progress[0] : book.reading_progress;
@@ -4097,7 +4222,7 @@ async function openCloudBook(book) {
         body: JSON.stringify({ action: 'download', key: book.storage_key })
       });
       const signed = await res.json();
-      if (!signed.downloadUrl) { alert('Кітапты жүктеу мүмкін болмады'); return; }
+      if (!signed.downloadUrl) { alert(tr('Кітапты жүктеу мүмкін болмады')); return; }
       const textRes = await fetch(signed.downloadUrl);
       text = await textRes.text();
       await lsSaveText(book.filename, text);
@@ -4112,7 +4237,7 @@ async function openCloudBook(book) {
       }).catch(() => {});
     }
   } catch(e) {
-    alert('Кітапты жүктеу кезінде қате шықты');
+    alert(tr('Кітапты жүктеу кезінде қате шықты'));
   }
 }
 
@@ -4265,14 +4390,14 @@ async function dashProfileRender() {
   if (!authUser) return;
   const meta = authUser.user_metadata || {};
   const name = meta.full_name || '';
-  document.getElementById('pf-name').textContent = name || 'Пайдаланушы';
+  document.getElementById('pf-name').textContent = name || tr('Пайдаланушы');
   document.getElementById('pf-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase() || '?';
   document.getElementById('pf-phone').textContent = authUser.phone ? formatPhoneShort(authUser.phone) : '';
   pfUpdateInstallCard();
   const [sLeft, rLeft, rec] = await Promise.all([schulteRemainingToday(), rnRemainingToday(), pfLoadRecords()]);
   document.getElementById('pf-energy-schulte').textContent = '⚡ ' + energyText(sLeft) + (PLAN.limitsEnabled ? ' / ' + PLAN.freeDaily : '');
   document.getElementById('pf-energy-rn').textContent = '⚡ ' + energyText(rLeft) + (PLAN.limitsEnabled ? ' / ' + PLAN.freeDaily : '');
-  document.getElementById('pf-rec-rn').textContent = rec.rn != null ? rec.rn + ' сан' : '—';
+  document.getElementById('pf-rec-rn').textContent = rec.rn != null ? tr('{n} сан', { n: rec.rn }) : '—';
   document.getElementById('pf-rec-schulte').innerHTML = PF_SCHULTE_SIZES.map(n => {
     const num = rec.schulte[n + '|numbers'], let_ = rec.schulte[n + '|letters'];
     const val = [num != null ? '123 ' + schulteFormatTime(num) : null, let_ != null ? 'АБВ ' + schulteFormatTime(let_) : null].filter(Boolean).join(' · ') || '—';
@@ -4288,13 +4413,13 @@ function pfInstallHintText() {
   const android = /Android/.test(ua);
   const firefox = /Firefox|FxiOS/.test(ua);
   const chromium = /Chrome|CriOS|Edg|EdgiOS|SamsungBrowser/.test(ua);
-  if (/Telegram|Instagram|FBAN|FBAV|; wv\)/.test(ua)) return 'Қолданба ішіндегі браузерде орнату мүмкін емес. Сілтемені ' + (iOS ? 'Safari' : 'Chrome') + '-да ашыңыз.';
-  if (iOS) return 'Safari-де «Бөлісу» (⬆︎) түймесін басып, «Басты экранға қосу» таңдаңыз.';
-  if (android) return firefox ? 'Firefox: ⋮ мәзірі → «Орнату».' : 'Chrome: ⋮ мәзірі → «Қолданбаны орнату» (немесе «Басты экранға қосу»).';
-  if (firefox) return 'Firefox компьютерде қолданба орнатуды қолдамайды. Chrome немесе Edge-те ашыңыз.';
-  if (chromium) return 'Мекенжай жолының оң жағындағы орнату белгісін басыңыз немесе ⋮ мәзірі → «Қолданбаны орнату».';
-  if (/Macintosh/.test(ua)) return 'Safari: «Файл» мәзірі → «Dock-қа қосу». Немесе Chrome/Edge-те ашыңыз.';
-  return 'Браузер мәзірінен «Қолданбаны орнату» немесе «Басты экранға қосу» таңдаңыз.';
+  if (/Telegram|Instagram|FBAN|FBAV|; wv\)/.test(ua)) return tr('Қолданба ішіндегі браузерде орнату мүмкін емес. Сілтемені {browser}-да ашыңыз.', { browser: iOS ? 'Safari' : 'Chrome' });
+  if (iOS) return tr('Safari-де «Бөлісу» (⬆︎) түймесін басып, «Басты экранға қосу» таңдаңыз.');
+  if (android) return firefox ? tr('Firefox: ⋮ мәзірі → «Орнату».') : tr('Chrome: ⋮ мәзірі → «Қолданбаны орнату» (немесе «Басты экранға қосу»).');
+  if (firefox) return tr('Firefox компьютерде қолданба орнатуды қолдамайды. Chrome немесе Edge-те ашыңыз.');
+  if (chromium) return tr('Мекенжай жолының оң жағындағы орнату белгісін басыңыз немесе ⋮ мәзірі → «Қолданбаны орнату».');
+  if (/Macintosh/.test(ua)) return tr('Safari: «Файл» мәзірі → «Dock-қа қосу». Немесе Chrome/Edge-те ашыңыз.');
+  return tr('Браузер мәзірінен «Қолданбаны орнату» немесе «Басты экранға қосу» таңдаңыз.');
 }
 function pfUpdateInstallCard() {
   document.getElementById('pf-install-hint').textContent = pfInstallHintText();
@@ -4423,7 +4548,7 @@ function fovAccuracy(found, errors, falsePresses) {
   const den = errors + falsePresses;
   return den > 0 ? Math.round(found / den * 1000) / 10 : 100;
 }
-const fovFmtPct = (v) => v.toFixed(1) + '%';
+const fovFmtPct = (v) => I18N.dec(v.toFixed(1)) + '%';
 
 /* ── settings ── */
 (function fovLoadSettings() {
@@ -4455,8 +4580,8 @@ function fovSettingsOpen() { if (fovRunning()) return; fovSyncSettingButtons(); 
 function fovSettingsClose() { fovEl('field-of-vision-settings').classList.remove('open'); }
 function fovTimingText() {
   const f = (ms) => String(ms / 1000).replace('.', ',');
-  const parts = FOV.stages.map((s, i) => f(i ? FOV.stages[i - 1].untilMs : 0) + '–' + f(s.untilMs) + ' с: кадр ' + f(s.frameMs) + ' с');
-  return 'Кадр өзі ауысады (' + parts.join('; ') + '). Ойын ' + f(FOV.totalMs) + ' секунд, алдында ' + f(FOV.prepMs) + ' секунд дайындық.';
+  const parts = FOV.stages.map((s, i) => tr('{from}–{to} с: кадр {frame} с', { from: f(i ? FOV.stages[i - 1].untilMs : 0), to: f(s.untilMs), frame: f(s.frameMs) }));
+  return tr('Кадр өзі ауысады ({parts}). Ойын {total} секунд, алдында {prep} секунд дайындық.', { parts: parts.join('; '), total: f(FOV.totalMs), prep: f(FOV.prepMs) });
 }
 function fovIntroOpen() { if (fovRunning()) return; fovEl('field-of-vision-intro-timing').textContent = fovTimingText(); fovEl('field-of-vision-intro').classList.add('open'); }
 function fovIntroClose() { try { localStorage.setItem(FOV_LS_INTRO, '1'); } catch (e) {} fovEl('field-of-vision-intro').classList.remove('open'); }
@@ -4502,12 +4627,12 @@ function fovSetControlsEnabled(on) {
 function fovShowScreen(which) {
   fovEl('field-of-vision-game').style.display = which === 'game' ? '' : 'none';
   fovEl('field-of-vision-results').style.display = which === 'results' ? '' : 'none';
-  fovEl('field-of-vision-title').textContent = which === 'results' ? 'Нәтижелер' : 'Көру өрісі';
+  fovEl('field-of-vision-title').textContent = which === 'results' ? tr('Нәтижелер') : tr('Көру өрісі');
 }
 function fovUpdateStatusIdle() {
   if (fovPhase !== 'idle') return;
   const n = fovSettings.size;
-  fovSetStatus(n + '×' + n + ' · ' + fovSettings.points + ' нүкте' + (fovBest != null ? ' · Рекорд: ' + fovFmtPct(fovBest) : ''));
+  fovSetStatus(n + '×' + n + ' · ' + tr('{n} нүкте', { n: fovSettings.points }) + (fovBest != null ? ' · ' + tr('Рекорд: {v}', { v: fovFmtPct(fovBest) }) : ''));
 }
 function fovResetToIdle(msg) {
   fovPhase = 'idle';
@@ -4544,10 +4669,10 @@ function fovStop() {
   fovFrame = null;
 }
 function fovBack() { fovStop(); showDashboard(); }
-function fovRestart() { const was = fovRunning(); fovStop(); fovResetToIdle(was ? 'Ойын тоқтатылды.' : ''); }
+function fovRestart() { const was = fovRunning(); fovStop(); fovResetToIdle(was ? tr('Ойын тоқтатылды.') : ''); }
 function fovAgain() { fovStop(); fovResetToIdle(); }
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && fovRunning()) { fovStop(); fovResetToIdle('Қолданба фонға кеткендіктен ойын тоқтатылды.'); }
+  if (document.visibilityState === 'hidden' && fovRunning()) { fovStop(); fovResetToIdle(tr('Қолданба фонға кеткендіктен ойын тоқтатылды.')); }
 });
 
 /* ── energy (2 free games a day, shared table with the other trainers) ── */
@@ -4585,8 +4710,8 @@ async function fovRefreshEnergyUI() {
   if (el) el.textContent = '⚡' + energyText(remaining);
   const btn = fovEl('field-of-vision-start');
   if (btn && fovPhase === 'idle' && !fovBusy) {
-    if (remaining <= 0) { btn.textContent = 'Ертең қайта келіңіз'; btn.disabled = true; }
-    else { btn.textContent = 'Бастау'; btn.disabled = false; }
+    if (remaining <= 0) { btn.textContent = tr('Ертең қайта келіңіз'); btn.disabled = true; }
+    else { btn.textContent = tr('Бастау'); btn.disabled = false; }
   }
 }
 
@@ -4596,13 +4721,13 @@ async function fovStart() {
   const gen = fovGen;
   const btn = fovEl('field-of-vision-start');
   fovBusy = true;
-  btn.disabled = true; btn.textContent = 'Жүктелуде...'; fovSetMsg('');
+  btn.disabled = true; btn.textContent = tr('Жүктелуде...'); fovSetMsg('');
   const r = await fovConsumePlay();
   if (gen !== fovGen) return;          // left the trainer / restarted in the meantime
   fovBusy = false;
-  btn.textContent = 'Бастау'; btn.disabled = false;
+  btn.textContent = tr('Бастау'); btn.disabled = false;
   if (r !== 'ok') {
-    fovSetMsg(r === 'limit' ? 'Бүгінгі тегін ойындар бітті. Ертең қайта келіңіз.' : 'Қате шықты. Интернетті тексеріп, қайта көріңіз.');
+    fovSetMsg(r === 'limit' ? tr('Бүгінгі тегін ойындар бітті. Ертең қайта келіңіз.') : tr('Қате шықты. Интернетті тексеріп, қайта көріңіз.'));
     fovRefreshEnergyUI();
     return;
   }
@@ -4622,7 +4747,7 @@ function fovBeginPrep() {
   press.style.display = ''; press.disabled = true;
   fovSetControlsEnabled(false);
   fovT0 = performance.now();
-  fovSetStatus('Дайындалыңыз · ' + Math.ceil(FOV.prepMs / 1000));
+  fovSetStatus(tr('Дайындалыңыз · {s}', { s: Math.ceil(FOV.prepMs / 1000) }));
   clearInterval(fovTimer);
   fovTimer = setInterval(fovTick, 30);
 }
@@ -4642,7 +4767,7 @@ function fovTick() {
   const now = performance.now();
   if (fovPhase === 'prep') {
     const left = FOV.prepMs - (now - fovT0);
-    if (left > 0) { fovSetStatus('Дайындалыңыз · ' + Math.ceil(left / 1000)); return; }
+    if (left > 0) { fovSetStatus(tr('Дайындалыңыз · {s}', { s: Math.ceil(left / 1000) })); return; }
     fovPhase = 'play';
     fovSetStatus('');
   }
@@ -4703,7 +4828,7 @@ function fovFinish() {
 async function fovAfterFinish(res, gen) {
   const info = await fovSaveResult(res);
   if (gen !== fovGen || fovPhase !== 'results') return;
-  if (info.newBest) fovEl('field-of-vision-newbest').textContent = 'Жаңа рекорд!';
+  if (info.newBest) fovEl('field-of-vision-newbest').textContent = tr('Жаңа рекорд!');
   const hist = await fovLoadHistory(res.size, res.points);
   if (gen !== fovGen || fovPhase !== 'results') return;
   let values = hist;
@@ -4766,7 +4891,7 @@ function fovRenderChart(values) {
   const n = values.length;
   const x = (i) => n > 1 ? L + (W - L - R) * i / (n - 1) : W / 2;
   const y = (v) => T + (H - T - B) * (1 - Math.max(0, Math.min(100, v)) / 100);
-  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Соңғы әрекеттердің дәлдігі">';
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + tr('Соңғы әрекеттердің дәлдігі') + '">';
   [0, 20, 40, 60, 80, 100].forEach(g => { svg += '<line class="field-of-vision-chart-grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"/>'; });
   if (n > 1) svg += '<polyline class="field-of-vision-chart-line" points="' + values.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ') + '"/>';
   values.forEach((v, i) => {
@@ -4775,7 +4900,7 @@ function fovRenderChart(values) {
     svg += '<text class="field-of-vision-chart-axis" x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '">' + (i + 1) + '</text>';
   });
   svg += '</svg>';
-  fovEl('field-of-vision-chart').innerHTML = '<div class="field-of-vision-chart-title">Дәлдік — соңғы әрекеттер</div>' + svg;
+  fovEl('field-of-vision-chart').innerHTML = '<div class="field-of-vision-chart-title">' + tr('Дәлдік — соңғы әрекеттер') + '</div>' + svg;
 }
 </script>
 <script>
@@ -4801,20 +4926,20 @@ function pfCancelName() {
 async function pfSaveName() {
   const err = document.getElementById('pf-name-err');
   const name = document.getElementById('pf-name-input').value.trim().replace(/\s+/g, ' ');
-  if (name.length < 2 || !/[A-Za-zЀ-ӿ]/.test(name)) { err.textContent = 'Аты-жөніңізді жазыңыз'; return; }
-  if (!sb || !authUser) { err.textContent = 'Қайтадан кіріңіз'; return; }
+  if (name.length < 2 || !/[A-Za-zЀ-ӿ]/.test(name)) { err.textContent = tr('Аты-жөніңізді жазыңыз'); return; }
+  if (!sb || !authUser) { err.textContent = tr('Қайтадан кіріңіз'); return; }
   const btn = document.getElementById('pf-name-save');
-  btn.disabled = true; btn.textContent = 'Сақталуда...';
+  btn.disabled = true; btn.textContent = tr('Сақталуда...');
   let res;
   try { res = await sb.auth.updateUser({ data: { full_name: name } }); } catch (e) { res = { error: e }; }
-  btn.disabled = false; btn.textContent = 'Сақтау';
-  if (res.error) { err.textContent = 'Сақталмады. Интернетті тексеріп, қайталап көріңіз'; return; }
+  btn.disabled = false; btn.textContent = tr('Сақтау');
+  if (res.error) { err.textContent = tr('Сақталмады. Интернетті тексеріп, қайталап көріңіз'); return; }
   if (res.data && res.data.user) authUser = res.data.user;
   else { authUser.user_metadata = authUser.user_metadata || {}; authUser.user_metadata.full_name = name; }
   document.getElementById('pf-name').textContent = name;
   document.getElementById('pf-avatar').textContent = name.charAt(0).toUpperCase();
   document.getElementById('dash-phone').textContent = name;
-  document.getElementById('dash-greeting').textContent = 'Қош келдіңіз, ' + name + '!';
+  document.getElementById('dash-greeting').textContent = tr('Қош келдіңіз, {name}!', { name });
   pfCancelName();
 }
 
@@ -4902,7 +5027,7 @@ function vpScreen(name) { // idle | play | results
 function vpRenderSettings() {
   vpEl('vertical-pacer-level').value = vpSettings.level;
   vpEl('vertical-pacer-wpm-setup').textContent = vpSettings.wpm + ' WPM';
-  vpEl('vertical-pacer-wpm-game').textContent = 'Жылдамдық ' + vpSettings.wpm;
+  vpEl('vertical-pacer-wpm-game').textContent = tr('Жылдамдық {wpm}', { wpm: vpSettings.wpm });
 }
 function vpWpm(delta) {
   vpSettings.wpm = Math.max(VP.wpmMin, Math.min(VP.wpmMax, vpSettings.wpm + delta));
@@ -4992,8 +5117,8 @@ async function vpRefreshEnergyUI() {
   vpEl('vertical-pacer-energy').textContent = '⚡' + energyText(remaining);
   const btn = vpEl('vertical-pacer-start');
   if (vpPhase === 'idle' && !vpBusy) {
-    if (remaining <= 0) { btn.textContent = 'Ертең қайта келіңіз'; btn.disabled = true; }
-    else { btn.textContent = 'Бастау'; btn.disabled = false; }
+    if (remaining <= 0) { btn.textContent = tr('Ертең қайта келіңіз'); btn.disabled = true; }
+    else { btn.textContent = tr('Бастау'); btn.disabled = false; }
   }
 }
 
@@ -5009,7 +5134,7 @@ async function vpStart() {
   if (gen !== vpGen) return;
   vpBusy = false;
   if (r !== 'ok') {
-    vpSetMsg(r === 'limit' ? 'Бүгінгі тегін ойындар таусылды. Ертең қайта келіңіз.' : 'Байланыс қатесі. Қайта көріңіз.');
+    vpSetMsg(r === 'limit' ? tr('Бүгінгі тегін ойындар таусылды. Ертең қайта келіңіз.') : tr('Байланыс қатесі. Қайта көріңіз.'));
     btn.disabled = r === 'limit';
     vpRefreshEnergyUI();
     return;
@@ -5066,7 +5191,7 @@ function vpUpdate() {
     vpRows[idx - vpPageStart].classList.add('is-on');
     vpIdx = idx;
   }
-  vpEl('vertical-pacer-time').textContent = 'Уақыт ' + (Math.max(0, VP.totalMs - vpElapsed) / 1000).toFixed(1);
+  vpEl('vertical-pacer-time').textContent = tr('Уақыт {t}', { t: I18N.dec((Math.max(0, VP.totalMs - vpElapsed) / 1000).toFixed(1)) });
 }
 function vpTogglePause() {
   if (vpPhase === 'play') {
@@ -5112,7 +5237,7 @@ async function vpSaveResult(res, gen) {
       const { error: writeError } = await sb.from('neural_accelerator_best_times').upsert({
         user_id: authUser.id, level: res.level, best_words: res.words, wpm: res.wpm, achieved_at: new Date().toISOString()
       }, { onConflict: 'user_id,level' });
-      if (!writeError && ex && gen === vpGen && vpPhase === 'results') vpEl('vertical-pacer-newbest').textContent = 'Жаңа рекорд!';
+      if (!writeError && ex && gen === vpGen && vpPhase === 'results') vpEl('vertical-pacer-newbest').textContent = tr('Жаңа рекорд!');
     }
   } catch (e) {}
 }
@@ -5130,7 +5255,7 @@ function vpRenderBest() {
   const el = vpEl('vertical-pacer-best');
   if (!el) return;
   const b = vpBest && vpBest[vpSettings.level];
-  el.textContent = b ? 'Рекорд: ' + b.best_words + ' сөз (' + b.wpm + ' WPM)' : '';
+  el.textContent = b ? tr('Рекорд: {n} сөз ({wpm} WPM)', { n: b.best_words, wpm: b.wpm }) : '';
 }
 </script>
 
@@ -5163,7 +5288,17 @@ function vpRenderBest() {
 </div>
 <script>
 (function () {
-  const TEXTS = {"A": {"title": "Ұйқы және есте сақтау", "body": ["Ұйқы — адам ағзасының тек демалуы емес, ми үшін өте маңызды жұмыс кезеңі. Ұйқы кезінде ми күндіз алған ақпаратты реттеп, қажеттісін ұзақ мерзімді жадқа жібереді де, маңызсызын ұмытады. Ғалымдар бұл үдерісті жадтың бекуі деп атайды.", "Ұйқы бірнеше кезеңнен тұрады. Бір түн ішінде олар төрт-бес рет қайталанады, әрбір циклдің ұзақтығы шамамен тоқсан минут. Ұйқының бастапқы кезеңінде жүрек соғуы баяулайды, дене босаңсиды. Одан кейін терең ұйқы келеді. Дәл осы кезде дене тіндері қалпына келеді, ал ми фактілер мен оқиғаларды есте сақтауға дайындайды. Таңға жақын жылдам көз қозғалысы кезеңі ұзарады. Адам түс көретін осы кезең үйренген дағдыларды бекітуге көмектеседі.", "Бір тәжірибе ұйқының жадқа әсерін анық көрсетті. Студенттер екі топқа бөлінді: біріншісі жаңа сөздерді жаттап, түнде ұйықтады, екіншісі сол сөздерді жаттап, түні бойы ұйықтамады. Екі күннен кейін тексергенде, ұйықтаған топ сөздерді айтарлықтай көп еске түсірді. Ұйқысыз қалған топтың нәтижесі нашар болды және кейін қанша ұйықтаса да, жоғалған ақпаратты толық қайтара алмады.", "Ұйқының тағы бір пайдасы — ми өзін-өзі тазартады. Күндіз жұмыс істегенде жасушаларда қалдық заттар жиналады. Терең ұйқы кезінде ми тінінде сұйықтықтың қозғалысы күшейіп, бұл заттарды сыртқа шығарады. Сондықтан жақсы ұйықтаған адамның ертеңіне ойы анық, зейіні тұрақты болады. Қысқа күндізгі ұйқы, шамамен жиырма минут, күш қосады, бірақ ұзақ ұйықтап кетсе, түнгі ұйқыны бұзуы мүмкін.", "Сондықтан емтиханға түні бойы дайындалу тиімсіз. Ең жақсы жол — материалды кешке оқып, толық ұйықтау, ертеңіне қайталау. Жасөспірімдерге тәулігіне сегіз-он сағат ұйқы қажет, бірақ көпшілігі бұдан әлдеқайда аз ұйықтайды. Ұйқы жетіспесе, зейін төмендейді, көңіл-күй нашарлайды, жаңа тақырыпты меңгеру қиындайды.", "Ұйқы сапасын жақсартуға көмектесетін қарапайым ережелер бар. Күн сайын бір уақытта жатып, бір уақытта тұру керек. Ұйықтар алдында бір сағат бұрын телефон мен компьютерді қою қажет, себебі экран жарығы ұйқы гормонының бөлінуін кешіктіреді. Бөлме салқын әрі қараңғы болғаны жөн. Кешке кофе мен энергетикалық сусындарды ішпеген дұрыс."], "qs": [{"q": "Ұйқы кезінде ми қандай жұмыс атқарады?", "o": ["Күндізгі ақпараттың бәрін бірдей сақтайды", "Ақпаратты реттеп, қажеттісін ұзақ мерзімді жадқа жібереді", "Ақпаратты қабылдауды тоқтатып, толық өшеді", "Тек түс көрумен айналысады"], "a": 1}, {"q": "Бір ұйқы циклінің ұзақтығы шамамен қанша?", "o": ["Отыз минут", "Алпыс минут", "Тоқсан минут", "Жүз жиырма минут"], "a": 2}, {"q": "Тәжірибеде ұйықтамаған топтың нәтижесі қандай болды?", "o": ["Ұйықтаған топпен бірдей", "Одан жақсы", "Нашар, жоғалтқанын кейін толық қайтара алмады", "Нәтижесі тексерілмеді"], "a": 2}, {"q": "Мәтін бойынша емтиханға дайындалудың ең жақсы жолы қайсы?", "o": ["Түні бойы оқу", "Кешке оқып, толық ұйықтап, ертеңіне қайталау", "Тек таңертең бір рет оқу", "Материалды мүлде қайталамау"], "a": 1}, {"q": "Ұйықтар алдында телефонды қоюдың себебі не?", "o": ["Батареясы таусылып қалмауы үшін", "Экран жарығы ұйқы гормонының бөлінуін кешіктіреді", "Телефон сигналы жадқа әсер етеді", "Түс көру кезеңін қысқартады"], "a": 1}]}, "B": {"title": "Судың айналымы", "body": ["Жер бетіндегі су бір орында тұрмайды, ол үнемі қозғалыста болады. Судың мұхиттан атмосфераға, одан құрлыққа, содан кейін қайтадан мұхитқа оралуын су айналымы дейді. Бұл үдеріс миллиондаған жыл бойы тоқтамай жүріп келеді.", "Жер бетіндегі судың басым бөлігі, шамамен тоқсан жеті пайызы, мұхиттар мен теңіздерде тұзды күйде орналасқан. Тұщы судың үштен екісінен астамы мұздықтарда мұз болып жатыр, сондықтан адамға қолжетімді су өте аз. Су бір күйден екінші күйге ауысып отырады: сұйық, бу және қатты мұз. Атмосферадағы су буы ауада орта есеппен тоғыз-он күн тұрады, ал мұздықтағы су мыңдаған жыл бойы өзгермей жатуы мүмкін.", "Айналымның қозғаушы күші — Күн. Күн сәулесі мұхит, көл, өзен беттерін қыздырғанда, су булана бастайды. Су буы көрінбейді, ол жеңіл болғандықтан жоғары көтеріледі. Өсімдіктер де айналымға қатысады: олар топырақтан суды сіңіріп, жапырақтары арқылы буландырады. Бұл құбылыс транспирация деп аталады. Мысалы, үлкен ағаш бір күнде жүздеген литрге дейін суды ауаға жібере алады.", "Биікке көтерілген бу салқын ауаға тап болып, ұсақ тамшыларға айналады. Бұл құбылыс конденсация деп аталады. Тамшылар жиналып, бұлт түзеді. Бұлттағы тамшылар ірілеп, ауырлағанда жаңбыр, қар немесе бұршақ болып жерге түседі. Жауын-шашынның бір бөлігі тікелей мұхитқа құяды, ал енді бір бөлігі құрлыққа жауады.", "Құрлыққа түскен судың жолы әртүрлі. Бір бөлігі беткі ағыс болып, өзендерге құяды да, ақырында теңізге жетеді. Енді бір бөлігі топыраққа сіңіп, жер асты суларына қосылады. Жер асты сулары баяу қозғалады, кейде олардың бір тамшысы шығатын жеріне жеткенше ондаған, тіпті жүздеген жыл өтеді. Қыста қар мен мұз түрінде жиналған су көктемде еріп, өзендердің суын арттырады.", "Су айналымы тіршілік үшін аса маңызды. Ол тұщы суды үнемі жаңартып отырады: мұхит суы тұзды, бірақ буланғанда тұз қалып қояды, сондықтан жаңбыр суы тұщы болады. Сонымен қатар айналым климатты реттеп, жылуды Жердің бір бөлігінен екіншісіне тасымалдайды.", "Адам қызметі бұл үдеріске әсер етеді. Ормандарды кесу буланатын су мөлшерін азайтады, ал қала көшелеріндегі асфальт суды топыраққа жібермей, тез ағызып жібереді. Сондықтан су ресурстарын үнемдеу және ормандарды қорғау маңызды."], "qs": [{"q": "Су айналымының қозғаушы күші не?", "o": ["Жел", "Жер тартылысы", "Күн", "Мұхит толқыны"], "a": 2}, {"q": "Транспирация дегеніміз не?", "o": ["Бұлттың түзілуі", "Өсімдіктердің суды жапырақтары арқылы буландыруы", "Судың топыраққа сіңуі", "Қардың еруі"], "a": 1}, {"q": "Бұлттағы тамшылар жерге қашан түседі?", "o": ["Қызғанда", "Желмен қозғалғанда", "Ауа салқындағанда", "Ірілеп, ауырлағанда"], "a": 3}, {"q": "Жаңбыр суы неліктен тұщы болады?", "o": ["Бұлт суды тазартады", "Су буланғанда тұз қалып қояды", "Ол жер асты суынан келеді", "Оған қар қосылады"], "a": 1}, {"q": "Қала асфальты су айналымына қалай әсер етеді?", "o": ["Буланатын су мөлшерін көбейтеді", "Жаңбырдың жаууын тоқтатады", "Суды топыраққа жібермей, тез ағызып жібереді", "Жер асты суын тұщытады"], "a": 2}]}, "C": {"title": "Ұлы Жібек жолы", "body": ["Жібек жолы — біздің заманымыздан бұрынғы екінші ғасырдан бастап Қытайды Жерорта теңізі жағалауындағы елдермен байланыстырған сауда жолдарының жүйесі. Бұл бір жол емес, көптеген керуен жолдарының желісі болған. «Жібек жолы» деген атауды XIX ғасырда неміс ғалымы Фердинанд фон Рихтгофен ұсынған, өйткені бұл жолмен Еуропаға ең көп тасымалданған тауар қытай жібегі еді.", "Жібектен басқа керуендер фарфор, дәмдеуіштер, қағаз, асыл тастар, жылқы мен қару-жарақ тасыды. Сауда жолы Қазақстан жері арқылы да өтті. Оңтүстік Қазақстандағы Отырар, Сауран, Сайрам, Тараз, Түркістан қалалары керуендер аялдайтын ірі орталықтарға айналды. Бұл қалаларда базарлар, керуен-сарайлар, қолөнер шеберханалары болды. Көшпелі халық керуендерге жол көрсетіп, азық-түлік пен мал беріп отырды.", "Керуен-сарайлар бір күндік жол сайын орналасты. Онда саудагерлер түнеп, жануарларын тамақтандырып, жолға азық алатын. Керуен-сарайлар сауданың ғана емес, жаңалықтардың да тарайтын орны болды: мұнда әртүрлі елдердің адамдары кездесіп, бір-бірімен әңгімелесті. Саудагерлерге әртүрлі тілдерде келіссөз жүргізуге тура келді, сондықтан аудармашылардың еңбегі жоғары бағаланды.", "Жібек жолы тек тауар алмасудың жолы емес еді. Сауда керуендерімен бірге ғылым, өнер, діндер мен технологиялар да тарады. Мысалы, қағаз жасау тәсілі Қытайдан батысқа осы жолмен жетті. Ғалымдар мен саяхатшылар жаңа білім алып, оны өз елдеріне апарды. Жүздеген жыл бойы тілдер мен мәдениеттер бір-біріне ықпал етті.", "Керуенмен жүру қауіпті де қиын болды. Саудагерлер шөл мен таудан өтіп, қарақшылардан сақтануға мәжбүр болды. Сондықтан олар топ болып жүріп, түйе мен жылқы пайдаланды. Түйе шөлде бірнеше күн су ішпей жүре алады, сол себепті керуендердің басты көлігіне айналды. Бір тауар бір саудагердің қолымен соңына дейін жеткен жоқ: ол ондаған делдалдың қолынан өтіп, жолда бағасы өсе берді.", "XV ғасырдан бастап Жібек жолы бірте-бірте әлсірей бастады. Теңіз жолдары ашылып, кемелер тауарды арзан әрі көп мөлшерде жеткізді. Сонымен қатар ірі мемлекеттер арасындағы соғыстар құрлықтағы жолдарды қауіпті етті. Дегенмен Жібек жолының мұрасы бүгінге дейін сақталған: ескі қалалардың қирандылары мен тарихи ескерткіштер оның бай тарихын еске салады."], "qs": [{"q": "«Жібек жолы» атауын кім ұсынған?", "o": ["Марко Поло", "Әл-Фараби", "Ұлықбек", "Фердинанд фон Рихтгофен"], "a": 3}, {"q": "Мәтінде Қазақстандағы керуен орталығы ретінде қай қала аталған?", "o": ["Астана", "Қарағанды", "Отырар", "Ақтау"], "a": 2}, {"q": "Түйе неліктен керуендердің басты көлігіне айналды?", "o": ["Өте жылдам жүгіреді", "Шөлде бірнеше күн су ішпей жүре алады", "Қарақшылардан қорғайды", "Қар үстінде жақсы жүреді"], "a": 1}, {"q": "Қытайдан батысқа сауда жолымен қандай технология тарады?", "o": ["Кеме жасау", "Шыны құю", "Тас қалау", "Қағаз жасау"], "a": 3}, {"q": "Жібек жолы неліктен әлсірей бастады?", "o": ["Жібекке сұраныс жойылды", "Теңіз жолдары ашылып, кемелер тауарды арзан әрі көп жеткізді", "Керуен-сарайлар өртеніп кетті", "Қытай саудаға тыйым салды"], "a": 1}]}};
+  const TEXTS_KK = {"A": {"title": "Ұйқы және есте сақтау", "body": ["Ұйқы — адам ағзасының тек демалуы емес, ми үшін өте маңызды жұмыс кезеңі. Ұйқы кезінде ми күндіз алған ақпаратты реттеп, қажеттісін ұзақ мерзімді жадқа жібереді де, маңызсызын ұмытады. Ғалымдар бұл үдерісті жадтың бекуі деп атайды.", "Ұйқы бірнеше кезеңнен тұрады. Бір түн ішінде олар төрт-бес рет қайталанады, әрбір циклдің ұзақтығы шамамен тоқсан минут. Ұйқының бастапқы кезеңінде жүрек соғуы баяулайды, дене босаңсиды. Одан кейін терең ұйқы келеді. Дәл осы кезде дене тіндері қалпына келеді, ал ми фактілер мен оқиғаларды есте сақтауға дайындайды. Таңға жақын жылдам көз қозғалысы кезеңі ұзарады. Адам түс көретін осы кезең үйренген дағдыларды бекітуге көмектеседі.", "Бір тәжірибе ұйқының жадқа әсерін анық көрсетті. Студенттер екі топқа бөлінді: біріншісі жаңа сөздерді жаттап, түнде ұйықтады, екіншісі сол сөздерді жаттап, түні бойы ұйықтамады. Екі күннен кейін тексергенде, ұйықтаған топ сөздерді айтарлықтай көп еске түсірді. Ұйқысыз қалған топтың нәтижесі нашар болды және кейін қанша ұйықтаса да, жоғалған ақпаратты толық қайтара алмады.", "Ұйқының тағы бір пайдасы — ми өзін-өзі тазартады. Күндіз жұмыс істегенде жасушаларда қалдық заттар жиналады. Терең ұйқы кезінде ми тінінде сұйықтықтың қозғалысы күшейіп, бұл заттарды сыртқа шығарады. Сондықтан жақсы ұйықтаған адамның ертеңіне ойы анық, зейіні тұрақты болады. Қысқа күндізгі ұйқы, шамамен жиырма минут, күш қосады, бірақ ұзақ ұйықтап кетсе, түнгі ұйқыны бұзуы мүмкін.", "Сондықтан емтиханға түні бойы дайындалу тиімсіз. Ең жақсы жол — материалды кешке оқып, толық ұйықтау, ертеңіне қайталау. Жасөспірімдерге тәулігіне сегіз-он сағат ұйқы қажет, бірақ көпшілігі бұдан әлдеқайда аз ұйықтайды. Ұйқы жетіспесе, зейін төмендейді, көңіл-күй нашарлайды, жаңа тақырыпты меңгеру қиындайды.", "Ұйқы сапасын жақсартуға көмектесетін қарапайым ережелер бар. Күн сайын бір уақытта жатып, бір уақытта тұру керек. Ұйықтар алдында бір сағат бұрын телефон мен компьютерді қою қажет, себебі экран жарығы ұйқы гормонының бөлінуін кешіктіреді. Бөлме салқын әрі қараңғы болғаны жөн. Кешке кофе мен энергетикалық сусындарды ішпеген дұрыс."], "qs": [{"q": "Ұйқы кезінде ми қандай жұмыс атқарады?", "o": ["Күндізгі ақпараттың бәрін бірдей сақтайды", "Ақпаратты реттеп, қажеттісін ұзақ мерзімді жадқа жібереді", "Ақпаратты қабылдауды тоқтатып, толық өшеді", "Тек түс көрумен айналысады"], "a": 1}, {"q": "Бір ұйқы циклінің ұзақтығы шамамен қанша?", "o": ["Отыз минут", "Алпыс минут", "Тоқсан минут", "Жүз жиырма минут"], "a": 2}, {"q": "Тәжірибеде ұйықтамаған топтың нәтижесі қандай болды?", "o": ["Ұйықтаған топпен бірдей", "Одан жақсы", "Нашар, жоғалтқанын кейін толық қайтара алмады", "Нәтижесі тексерілмеді"], "a": 2}, {"q": "Мәтін бойынша емтиханға дайындалудың ең жақсы жолы қайсы?", "o": ["Түні бойы оқу", "Кешке оқып, толық ұйықтап, ертеңіне қайталау", "Тек таңертең бір рет оқу", "Материалды мүлде қайталамау"], "a": 1}, {"q": "Ұйықтар алдында телефонды қоюдың себебі не?", "o": ["Батареясы таусылып қалмауы үшін", "Экран жарығы ұйқы гормонының бөлінуін кешіктіреді", "Телефон сигналы жадқа әсер етеді", "Түс көру кезеңін қысқартады"], "a": 1}]}, "B": {"title": "Судың айналымы", "body": ["Жер бетіндегі су бір орында тұрмайды, ол үнемі қозғалыста болады. Судың мұхиттан атмосфераға, одан құрлыққа, содан кейін қайтадан мұхитқа оралуын су айналымы дейді. Бұл үдеріс миллиондаған жыл бойы тоқтамай жүріп келеді.", "Жер бетіндегі судың басым бөлігі, шамамен тоқсан жеті пайызы, мұхиттар мен теңіздерде тұзды күйде орналасқан. Тұщы судың үштен екісінен астамы мұздықтарда мұз болып жатыр, сондықтан адамға қолжетімді су өте аз. Су бір күйден екінші күйге ауысып отырады: сұйық, бу және қатты мұз. Атмосферадағы су буы ауада орта есеппен тоғыз-он күн тұрады, ал мұздықтағы су мыңдаған жыл бойы өзгермей жатуы мүмкін.", "Айналымның қозғаушы күші — Күн. Күн сәулесі мұхит, көл, өзен беттерін қыздырғанда, су булана бастайды. Су буы көрінбейді, ол жеңіл болғандықтан жоғары көтеріледі. Өсімдіктер де айналымға қатысады: олар топырақтан суды сіңіріп, жапырақтары арқылы буландырады. Бұл құбылыс транспирация деп аталады. Мысалы, үлкен ағаш бір күнде жүздеген литрге дейін суды ауаға жібере алады.", "Биікке көтерілген бу салқын ауаға тап болып, ұсақ тамшыларға айналады. Бұл құбылыс конденсация деп аталады. Тамшылар жиналып, бұлт түзеді. Бұлттағы тамшылар ірілеп, ауырлағанда жаңбыр, қар немесе бұршақ болып жерге түседі. Жауын-шашынның бір бөлігі тікелей мұхитқа құяды, ал енді бір бөлігі құрлыққа жауады.", "Құрлыққа түскен судың жолы әртүрлі. Бір бөлігі беткі ағыс болып, өзендерге құяды да, ақырында теңізге жетеді. Енді бір бөлігі топыраққа сіңіп, жер асты суларына қосылады. Жер асты сулары баяу қозғалады, кейде олардың бір тамшысы шығатын жеріне жеткенше ондаған, тіпті жүздеген жыл өтеді. Қыста қар мен мұз түрінде жиналған су көктемде еріп, өзендердің суын арттырады.", "Су айналымы тіршілік үшін аса маңызды. Ол тұщы суды үнемі жаңартып отырады: мұхит суы тұзды, бірақ буланғанда тұз қалып қояды, сондықтан жаңбыр суы тұщы болады. Сонымен қатар айналым климатты реттеп, жылуды Жердің бір бөлігінен екіншісіне тасымалдайды.", "Адам қызметі бұл үдеріске әсер етеді. Ормандарды кесу буланатын су мөлшерін азайтады, ал қала көшелеріндегі асфальт суды топыраққа жібермей, тез ағызып жібереді. Сондықтан су ресурстарын үнемдеу және ормандарды қорғау маңызды."], "qs": [{"q": "Су айналымының қозғаушы күші не?", "o": ["Жел", "Жер тартылысы", "Күн", "Мұхит толқыны"], "a": 2}, {"q": "Транспирация дегеніміз не?", "o": ["Бұлттың түзілуі", "Өсімдіктердің суды жапырақтары арқылы буландыруы", "Судың топыраққа сіңуі", "Қардың еруі"], "a": 1}, {"q": "Бұлттағы тамшылар жерге қашан түседі?", "o": ["Қызғанда", "Желмен қозғалғанда", "Ауа салқындағанда", "Ірілеп, ауырлағанда"], "a": 3}, {"q": "Жаңбыр суы неліктен тұщы болады?", "o": ["Бұлт суды тазартады", "Су буланғанда тұз қалып қояды", "Ол жер асты суынан келеді", "Оған қар қосылады"], "a": 1}, {"q": "Қала асфальты су айналымына қалай әсер етеді?", "o": ["Буланатын су мөлшерін көбейтеді", "Жаңбырдың жаууын тоқтатады", "Суды топыраққа жібермей, тез ағызып жібереді", "Жер асты суын тұщытады"], "a": 2}]}, "C": {"title": "Ұлы Жібек жолы", "body": ["Жібек жолы — біздің заманымыздан бұрынғы екінші ғасырдан бастап Қытайды Жерорта теңізі жағалауындағы елдермен байланыстырған сауда жолдарының жүйесі. Бұл бір жол емес, көптеген керуен жолдарының желісі болған. «Жібек жолы» деген атауды XIX ғасырда неміс ғалымы Фердинанд фон Рихтгофен ұсынған, өйткені бұл жолмен Еуропаға ең көп тасымалданған тауар қытай жібегі еді.", "Жібектен басқа керуендер фарфор, дәмдеуіштер, қағаз, асыл тастар, жылқы мен қару-жарақ тасыды. Сауда жолы Қазақстан жері арқылы да өтті. Оңтүстік Қазақстандағы Отырар, Сауран, Сайрам, Тараз, Түркістан қалалары керуендер аялдайтын ірі орталықтарға айналды. Бұл қалаларда базарлар, керуен-сарайлар, қолөнер шеберханалары болды. Көшпелі халық керуендерге жол көрсетіп, азық-түлік пен мал беріп отырды.", "Керуен-сарайлар бір күндік жол сайын орналасты. Онда саудагерлер түнеп, жануарларын тамақтандырып, жолға азық алатын. Керуен-сарайлар сауданың ғана емес, жаңалықтардың да тарайтын орны болды: мұнда әртүрлі елдердің адамдары кездесіп, бір-бірімен әңгімелесті. Саудагерлерге әртүрлі тілдерде келіссөз жүргізуге тура келді, сондықтан аудармашылардың еңбегі жоғары бағаланды.", "Жібек жолы тек тауар алмасудың жолы емес еді. Сауда керуендерімен бірге ғылым, өнер, діндер мен технологиялар да тарады. Мысалы, қағаз жасау тәсілі Қытайдан батысқа осы жолмен жетті. Ғалымдар мен саяхатшылар жаңа білім алып, оны өз елдеріне апарды. Жүздеген жыл бойы тілдер мен мәдениеттер бір-біріне ықпал етті.", "Керуенмен жүру қауіпті де қиын болды. Саудагерлер шөл мен таудан өтіп, қарақшылардан сақтануға мәжбүр болды. Сондықтан олар топ болып жүріп, түйе мен жылқы пайдаланды. Түйе шөлде бірнеше күн су ішпей жүре алады, сол себепті керуендердің басты көлігіне айналды. Бір тауар бір саудагердің қолымен соңына дейін жеткен жоқ: ол ондаған делдалдың қолынан өтіп, жолда бағасы өсе берді.", "XV ғасырдан бастап Жібек жолы бірте-бірте әлсірей бастады. Теңіз жолдары ашылып, кемелер тауарды арзан әрі көп мөлшерде жеткізді. Сонымен қатар ірі мемлекеттер арасындағы соғыстар құрлықтағы жолдарды қауіпті етті. Дегенмен Жібек жолының мұрасы бүгінге дейін сақталған: ескі қалалардың қирандылары мен тарихи ескерткіштер оның бай тарихын еске салады."], "qs": [{"q": "«Жібек жолы» атауын кім ұсынған?", "o": ["Марко Поло", "Әл-Фараби", "Ұлықбек", "Фердинанд фон Рихтгофен"], "a": 3}, {"q": "Мәтінде Қазақстандағы керуен орталығы ретінде қай қала аталған?", "o": ["Астана", "Қарағанды", "Отырар", "Ақтау"], "a": 2}, {"q": "Түйе неліктен керуендердің басты көлігіне айналды?", "o": ["Өте жылдам жүгіреді", "Шөлде бірнеше күн су ішпей жүре алады", "Қарақшылардан қорғайды", "Қар үстінде жақсы жүреді"], "a": 1}, {"q": "Қытайдан батысқа сауда жолымен қандай технология тарады?", "o": ["Кеме жасау", "Шыны құю", "Тас қалау", "Қағаз жасау"], "a": 3}, {"q": "Жібек жолы неліктен әлсірей бастады?", "o": ["Жібекке сұраныс жойылды", "Теңіз жолдары ашылып, кемелер тауарды арзан әрі көп жеткізді", "Керуен-сарайлар өртеніп кетті", "Қытай саудаға тыйым салды"], "a": 1}]}};
+  // Орысша өлшем тесті мәтіндері (texts.ru.js → TEXTS_RU.baseline). Құрылымы қазақшамен дәл сәйкес болмаса (сұрақ/нұсқа саны, дұрыс жауап индексі) қазақша қолданылады.
+  const TEXTS = (function () {
+    const ru = I18N.lang === 'ru' && window.TEXTS_RU && TEXTS_RU.baseline;
+    if (!ru) return TEXTS_KK;
+    const ok = Object.keys(TEXTS_KK).every(k => ru[k] && typeof ru[k].title === 'string' && Array.isArray(ru[k].body) && ru[k].body.length &&
+      Array.isArray(ru[k].qs) && ru[k].qs.length === TEXTS_KK[k].qs.length &&
+      ru[k].qs.every((q, i) => q && typeof q.q === 'string' && Array.isArray(q.o) && q.o.length === TEXTS_KK[k].qs[i].o.length && q.a === TEXTS_KK[k].qs[i].a));
+    if (!ok) { console.warn('[i18n] TEXTS_RU.baseline құрылымы сәйкес емес — қазақша мәтін қолданылады'); return TEXTS_KK; }
+    return ru;
+  })();
   const ORDERS = [['A', 'B', 'C'], ['B', 'C', 'A'], ['C', 'A', 'B']];
   const el = id => document.getElementById(id);
   const body = () => el('baseline-body');
@@ -5193,7 +5328,7 @@ function vpRenderBest() {
       if (!sb || !authUser) { b.style.display = 'none'; return; }
       const s = await status();
       if (s.available) {
-        el('bl-banner-title').textContent = 'Өлшем тесті ' + s.open + '/3 ашық';
+        el('bl-banner-title').textContent = tr('Өлшем тесті {n}/3 ашық', { n: s.open });
         b.style.display = 'flex';
       } else {
         b.style.display = 'none';
@@ -5212,7 +5347,7 @@ function vpRenderBest() {
   document.addEventListener('visibilitychange', blTick);
 
   window.blBack = function () {
-    if (st.phase === 'read' && !confirm('Тестті тоқтатсаңыз, нәтиже сақталмайды. Шығасыз ба?')) return;
+    if (st.phase === 'read' && !confirm(tr('Тестті тоқтатсаңыз, нәтиже сақталмайды. Шығасыз ба?'))) return;
     st.phase = null;
     showDashboard();
   };
@@ -5220,35 +5355,35 @@ function vpRenderBest() {
   window.blOpen = async function () {
     hideAllViews();
     el('baseline').style.display = 'block';
-    el('baseline-title').textContent = 'Өлшем тесті';
-    body().innerHTML = '<p>Жүктелуде…</p>';
+    el('baseline-title').textContent = tr('Өлшем тесті');
+    body().innerHTML = '<p>' + tr('Жүктелуде…') + '</p>';
     st.phase = 'loading';
     try {
       const s = await status();
       if (!s.available) {
         body().innerHTML = s.open > 0
-          ? '<h2>Бұл тестті тапсырып қойдыңыз</h2><p>Келесі тестті мұғалім ашады, дашбордта хабарлама шығады.</p>'
-          : '<h2>Қазір тест жабық</h2><p>Мұғалім тестті ашқанда, дашбордта хабарлама шығады.</p>';
-        const b = mk('button', { className: 'bl-btn', textContent: 'Дашбордқа оралу' }); b.onclick = () => { st.phase = null; showDashboard(); }; body().appendChild(b);
+          ? '<h2>' + tr('Бұл тестті тапсырып қойдыңыз') + '</h2><p>' + tr('Келесі тестті мұғалім ашады, дашбордта хабарлама шығады.') + '</p>'
+          : '<h2>' + tr('Қазір тест жабық') + '</h2><p>' + tr('Мұғалім тестті ашқанда, дашбордта хабарлама шығады.') + '</p>';
+        const b = mk('button', { className: 'bl-btn', textContent: tr('Дашбордқа оралу') }); b.onclick = () => { st.phase = null; showDashboard(); }; body().appendChild(b);
         st.phase = null; return;
       }
       st.testNo = s.open; st.textId = orderFor(authUser.id)[s.open - 1]; st.saved = false; st.result = null;
       intro();
     } catch (e) {
-      body().innerHTML = '<h2>Қате</h2><p>Тест ашылмады. Интернетті тексеріп, қайталап көріңіз.</p>';
+      body().innerHTML = '<h2>' + tr('Қате') + '</h2><p>' + tr('Тест ашылмады. Интернетті тексеріп, қайталап көріңіз.') + '</p>';
       st.phase = null;
     }
   };
 
   function intro() {
     st.phase = 'intro';
-    el('baseline-title').textContent = 'Өлшем тесті ' + st.testNo + '/3';
-    body().innerHTML = '<h2>Оқу жылдамдығын өлшейміз</h2>' +
-      '<p>1. Қысқа мәтін шығады. Оны <b>әдеттегідей, түсініп</b> оқыңыз: асықпаңыз, бірақ тоқтап қалмаңыз.</p>' +
-      '<p>2. Оқып болғанда «Оқып болдым» батырмасын басыңыз. Мәтін жасырылады.</p>' +
-      '<p>3. Мәтін бойынша 5 сұраққа жауап бересіз. Мәтінге қайта қарай алмайсыз.</p>' +
-      '<p>Тестті тыныш жерде, басқа қосымшаға өтпей орындаңыз. Бастағаннан кейін тоқтатуға болмайды.</p>';
-    const b = mk('button', { className: 'bl-btn', textContent: 'Бастау' }); b.onclick = startRead; body().appendChild(b);
+    el('baseline-title').textContent = tr('Өлшем тесті {n}/3', { n: st.testNo });
+    body().innerHTML = '<h2>' + tr('Оқу жылдамдығын өлшейміз') + '</h2>' +
+      '<p>' + tr('1. Қысқа мәтін шығады. Оны <b>әдеттегідей, түсініп</b> оқыңыз: асықпаңыз, бірақ тоқтап қалмаңыз.') + '</p>' +
+      '<p>' + tr('2. Оқып болғанда «Оқып болдым» батырмасын басыңыз. Мәтін жасырылады.') + '</p>' +
+      '<p>' + tr('3. Мәтін бойынша 5 сұраққа жауап бересіз. Мәтінге қайта қарай алмайсыз.') + '</p>' +
+      '<p>' + tr('Тестті тыныш жерде, басқа қосымшаға өтпей орындаңыз. Бастағаннан кейін тоқтатуға болмайды.') + '</p>';
+    const b = mk('button', { className: 'bl-btn', textContent: tr('Бастау') }); b.onclick = startRead; body().appendChild(b);
   }
 
   function startRead() {
@@ -5259,7 +5394,7 @@ function vpRenderBest() {
     wrap.appendChild(mk('h2', null, esc(t.title)));
     t.body.forEach(p => wrap.appendChild(mk('p', null, esc(p))));
     body().appendChild(wrap);
-    const b = mk('button', { className: 'bl-btn', textContent: 'Оқып болдым' }); b.onclick = finishRead; body().appendChild(b);
+    const b = mk('button', { className: 'bl-btn', textContent: tr('Оқып болдым') }); b.onclick = finishRead; body().appendChild(b);
     window.scrollTo(0, 0); el('baseline').scrollTop = 0;
     st.t0 = performance.now();
   }
@@ -5269,7 +5404,7 @@ function vpRenderBest() {
     st.phase = 'quiz';
     const t = TEXTS[st.textId];
     st.answers = new Array(t.qs.length).fill(-1);
-    body().innerHTML = '<h2>Сұрақтар</h2><p>Мәтін жасырылды. Әр сұраққа бір жауап таңдаңыз.</p>';
+    body().innerHTML = '<h2>' + tr('Сұрақтар') + '</h2><p>' + tr('Мәтін жасырылды. Әр сұраққа бір жауап таңдаңыз.') + '</p>';
     t.qs.forEach((q, i) => {
       const box = mk('div', { className: 'bl-q' });
       box.appendChild(mk('b', null, (i + 1) + '. ' + esc(q.q)));
@@ -5281,12 +5416,12 @@ function vpRenderBest() {
       body().appendChild(box);
     });
     body().appendChild(mk('div', { className: 'bl-err', id: 'bl-err' }));
-    const b = mk('button', { className: 'bl-btn', textContent: 'Жауаптарды жіберу' }); b.onclick = submit; body().appendChild(b);
+    const b = mk('button', { className: 'bl-btn', textContent: tr('Жауаптарды жіберу') }); b.onclick = submit; body().appendChild(b);
     el('baseline').scrollTop = 0;
   }
 
   async function submit() {
-    if (st.answers.some(a => a < 0)) { el('bl-err').textContent = 'Барлық сұраққа жауап беріңіз.'; return; }
+    if (st.answers.some(a => a < 0)) { el('bl-err').textContent = tr('Барлық сұраққа жауап беріңіз.'); return; }
     const t = TEXTS[st.textId];
     const correct = t.qs.reduce((n, q, i) => n + (st.answers[i] === q.a ? 1 : 0), 0);
     const wpm = Math.round(st.words / (st.seconds / 60));
@@ -5296,7 +5431,7 @@ function vpRenderBest() {
   }
 
   async function save() {
-    body().innerHTML = '<p>Сақталуда…</p>';
+    body().innerHTML = '<p>' + tr('Сақталуда…') + '</p>';
     const r = st.result;
     let err = null;
     if (!st.saved) {
@@ -5310,23 +5445,23 @@ function vpRenderBest() {
     }
     if (err && err.code === '42501') {
       st.phase = null;
-      body().innerHTML = '<h2>Тест жабылды</h2><p>Мұғалім тестті жауып тастады, сондықтан нәтиже сақталмады. Мұғалімге айтыңыз.</p>';
-      const b = mk('button', { className: 'bl-btn', textContent: 'Дашбордқа оралу' }); b.onclick = () => { showDashboard(); }; body().appendChild(b);
+      body().innerHTML = '<h2>' + tr('Тест жабылды') + '</h2><p>' + tr('Мұғалім тестті жауып тастады, сондықтан нәтиже сақталмады. Мұғалімге айтыңыз.') + '</p>';
+      const b = mk('button', { className: 'bl-btn', textContent: tr('Дашбордқа оралу') }); b.onclick = () => { showDashboard(); }; body().appendChild(b);
       return;
     }
     if (err && err.code !== '23505') {
-      body().innerHTML = '<h2>Нәтиже сақталмады</h2><p>Интернетті тексеріп, қайталап көріңіз. Нәтижеңіз жоғалған жоқ.</p>';
-      const b = mk('button', { className: 'bl-btn', textContent: 'Қайта жіберу' }); b.onclick = save; body().appendChild(b);
+      body().innerHTML = '<h2>' + tr('Нәтиже сақталмады') + '</h2><p>' + tr('Интернетті тексеріп, қайталап көріңіз. Нәтижеңіз жоғалған жоқ.') + '</p>';
+      const b = mk('button', { className: 'bl-btn', textContent: tr('Қайта жіберу') }); b.onclick = save; body().appendChild(b);
       return;
     }
     st.saved = true; st.phase = 'done';
     const pct = Math.round(100 * r.correct / r.total), thr = Math.round(r.wpm * r.correct / r.total);
-    body().innerHTML = '<h2>Тест аяқталды</h2><div class="bl-res">' +
-      '<div><b>' + r.wpm + '</b><span>сөз/мин</span></div>' +
-      '<div><b>' + pct + '%</b><span>түсіну (' + r.correct + '/' + r.total + ')</span></div>' +
-      '<div><b>' + thr + '</b><span>қорытынды</span></div></div>' +
-      '<p>Қорытынды = жылдамдық × түсіну. Келесі тестті мұғалім ашады.</p>';
-    const b = mk('button', { className: 'bl-btn', textContent: 'Дашбордқа оралу' }); b.onclick = () => { st.phase = null; showDashboard(); }; body().appendChild(b);
+    body().innerHTML = '<h2>' + tr('Тест аяқталды') + '</h2><div class="bl-res">' +
+      '<div><b>' + r.wpm + '</b><span>' + tr('сөз/мин') + '</span></div>' +
+      '<div><b>' + pct + '%</b><span>' + tr('түсіну') + ' (' + r.correct + '/' + r.total + ')</span></div>' +
+      '<div><b>' + thr + '</b><span>' + tr('қорытынды') + '</span></div></div>' +
+      '<p>' + tr('Қорытынды = жылдамдық × түсіну. Келесі тестті мұғалім ашады.') + '</p>';
+    const b = mk('button', { className: 'bl-btn', textContent: tr('Дашбордқа оралу') }); b.onclick = () => { st.phase = null; showDashboard(); }; body().appendChild(b);
   }
 
   // Оқу кезінде басқа қосымшаға/табқа өтсе, нәтиже күдікті деп белгіленеді (админ панельде «!»)
@@ -5361,7 +5496,7 @@ function vpRenderBest() {
     <div id="fb-head"><span id="fb-title">Бұл жаттығу қалай болды?</span><i class="ti ti-x" id="fb-close" onclick="fbClose()" aria-label="Жабу"></i></div>
     <div id="fb-moods">
       <button class="fb-mood" data-m="good" onclick="fbMood('good')"><i class="ti ti-mood-happy" aria-hidden="true"></i>Ұнады</button>
-      <button class="fb-mood" data-m="ok" onclick="fbMood('ok')"><i class="ti ti-mood-neutral" aria-hidden="true"></i>Орташа</button>
+      <button class="fb-mood" data-m="ok" data-i18n="Орташа (көңіл-күй)" onclick="fbMood('ok')"><i class="ti ti-mood-neutral" aria-hidden="true"></i>Орташа</button>
       <button class="fb-mood" data-m="bad" onclick="fbMood('bad')"><i class="ti ti-mood-sad" aria-hidden="true"></i>Ұнамады</button>
     </div>
     <div id="fb-more">
@@ -5376,7 +5511,7 @@ function vpRenderBest() {
 <script>
 (function () {
   const ROOT = { schulte: 'schulte', remember_number: 'remember-number', field_of_vision: 'field-of-vision', reading: 'dashboard' };
-  const TITLE = { reading: 'Бүгінгі оқу қалай болды?' };
+  const TITLE = { reading: tr('Бүгінгі оқу қалай болды?') };
   const GAP_MS = 30 * 60 * 1000;   // жаттығуларда: бір тренажерге 30 минутта бір рет қана сұрайды
   const READ_MIN_WORDS = 1500;     // кітап: бір сессияда кемінде 5 бет (1 бет = 300 сөз, статистикамен бірдей)
   const READ_MAX_PER_WEEK = 3;     // кітап: аптасына ең көбі 3 рет, күніне бір реттен көп емес
@@ -5386,7 +5521,7 @@ function vpRenderBest() {
     ok:   ['Түсініксіз', 'Қызықсыз', 'Тым қиын', 'Тым оңай', 'Баяу жұмыс істеді'],
     bad:  ['Түсініксіз', 'Баяу жұмыс істеді', 'Тым қиын', 'Қате шықты', 'Қызықсыз']
   };
-  const LABEL = { good: 'Не ұнады? (міндетті емес)', ok: 'Не жақсарту керек? (міндетті емес)', bad: 'Не болды? (міндетті емес)' };
+  const LABEL = { good: tr('Не ұнады? (міндетті емес)'), ok: tr('Не жақсарту керек? (міндетті емес)'), bad: tr('Не болды? (міндетті емес)') };
   const st = { src: null, id: null, mood: null, tags: [], p: null, shownAt: 0, idle: null, watch: null };
   const el = id => document.getElementById(id);
   const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
@@ -5402,7 +5537,7 @@ function vpRenderBest() {
   }
   function open(src, ctx) {
     st.src = src; st.ctx = ctx || ''; st.id = null; st.mood = null; st.tags = []; st.p = null; st.shownAt = Date.now();
-    el('fb-title').textContent = TITLE[src] || 'Бұл жаттығу қалай болды?';
+    el('fb-title').textContent = TITLE[src] || tr('Бұл жаттығу қалай болды?');
     el('fb-more').style.display = 'none';
     el('fb-thanks').style.display = 'none';
     el('fb-moods').style.display = 'flex';
@@ -5453,7 +5588,7 @@ function vpRenderBest() {
     if (changed) {
       st.tags = [];
       el('fb-more-label').textContent = LABEL[m];
-      el('fb-chips').innerHTML = TAGS[m].map(t => '<button class="fb-chip" onclick="fbChip(this)">' + t + '</button>').join('');
+      el('fb-chips').innerHTML = TAGS[m].map(t => '<button class="fb-chip" data-tag="' + t + '" onclick="fbChip(this)">' + tr(t) + '</button>').join('');
     }
     document.querySelectorAll('.fb-mood').forEach(b => b.classList.toggle('sel', b.dataset.m === m));
     el('fb-more').style.display = 'block';
@@ -5468,7 +5603,7 @@ function vpRenderBest() {
   };
   window.fbChip = function (btn) {
     btn.classList.toggle('sel');
-    const t = btn.textContent, i = st.tags.indexOf(t);
+    const t = btn.dataset.tag, i = st.tags.indexOf(t);
     if (i > -1) st.tags.splice(i, 1); else st.tags.push(t);
   };
   window.fbSend = async function () {
@@ -5492,6 +5627,7 @@ function vpRenderBest() {
 })();
 </script>
 
+<script>I18N.apply();   /* скрипттерден кейін келетін HTML бөліктері (өлшем тесті, пікір карточкасы) */</script>
 <script src="session.js"></script>
 </body>
 </html>

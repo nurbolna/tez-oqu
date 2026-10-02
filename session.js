@@ -2,6 +2,9 @@
    Классикалық скрипт: defer/module ЕМЕС. index.html ішінде барлық басқа скрипттен кейін, </body> алдында жүктеледі.
    Спек: «Күнделікті 15 минут — спецификация.md». Жоспар: «Күнделікті 15 минут — іске асыру жоспары.md». */
 
+/* tr() — index.html ішіндегі I18N аудармасы. Тест беттерінде (I18N жоқ) қазақша мәтін қалады, тек {параметр} орнына қойылады. */
+if (typeof window.tr !== 'function') window.tr = function (k, p) { return p ? k.replace(/\{(\w+)\}/g, function (m, n) { return p[n] !== undefined ? p[n] : m; }) : k; };
+
 /* ═══ 1. ТАЗА ЯДРО: DOM да, желі де жоқ. Тест: tests/session-core.test.html ═══ */
 (function () {
   'use strict';
@@ -129,7 +132,7 @@
   var LAG_AFTER = (qs && parseInt(qs.get('lag'), 10)) || 90;          // сервер минуты осынша секундтан кейін артта қалса, оқушыға түсіндіреміз
   if (SESSION_MODE === 'off') return;
 
-  var EYE = { id: 'eye', name: 'Көз жаттығуы', sec: 90, cardId: 'trainer-eyewarmup', done: 'eyeWarmupFinish' };
+  var EYE = { id: 'eye', name: tr('Көз жаттығуы'), sec: 90, cardId: 'trainer-eyewarmup', done: 'eyeWarmupFinish' };
   var S = {
     pool: [], row: null, plan: null, openStep: null, openSince: 0,
     srvRead: 0, readBase: 0, localRead: 0,
@@ -169,7 +172,7 @@
     return Object.assign({}, local || {}, server || {}, { done: done });
   }
   function handleDayChanged() {
-    toast('Күн ауысты. Сессияны жаңадан бастаңыз.');
+    toast(tr('Күн ауысты. Сессияны жаңадан бастаңыз.'));
     S.row = null; S.plan = null; S.pending = {};
     exitToDashboard();
   }
@@ -231,7 +234,7 @@
   /* ── тренажер пулы: дашбордтағы карточкалар ── */
   function nameOf(id) {
     if (id === 'eye') return EYE.name;
-    if (id === 'reading') return 'Кітап оқу';
+    if (id === 'reading') return tr('Кітап оқу');
     for (var i = 0; i < S.pool.length; i++) if (S.pool[i].id === id) return S.pool[i].name;
     return id;
   }
@@ -300,17 +303,17 @@
     c.textContent = '';
     var st = force ? { state: force } : Core.cardState(S.row, S.plan);
     c.className = 'tez-ses' + (st.state === 'done' ? ' is-done' : '');
-    var title = 'Бүгінгі 15 минут', sub = '', btnLabel = '';
-    if (st.state === 'loading') sub = 'Жүктелуде…';
-    else if (st.state === 'error') sub = 'Сессия қазір қолжетімсіз. Тренажерлерді төменнен қолмен ашуға болады.';
-    else if (st.state === 'none') { sub = 'Көз жаттығуы → 2 ойын → 10 минут оқу. Бір басумен бастаңыз.'; btnLabel = 'Бастау'; }
-    else if (st.state === 'progress') { title += ' · Қадам ' + st.no + '/' + st.total; sub = 'Келесі: ' + nameOf(st.next); btnLabel = 'Жалғастыру'; }
-    else if (st.state === 'done') { title = 'Бүгін аяқталды ✓'; sub = '15 минуттық сессия орындалды. Қосымша жаттығулар төменде.'; }
+    var title = tr('Бүгінгі 15 минут'), sub = '', btnLabel = '';
+    if (st.state === 'loading') sub = tr('Жүктелуде…');
+    else if (st.state === 'error') sub = tr('Сессия қазір қолжетімсіз. Тренажерлерді төменнен қолмен ашуға болады.');
+    else if (st.state === 'none') { sub = tr('Көз жаттығуы → 2 ойын → 10 минут оқу. Бір басумен бастаңыз.'); btnLabel = tr('Бастау'); }
+    else if (st.state === 'progress') { title += ' · ' + tr('Қадам {no}/{total}', { no: st.no, total: st.total }); sub = tr('Келесі: {name}', { name: nameOf(st.next) }); btnLabel = tr('Жалғастыру'); }
+    else if (st.state === 'done') { title = tr('Бүгін аяқталды ✓'); sub = tr('15 минуттық сессия орындалды. Қосымша жаттығулар төменде.'); }
     c.appendChild(mk('div', 'tez-ses-title', title));
     c.appendChild(mk('div', 'tez-ses-sub', sub));
     if (st.state === 'none') {
       var g = mk('div', 'tez-ses-chips');
-      ['Көз жаттығуы', 'Ойын', 'Ойын', 'Оқу · 10 мин'].forEach(function (t) { g.appendChild(mk('span', 'tez-ses-chip', t)); });
+      [tr('Көз жаттығуы'), tr('Ойын'), tr('Ойын'), tr('Оқу · 10 мин')].forEach(function (t) { g.appendChild(mk('span', 'tez-ses-chip', t)); });
       c.appendChild(g);
     } else if (st.state === 'progress' || st.state === 'done') {
       c.appendChild(chipsFor(S.plan || S.row.plan, S.row.done, st.next));
@@ -381,9 +384,9 @@
       flushPending().then(function (ok) {
         if (!S.row) return;                                    // күн ауысты: handleDayChanged жұмыс істеді
         if (!ok) {
-          showCard('Байланыс қатесі', 'Алдыңғы қадамдар сақталмады. Интернетті тексеріп, қайта көріңіз.', [
-            { label: 'Қайта көру', primary: true, onClick: launchNext },
-            { label: 'Шығу', onClick: exitToDashboard }
+          showCard(tr('Байланыс қатесі'), tr('Алдыңғы қадамдар сақталмады. Интернетті тексеріп, қайта көріңіз.'), [
+            { label: tr('Қайта көру'), primary: true, onClick: launchNext },
+            { label: tr('Шығу'), onClick: exitToDashboard }
           ]);
           return;
         }
@@ -416,17 +419,17 @@
     renderLine();
     showNext(id);
     return flushPending().then(function (ok) {
-      if (!ok && S.row) toast('Байланыс қатесі: қадам әзірге сақталмады, қайта көреміз.');
+      if (!ok && S.row) toast(tr('Байланыс қатесі: қадам әзірге сақталмады, қайта көреміз.'));
     });
   }
   function showNext(finishedId) {
     var step = Core.nextStep(S.plan, S.row.done || {});
     if (!step) { exitToDashboard(); return; }
-    var sub = step === 'reading' ? 'Келесі: кітап оқу · 10 минут'
-      : 'Келесі: ' + nameOf(step) + ' · ≈' + Math.max(1, Math.round(secOf(step) / 60)) + ' мин';
-    showCard('✓ ' + nameOf(finishedId) + ' аяқталды', sub, [
-      { label: step === 'reading' ? 'Кітап таңдау →' : 'Бастау →', primary: true, onClick: launchNext },
-      { label: 'Шығу', onClick: exitToDashboard }
+    var sub = step === 'reading' ? tr('Келесі: кітап оқу · 10 минут')
+      : tr('Келесі: {name} · ≈{mins} мин', { name: nameOf(step), mins: Math.max(1, Math.round(secOf(step) / 60)) });
+    showCard(tr('✓ {name} аяқталды', { name: nameOf(finishedId) }), sub, [
+      { label: step === 'reading' ? tr('Кітап таңдау →') : tr('Бастау →'), primary: true, onClick: launchNext },
+      { label: tr('Шығу'), onClick: exitToDashboard }
     ]);
   }
   function exitToDashboard() {
@@ -477,8 +480,8 @@
       if (S.openStep !== step) return;
       var box = root('tez-ses-valve');
       box.textContent = '';
-      box.appendChild(mk('span', '', 'Ақау бар ма?'));
-      var b = mk('button', 'tez-ses-btn is-ghost', 'Келесіге өту');
+      box.appendChild(mk('span', '', tr('Ақау бар ма?')));
+      var b = mk('button', 'tez-ses-btn is-ghost', tr('Келесіге өту'));
       b.onclick = function () { S.openStep = null; markDone(step, true); };
       box.appendChild(b);
       box.classList.add('is-on');
@@ -627,9 +630,9 @@
   function onCompleted() {
     renderChip();
     E.renderLine();
-    E.showCard('✓ Күн есепке кірді', 'Бүгінгі 15 минут орындалды. Қаласаңыз, оқуды жалғастыра беріңіз.', [
-      { label: 'Аяқтау', primary: true, onClick: E.exitToDashboard },
-      { label: 'Оқуды жалғастыру', onClick: E.hideCard }
+    E.showCard(tr('✓ Күн есепке кірді'), tr('Бүгінгі 15 минут орындалды. Қаласаңыз, оқуды жалғастыра беріңіз.'), [
+      { label: tr('Аяқтау'), primary: true, onClick: E.exitToDashboard },
+      { label: tr('Оқуды жалғастыру'), onClick: E.hideCard }
     ]);
   }
 
@@ -652,7 +655,7 @@
       lastPos = p;
       if (!lagWarned && !completed && nowPlaying && S.localRead >= E.LAG_AFTER && (S.readBase + S.localRead) - S.srvRead > E.LAG_AFTER / 2) {
         lagWarned = true;
-        E.toast('Оқу минуты сервермен сәйкеспей тұр. Кітаптың бұлтқа жүктелуін күтіңіз немесе кітапты қайта ашыңыз.');
+        E.toast(tr('Оқу минуты сервермен сәйкеспей тұр. Кітаптың бұлтқа жүктелуін күтіңіз немесе кітапты қайта ашыңыз.'));
       }
       if (wasPlaying && !nowPlaying && S.openStep === 'reading') setTimeout(pollStatus, 1500);   // ▶ тоқтағанда жазба жазылып үлгерсін
       wasPlaying = nowPlaying;
@@ -688,12 +691,12 @@
       cloud.slice().sort(function (a, b) { return ts(b) - ts(a); }).forEach(function (b) {
         var p = prog(b);
         var pct = p && b.total_words ? Math.min(100, Math.round(p.position / b.total_words * 100)) : 0;
-        out.push({ title: b.filename, pct: pct, meta: 'Бұлт', open: function () { window.openCloudBook(b); } });
+        out.push({ title: b.filename, pct: pct, meta: tr('Бұлт'), open: function () { window.openCloudBook(b); } });
       });
       if (typeof window.lsAllBooks === 'function') window.lsAllBooks().forEach(function (name) {
         var p = window.lsLoadProgress(name);
         if (!p || !p.private || !keys.has(name)) return;
-        out.push({ title: name, pct: p.total ? Math.round(p.pos / p.total * 100) : 0, meta: 'Жеке · осы құрылғыда', open: function () { window.loadFromCache(name); } });
+        out.push({ title: name, pct: p.total ? Math.round(p.pos / p.total * 100) : 0, meta: tr('Жеке · осы құрылғыда'), open: function () { window.loadFromCache(name); } });
       });
       var cur = typeof currentFileName === 'string' ? currentFileName : '';
       out.sort(function (a, b) { return (b.title === cur) - (a.title === cur); });          // соңғы ашылған кітап жоғарыда
@@ -709,15 +712,15 @@
     var box = E.root('tez-ses-picker');
     box.textContent = '';
     var inner = E.mk('div', 'tez-ses-picker-in');
-    inner.appendChild(E.mk('div', 'tez-ses-title', 'Не оқимыз?'));
-    inner.appendChild(E.mk('div', 'tez-ses-sub', 'Кітапты таңдаңыз. Минут тек ▶ басып оқығанда есептеледі: 10 минут жинағанда күн есепке кіреді.'));
+    inner.appendChild(E.mk('div', 'tez-ses-title', tr('Не оқимыз?')));
+    inner.appendChild(E.mk('div', 'tez-ses-sub', tr('Кітапты таңдаңыз. Минут тек ▶ басып оқығанда есептеледі: 10 минут жинағанда күн есепке кіреді.')));
     var list = E.mk('div', 'tez-ses-books');
-    list.appendChild(E.mk('div', 'tez-ses-sub', 'Жүктелуде…'));
+    list.appendChild(E.mk('div', 'tez-ses-sub', tr('Жүктелуде…')));
     inner.appendChild(list);
     var actions = E.mk('div', 'tez-ses-row');
-    var add = E.mk('button', 'tez-ses-btn is-ghost', '+ Жаңа кітап қосу');
+    var add = E.mk('button', 'tez-ses-btn is-ghost', tr('+ Жаңа кітап қосу'));
     add.onclick = function () { var f = byId('file-input'); if (f) f.click(); };
-    var exit = E.mk('button', 'tez-ses-btn is-ghost', 'Шығу');
+    var exit = E.mk('button', 'tez-ses-btn is-ghost', tr('Шығу'));
     exit.onclick = function () { E.exitToDashboard(); };
     actions.appendChild(add);
     actions.appendChild(exit);
@@ -727,7 +730,7 @@
     watchReader();
     collectBooks().then(function (items) {
       list.textContent = '';
-      if (!items.length) { list.appendChild(E.mk('div', 'tez-ses-sub', 'Әлі кітап жоқ. «Жаңа кітап қосу» батырмасын басыңыз.')); return; }
+      if (!items.length) { list.appendChild(E.mk('div', 'tez-ses-sub', tr('Әлі кітап жоқ. «Жаңа кітап қосу» батырмасын басыңыз.'))); return; }
       items.forEach(function (it) {
         var row = E.mk('div', 'tez-ses-book');
         var left = E.mk('div', '');
@@ -739,9 +742,9 @@
         fill.style.width = it.pct + '%';
         track.appendChild(fill);
         left.appendChild(track);
-        left.appendChild(E.mk('div', 'tez-ses-book-m', it.pct + '% оқылды · ' + it.meta));
+        left.appendChild(E.mk('div', 'tez-ses-book-m', tr('{pct}% оқылды', { pct: it.pct }) + ' · ' + it.meta));
         row.appendChild(left);
-        row.appendChild(E.mk('div', 'tez-ses-go', 'Оқу →'));
+        row.appendChild(E.mk('div', 'tez-ses-go', tr('Оқу →')));
         row.onclick = function () { startWatch(); it.open(); };
         list.appendChild(row);
       });
