@@ -734,6 +734,15 @@
   #vertical-pacer.is-playing #vertical-pacer-setup, #vertical-pacer.is-playing #vertical-pacer-results,
   #vertical-pacer.is-results #vertical-pacer-setup, #vertical-pacer.is-results #vertical-pacer-game { display: none; }
   #vertical-pacer:not(.is-results) #vertical-pacer-results { display: none; }
+  /* түсіну тесті (тек 2.2/3/4 деңгейлерінде, 60 с кейін) */
+  #vertical-pacer-quiz { display: none; flex: 1; overflow-y: auto; width: 100%; max-width: 420px; margin: 0 auto; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+  #vertical-pacer.is-quiz #vertical-pacer-quiz { display: block; }
+  #vertical-pacer.is-quiz #vertical-pacer-setup, #vertical-pacer.is-quiz #vertical-pacer-game, #vertical-pacer.is-quiz #vertical-pacer-results { display: none; }
+  #vertical-pacer-quiz-head { display: flex; justify-content: space-between; font-size: 14px; color: var(--d-text-2); margin-bottom: 14px; }
+  #vertical-pacer-quiz-q { font-size: 19px; font-weight: 600; line-height: 1.4; margin-bottom: 18px; }
+  .vpq-opt { display: block; width: 100%; min-height: 54px; margin: 0 0 10px; padding: 12px 14px; text-align: left; font-family: inherit; font-size: 16px; line-height: 1.35; color: var(--d-text); background: var(--d-panel); border: 1px solid var(--d-border-strong); border-radius: 12px; cursor: pointer; }
+  .vpq-opt.is-right { background: #EAF3DE; border-color: #97C459; color: #27500A; }
+  .vpq-opt.is-wrong { background: #FCEBEB; border-color: #F09595; color: #791F1F; }
   #vertical-pacer-stage { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
   #vertical-pacer-list { width: 100%; }
   .vertical-pacer-row { height: 52px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 12px; font-size: 22px; color: var(--d-text-2); white-space: nowrap; }
@@ -1213,10 +1222,17 @@
       <button class="vertical-pacer-step" onclick="vpWpm(50)" aria-label="Жылдамдату">+</button>
     </div>
   </div>
+  <div id="vertical-pacer-quiz">
+    <div id="vertical-pacer-quiz-head"><span>Түсіну тесті</span><span id="vertical-pacer-quiz-step">1 / 3</span></div>
+    <div id="vertical-pacer-quiz-q"></div>
+    <div id="vertical-pacer-quiz-options"></div>
+  </div>
   <div id="vertical-pacer-results">
     <div class="vertical-pacer-row-res vertical-pacer-row-big"><span>Оқылған сөз</span><b id="vertical-pacer-res-words">0</b></div>
     <div class="vertical-pacer-row-res"><span>Жылдамдық</span><b id="vertical-pacer-res-wpm">0</b></div>
     <div class="vertical-pacer-row-res"><span>Деңгей</span><b id="vertical-pacer-res-level">1</b></div>
+    <div class="vertical-pacer-row-res" id="vertical-pacer-res-pct-row" style="display:none;"><span>Түсіну</span><b id="vertical-pacer-res-pct">0%</b></div>
+    <div class="vertical-pacer-row-res vertical-pacer-row-big" id="vertical-pacer-res-score-row" style="display:none;"><span>Ұпай</span><b id="vertical-pacer-res-score">0</b></div>
     <div id="vertical-pacer-newbest"></div>
     <button class="vertical-pacer-btn" onclick="vpAgain()"><i class="ti ti-refresh"></i>&nbsp;Қайта ойнау</button>
   </div>
@@ -5228,6 +5244,7 @@ let vpRaf = 0;            // the only timer this trainer ever creates (requestAn
 let vpBusy = false;       // "Бастау" was pressed, waiting for the energy check
 let vpChunks = [];        // [{ text, cum }] cum = words completed before this chunk starts
 let vpTotalWords = 0;
+let vpSegments = [];      // [{ t, start, words }] — қай мәтін тізбектің қай жерінде (түсіну тесті үшін)
 let vpRows = [];          // rows of the page on screen
 let vpPageStart = 0;      // index of the first chunk on the page
 let vpPageEnd = 0;        // index after the last chunk on the page
@@ -5259,12 +5276,12 @@ function vpShuffle(a) {
 // builds the list of chunks for a level out of the shared Kazakh text base (PYRAMID_TEXTS), shuffled; reshuffled again if the base runs out
 function vpBuildChunks(levelKey, minWords) {
   const lv = VP_LEVELS[levelKey];
-  const out = [];
+  const out = [], segments = [];   // segments: [{ t, start, words }] — түсіну тесті үшін (тек топтық деңгейлер, мәтін реті сақталатын)
   let total = 0, rounds = 0;
   while (total < minWords && rounds < 12) {
     rounds++;
-    for (const text of vpShuffle(PYRAMID_TEXTS)) {
-      const words = text.split(/\s+/).filter(w => vpCleanWord(w));
+    for (const t of vpShuffle(PYRAMID_TEXTS.map((_, i) => i))) {
+      const words = PYRAMID_TEXTS[t].split(/\s+/).filter(w => vpCleanWord(w));
       if (lv.len) {
         for (const raw of words) {
           const w = vpCleanWord(raw);
@@ -5272,6 +5289,7 @@ function vpBuildChunks(levelKey, minWords) {
           if (L >= lv.len[0] && L <= lv.len[1]) { out.push({ text: w, words: 1, cum: total }); total += 1; }
         }
       } else {
+        segments.push({ t, start: total, words: words.length });
         for (let i = 0; i < words.length; i += lv.n) {
           const part = words.slice(i, i + lv.n);
           out.push({ text: part.join(' '), words: part.length, cum: total }); total += part.length;
@@ -5280,13 +5298,14 @@ function vpBuildChunks(levelKey, minWords) {
       if (total >= minWords) break;
     }
   }
-  return { chunks: out, total };
+  return { chunks: out, total, segments };
 }
 
 /* ── screens ── */
-function vpScreen(name) { // idle | play | results
+function vpScreen(name) { // idle | play | quiz | results
   const root = vpEl('vertical-pacer');
   root.classList.toggle('is-playing', name === 'play');
+  root.classList.toggle('is-quiz', name === 'quiz');
   root.classList.toggle('is-results', name === 'results');
 }
 function vpRenderSettings() {
@@ -5325,9 +5344,14 @@ function vpStop() {
   vpBusy = false;
   vpPhase = 'idle';
   const root = vpEl('vertical-pacer');
-  if (root) root.classList.remove('is-open', 'is-playing', 'is-results');
+  if (root) root.classList.remove('is-open', 'is-playing', 'is-quiz', 'is-results');
 }
-function vpBack() { vpStop(); showDashboard(); }
+function vpBack() {
+  if (vpPhase === 'quiz') {                            // тесттен шығу: нәтиже тек сөзбен, түсіну 0% (спецификация); vpFinish шақырылмайды
+    vpSaveResult({ words: Math.min(vpTotalWords, Math.floor(vpPos)), wpm: vpSettings.wpm, level: vpSettings.level, pct: 0, score: 0 }, vpGen);
+  }
+  vpStop(); showDashboard();
+}
 function vpResetToIdle(msg) {
   if (vpRaf) cancelAnimationFrame(vpRaf);
   vpRaf = 0;
@@ -5445,7 +5469,7 @@ async function vpStart() {
   }
   vpRefreshEnergyUI();
   const built = vpBuildChunks(vpSettings.level, VP.minWords);
-  vpChunks = built.chunks; vpTotalWords = built.total;
+  vpChunks = built.chunks; vpTotalWords = built.total; vpSegments = built.segments;
   vpPos = 0; vpElapsed = 0; vpIdx = -1;
   vpPageStart = 0; vpPageEnd = 0; vpRows = [];
   vpScreen('play');
@@ -5463,7 +5487,7 @@ function vpTick(now) {
   vpLast = now;
   vpElapsed += dt;
   vpPos += dt * vpSettings.wpm / 60000;
-  if (vpElapsed >= VP.totalMs || vpPos >= vpTotalWords) { vpFinish(); return; }
+  if (vpElapsed >= VP.totalMs || vpPos >= vpTotalWords) { vpPlayEnd(); return; }
   vpUpdate();
   vpRaf = requestAnimationFrame(vpTick);
 }
@@ -5518,30 +5542,90 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) vpTogglePause(); }
 }, true);
 
+/* ── түсіну тесті ── */
+// Таймер соңы. vpFinish-ті 15 минуттық сессия орайды (data-session-done), сондықтан ол тест біткенде ғана шақырылады.
+const VP_QUIZ_LEVELS = ['2.2', '3', '4'];      // 1/1.1/1.1.1 — жеке сөздер, мағыналы мәтін жоқ → тест жоқ
+let vpQuiz = null;                             // { qs, i, right, locked }
+function vpPlayEnd() {
+  if (vpRaf) cancelAnimationFrame(vpRaf);
+  vpRaf = 0;
+  const words = Math.min(vpTotalWords, Math.floor(vpPos));
+  const qs = VP_QUIZ_LEVELS.includes(vpSettings.level) && window.VPQuiz
+    ? VPQuiz.pick(VPQuiz.coverage(vpSegments, words), VPQuiz.bankFor(PYRAMID_TEXTS === PYRAMID_TEXTS_KK))
+    : [];
+  if (qs.length) vpQuizStart(qs); else vpFinish(null);
+}
+function vpQuizStart(qs) {
+  vpPhase = 'quiz';
+  vpQuiz = { qs, i: 0, right: 0, locked: false };
+  vpScreen('quiz');
+  vpQuizRender();
+}
+function vpQuizRender() {
+  const q = vpQuiz.qs[vpQuiz.i];
+  vpEl('vertical-pacer-quiz-step').textContent = (vpQuiz.i + 1) + ' / ' + vpQuiz.qs.length;
+  vpEl('vertical-pacer-quiz-q').textContent = q.q;
+  const box = vpEl('vertical-pacer-quiz-options');
+  box.innerHTML = '';
+  q.options.forEach((text, k) => {
+    const b = document.createElement('button');
+    b.className = 'vpq-opt';
+    b.textContent = text;
+    b.onclick = () => vpQuizAnswer(k);
+    box.appendChild(b);
+  });
+  vpQuiz.locked = false;
+}
+function vpQuizAnswer(k) {
+  if (vpPhase !== 'quiz' || !vpQuiz || vpQuiz.locked) return;
+  vpQuiz.locked = true;
+  const q = vpQuiz.qs[vpQuiz.i], btns = vpEl('vertical-pacer-quiz-options').children;
+  if (k === q.correct) vpQuiz.right++;
+  else btns[k].classList.add('is-wrong');
+  btns[q.correct].classList.add('is-right');
+  const gen = vpGen;
+  setTimeout(() => {
+    if (gen !== vpGen || vpPhase !== 'quiz') return;   // ← басылды не экраннан шықты
+    vpQuiz.i++;
+    if (vpQuiz.i < vpQuiz.qs.length) vpQuizRender();
+    else vpFinish({ right: vpQuiz.right, total: vpQuiz.qs.length });
+  }, 1000);
+}
+
 /* ── results ── */
-function vpFinish() {
+function vpFinish(quiz) {
   if (vpRaf) cancelAnimationFrame(vpRaf);
   vpRaf = 0;
   vpPhase = 'results';
-  const res = { words: Math.min(vpTotalWords, Math.floor(vpPos)), wpm: vpSettings.wpm, level: vpSettings.level };
+  const res = { words: Math.min(vpTotalWords, Math.floor(vpPos)), wpm: vpSettings.wpm, level: vpSettings.level, pct: null, score: null };
+  if (quiz && window.VPQuiz) { const sc = VPQuiz.score(res.words, quiz.right, quiz.total); res.pct = sc.pct; res.score = sc.score; }
   vpEl('vertical-pacer-res-words').textContent = res.words;
   vpEl('vertical-pacer-res-wpm').textContent = res.wpm;
   vpEl('vertical-pacer-res-level').textContent = res.level;
+  vpEl('vertical-pacer-res-pct-row').style.display = res.score == null ? 'none' : '';
+  vpEl('vertical-pacer-res-score-row').style.display = res.score == null ? 'none' : '';
+  if (res.score != null) { vpEl('vertical-pacer-res-pct').textContent = res.pct + '%'; vpEl('vertical-pacer-res-score').textContent = res.score; }
   vpEl('vertical-pacer-newbest').textContent = '';
   vpScreen('results');
   vpSaveResult(res, vpGen);
 }
 async function vpSaveResult(res, gen) {
   if (!sb || !authUser) return;
+  const quizLevel = VP_QUIZ_LEVELS.includes(res.level);
+  if (quizLevel && res.score == null) return;          // 2.2+ тест болмаса (сұрақ табылмады) — рекорд жаңармайды
   try {
-    const { data: ex, error: readError } = await sb.from('neural_accelerator_best_times').select('best_words')
-      .eq('user_id', authUser.id).eq('level', res.level).maybeSingle();
+    const read = (cols) => sb.from('neural_accelerator_best_times').select(cols).eq('user_id', authUser.id).eq('level', res.level).maybeSingle();
+    let scored = quizLevel;
+    let { data: ex, error: readError } = await read(scored ? 'best_words,best_score' : 'best_words');
+    if (readError && scored) { scored = false; ({ data: ex, error: readError } = await read('best_words')); }   // vertical_pacer_quiz.sql әлі іске қосылмаса — бұрынғыдай сөз бойынша
     if (readError) return;
-    if (!ex || res.words > ex.best_words) {
-      const { error: writeError } = await sb.from('neural_accelerator_best_times').upsert({
-        user_id: authUser.id, level: res.level, best_words: res.words, wpm: res.wpm, achieved_at: new Date().toISOString()
-      }, { onConflict: 'user_id,level' });
+    const better = scored ? (!ex || ex.best_score == null || res.score > ex.best_score) : (!ex || res.words > ex.best_words);
+    if (better) {
+      const row = { user_id: authUser.id, level: res.level, best_words: res.words, wpm: res.wpm, achieved_at: new Date().toISOString() };
+      if (scored) { row.best_score = res.score; row.comprehension = res.pct; }
+      const { error: writeError } = await sb.from('neural_accelerator_best_times').upsert(row, { onConflict: 'user_id,level' });
       if (!writeError && ex && gen === vpGen && vpPhase === 'results') vpEl('vertical-pacer-newbest').textContent = tr('Жаңа рекорд!');
+      if (!writeError && gen === vpGen) { vpBest = vpBest || {}; vpBest[res.level] = Object.assign({}, vpBest[res.level], row); }
     }
   } catch (e) {}
 }
@@ -5550,7 +5634,8 @@ async function vpLoadBest() {
   if (!sb || !authUser) { vpRenderBest(); return; }
   const gen = vpGen;
   try {
-    const { data, error } = await sb.from('neural_accelerator_best_times').select('level,best_words,wpm').eq('user_id', authUser.id);
+    let { data, error } = await sb.from('neural_accelerator_best_times').select('level,best_words,wpm,best_score,comprehension').eq('user_id', authUser.id);
+    if (error) ({ data, error } = await sb.from('neural_accelerator_best_times').select('level,best_words,wpm').eq('user_id', authUser.id));   // SQL әлі іске қосылмаса
     if (!error && data) data.forEach(r => { vpBest[r.level] = r; });
   } catch (e) {}
   if (gen === vpGen) vpRenderBest();
@@ -5559,6 +5644,10 @@ function vpRenderBest() {
   const el = vpEl('vertical-pacer-best');
   if (!el) return;
   const b = vpBest && vpBest[vpSettings.level];
+  if (VP_QUIZ_LEVELS.includes(vpSettings.level)) {     // 2.2+: рекорд ұпай бойынша; ескі (тек сөз) жазба көрсетілмейді
+    el.textContent = b && b.best_score != null ? tr('Рекорд: {s} ұпай ({n} сөз, {p}%)', { s: b.best_score, n: b.best_words, p: b.comprehension }) : '';
+    return;
+  }
   el.textContent = b ? tr('Рекорд: {n} сөз ({wpm} WPM)', { n: b.best_words, wpm: b.wpm }) : '';
 }
 </script>
@@ -5933,6 +6022,8 @@ function vpRenderBest() {
 
 <script>I18N.apply();   /* скрипттерден кейін келетін HTML бөліктері (өлшем тесті, пікір карточкасы) */</script>
 <script src="session.js"></script>
+<script src="vp_questions.js"></script>
+<script src="vp_quiz.js"></script>
 <script src="onboarding.js"></script>
 </body>
 </html>
