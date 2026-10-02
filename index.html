@@ -511,6 +511,14 @@
   .tri-fov-btn { border: 1px solid #D3D2C9; border-radius: 8px; padding: 6px 16px; font-size: 14px; font-weight: 600; color: #1F1E1B; transition: background .15s; }
   .tri-fov-btn.on { background: #E6F0FB; border-color: #2A78D6; color: #1F63B8; }
   .tri-fov-v { font-size: 13px; min-height: 18px; margin: 6px 0 4px; color: #57564F; }
+  .tri-col { border: 1px solid #E4E3DD; border-radius: 10px; padding: 4px 0; margin: 2px 0 10px; width: 190px; }
+  .tri-col div { height: 28px; display: flex; align-items: center; justify-content: center; margin: 0 6px; border-radius: 6px; font-size: 15px; white-space: nowrap; overflow: hidden; transition: background .15s; }
+  .tri-col div.m { background: #E6F0FB; color: #1F63B8; font-weight: 600; }
+  .tri-cols { display: flex; gap: 8px; width: 100%; }
+  .tri-cols > div { flex: 1; min-width: 0; }
+  .tri-cols .tri-col { width: auto; }
+  .tri-cols .tri-col div { height: auto; min-height: 28px; padding: 3px 4px; white-space: normal; font-size: 13px; line-height: 1.25; text-align: center; }
+  .tri-cols small { display: block; font-size: 12px; color: #8A8980; margin-bottom: 4px; }
   .tri-next { width: 100%; min-height: 46px; border: none; border-radius: 10px; background: #2A78D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 
   /* ══ pyramid text ══ */
@@ -738,13 +746,6 @@
   .vertical-pacer-row-res b { color: var(--d-text); font-size: 26px; font-variant-numeric: tabular-nums; }
   .vertical-pacer-row-big b { color: var(--d-accent); font-size: 44px; }
   #vertical-pacer-newbest { min-height: 24px; margin: 12px 0 16px; text-align: center; font-weight: 600; color: var(--d-green); }
-  #vertical-pacer-intro { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; align-items: center; justify-content: center; padding: 16px; }
-  #vertical-pacer-intro.open { display: flex; }
-  .vertical-pacer-card { background: var(--d-panel); border-radius: 16px; padding: 24px 22px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
-  .vertical-pacer-card h3 { margin: 0 0 10px; font-size: 18px; text-align: center; }
-  .vertical-pacer-card ul { margin: 0 0 18px; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--d-text-2); }
-  .vertical-pacer-card li { margin-bottom: 6px; }
-  @media (max-width: 520px) { #vertical-pacer-intro { align-items: flex-end; padding: 0; } .vertical-pacer-card { max-width: none; border-radius: 18px 18px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom)); } .vertical-pacer-row { font-size: 24px; } }
   /* ══ profile page (lives inside the dashboard, switched by the 4th nav tab) ══ */
   #profile-content { display: none; padding: 32px 40px 48px; max-width: 760px; }
   #dashboard.show-profile #dashboard-content { display: none !important; }
@@ -1218,19 +1219,6 @@
     <div class="vertical-pacer-row-res"><span>Деңгей</span><b id="vertical-pacer-res-level">1</b></div>
     <div id="vertical-pacer-newbest"></div>
     <button class="vertical-pacer-btn" onclick="vpAgain()"><i class="ti ti-refresh"></i>&nbsp;Қайта ойнау</button>
-  </div>
-  <div id="vertical-pacer-intro">
-    <div class="vertical-pacer-card">
-      <h3>Нейронды үдеткіш</h3>
-      <ul>
-        <li>Көгілдір маркер сөздермен төмен қарай жүгіреді. Көзіңізді маркерден қалдырмаңыз.</li>
-        <li>Жаттығу 60 секундқа созылады. Нәтиже — осы уақытта маркер өткен сөз саны.</li>
-        <li>Жылдамдықты (100–600 WPM) жаттығу кезінде де − және + батырмаларымен өзгертуге болады.</li>
-        <li>Деңгей жоғарылаған сайын бір қадамда көбірек сөз көресіз.</li>
-        <li>Бос орын (пробел) — үзіліс.</li>
-      </ul>
-      <button class="vertical-pacer-btn" onclick="vpIntroClose()">Түсінікті</button>
-    </div>
   </div>
 </div>
 
@@ -5232,7 +5220,6 @@ const VP_LEVELS = {
   '4':     { n: 4 }
 };
 const VP_LS_SETTINGS = 'sr5_vp_settings';
-const VP_LS_INTRO = 'sr5_vp_intro_seen';
 
 let vpSettings = { level: '1.1', wpm: VP.wpmDefault };
 let vpPhase = 'idle';     // idle | play | pause | results
@@ -5326,9 +5313,9 @@ function showVerticalPacer() {
   vpLoadSettings();
   vpResetToIdle();
   vpLoadBest();
-  let seen = false;
-  try { seen = !!localStorage.getItem(VP_LS_INTRO); } catch (e) {}
-  if (!seen) vpIntroOpen();
+  const staleIntro = document.getElementById('tri-ov');            // ⓘ ашық күйде экраннан шығып кетсе
+  if (staleIntro) staleIntro.remove();
+  vpIntroMaybeShow();
 }
 // stops everything this trainer has scheduled; safe to call at any time (also from hideAllViews)
 function vpStop() {
@@ -5353,10 +5340,49 @@ function vpResetToIdle(msg) {
   vpRenderBest();
 }
 function vpAgain() { vpStop(); vpEl('vertical-pacer').classList.add('is-open'); vpResetToIdle(); vpLoadBest(); }
-function vpIntroOpen() { vpEl('vertical-pacer-intro').classList.add('open'); }
-function vpIntroClose() {
-  vpEl('vertical-pacer-intro').classList.remove('open');
-  try { localStorage.setItem(VP_LS_INTRO, '1'); } catch (e) {}
+// Онбординг: жалпы trainerIntroShow; ескі sr5_vp_intro_seen әдейі ескерілмейді — жаңа мазмұн бәріне қайта шығады
+function vpIntroSlides() {
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const words = PYRAMID_TEXTS[0].split(/\s+/).filter(w => vpCleanWord(w));      // демо мәтін — интерфейс тіліндегі 1-мәтін
+  const col = items => '<div class="tri-col">' + items.map(t => '<div>' + esc(t) + '</div>').join('') + '</div>';
+  const groups = n => { const out = []; for (let i = 0; i < words.length && out.length < 5; i += n) out.push(words.slice(i, i + n).join(' ')); return out; };
+  const runCol = (colEl, ms) => {                    // маркер бағанмен төмен жүреді
+    const rows = colEl.querySelectorAll('div');
+    let k = 0;
+    const t = setInterval(() => {
+      if (!colEl.isConnected) { clearInterval(t); return; }
+      rows.forEach(r => r.classList.remove('m'));
+      rows[k++ % rows.length].classList.add('m');
+    }, ms);
+    return () => clearInterval(t);
+  };
+  return [
+    { icon: 'bolt', title: tr('Нейронды үдеткіш не үшін?'),
+      html: '<p>' + esc(tr('Маркер көзді бір ырғақпен алға жетелейді. Көз артқа қайтпауға және бір қарағанда бірнеше сөз көруге үйренеді — оқу жылдамдайды.')) + '</p>' },
+    { icon: 'arrow-down', title: tr('Маркерге ілесіңіз'),
+      html: col(words.slice(0, 7).map(vpCleanWord)) +
+        '<ul><li>' + esc(tr('Көгілдір маркер сөздермен төмен жүреді')) + '</li>' +
+        '<li>' + esc(tr('Көзді маркерден қалдырмаңыз, артқа қайтпаңыз')) + '</li></ul>',
+      onShow: el => runCol(el.querySelector('.tri-col'), 450) },
+    { icon: 'adjustments', title: tr('Деңгей және жылдамдық'),
+      html: '<div class="tri-cols"><div><small>' + esc(tr('Деңгей 1 · қысқа сөздер')) + '</small>' + col(words.map(vpCleanWord).filter(w => [...w].length <= VP_LEVELS['1'].len[1]).slice(0, 5)) + '</div>' +
+        '<div><small>' + esc(tr('Деңгей 3 · 3 сөз')) + '</small>' + col(groups(3)) + '</div></div>' +
+        '<p>' + esc(tr('Деңгей өскен сайын бір қадамда көбірек сөз көресіз. Жылдамдықты (100–600 WPM) ойын кезінде де − және + батырмаларымен өзгертуге болады.')) + '</p>',
+      onShow: el => { const c = el.querySelectorAll('.tri-col'); const a = runCol(c[0], 450), b = runCol(c[1], 900); return () => { a(); b(); }; } },
+    { icon: 'clock', title: tr('Ойын ережесі'),
+      html: '<ul><li>' + esc(tr('60 секунд. Нәтиже — маркер өткен сөз саны')) + '</li>' +
+        '<li>' + esc(tr('Бос орын (пробел) — үзіліс.')) + '</li>' +
+        '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li>' +
+        '<li>' + esc(tr('Деңгей мен жылдамдықты бастау алдында осы экранда таңдайсыз')) + '</li></ul>' }
+  ];
+}
+function vpIntroMaybeShow() {
+  if (trainerIntroHidden('vp')) return;
+  trainerIntroShow({ key: 'vp', host: vpEl('vertical-pacer'), slides: vpIntroSlides(), onDone: () => vpStart() });
+}
+function vpIntroOpen() {                                // тақырыптағы ⓘ: тек оқу үшін, ойын кезінде ашылмайды
+  if (vpRunning()) return;
+  trainerIntroShow({ key: 'vp', host: vpEl('vertical-pacer'), slides: vpIntroSlides(), startLabel: tr('Түсінікті') });
 }
 
 /* ── energy (shared exercise_daily_plays table) ── */
