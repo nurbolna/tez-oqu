@@ -742,6 +742,7 @@
   .pf-row-value { font-weight: 600; font-variant-numeric: tabular-nums; }
   .pf-hint { font-size: 13px; color: var(--d-text-2); line-height: 1.5; }
   #pf-install-btn { display: none; margin-top: 12px; }
+  #pf-guide-btn { margin-top: 12px; }
   #pf-signout { width: 100%; justify-content: center; background: var(--d-tile); color: var(--d-danger); padding: 12px 14px; font-size: 14px; margin-top: 4px; }
   @media (hover: hover) { #pf-signout:hover { background: var(--d-tile-strong); } }
   @media (max-width: 640px) { #profile-content { padding: 20px 16px calc(92px + env(safe-area-inset-bottom)); } }
@@ -955,6 +956,11 @@
           <div class="pf-card-title">Қолданба ретінде орнату</div>
           <div class="pf-hint" id="pf-install-hint">Safari: «Бөлісу» → «Басты экранға қосу». Android Chrome: ⋮ мәзірі → «Қолданбаны орнату».</div>
           <button class="dash-btn-primary" id="pf-install-btn" onclick="pfInstall()"><i class="ti ti-download"></i> Орнату</button>
+        </div>
+        <div class="pf-card" id="pf-guide-card">
+          <div class="pf-card-title">Нұсқаулық</div>
+          <div class="pf-hint">Сайтты қалай қолдану керегін қысқаша қайта көрсетеді.</div>
+          <button class="dash-btn-primary" id="pf-guide-btn" onclick="if(window.TezOnboarding)TezOnboarding.open()"><i class="ti ti-book-2"></i> Нұсқаулықты ашу</button>
         </div>
         <button class="dash-btn-primary" id="pf-signout" onclick="signOut()"><i class="ti ti-logout"></i> Шығу</button>
       </div>
@@ -2965,11 +2971,13 @@ function hideAllViews() {
   if (blView) blView.style.display = 'none';
   if (typeof fovStop === 'function') fovStop();
   if (typeof vpStop === 'function') vpStop();
+  try { if (window.TezOnboarding) window.TezOnboarding.close(); } catch (e) {}
 }
 
 function showReaderView() {
   hideAllViews();
   document.getElementById('app').style.display = 'block';
+  try { if (window.TezOnboarding) window.TezOnboarding.readerHints(); } catch (e) {}
 }
 
 /* ── schulte trainer ── */
@@ -3989,6 +3997,7 @@ async function showDashboard() {
   dashNavSetActive('home');
   document.getElementById('dashboard').style.display = 'block';
   try { if (window.TezSession) window.TezSession.onDashboard(); } catch (e) {}
+  try { if (window.TezOnboarding) window.TezOnboarding.maybeShow(); } catch (e) {}
   // Stale-while-revalidate: алдыңғы деректі бірден көрсетіп, фонда жаңартамыз
   // (Supabase RTT ≈ 400 мс — әйтпесе әр қайтуда спиннер шығады).
   const cacheKey = 'sr5_dash_cache_' + (authUser && authUser.id);
@@ -5629,5 +5638,6 @@ function vpRenderBest() {
 
 <script>I18N.apply();   /* скрипттерден кейін келетін HTML бөліктері (өлшем тесті, пікір карточкасы) */</script>
 <script src="session.js"></script>
+<script src="onboarding.js"></script>
 </body>
 </html>
