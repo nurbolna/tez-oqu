@@ -521,8 +521,9 @@
   .tri-cols small { display: block; font-size: 12px; color: #8A8980; margin-bottom: 4px; }
   .tri-py { position: relative; width: 230px; margin: 2px 0 10px; }
   .tri-py > span.gl { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #1D9E75; opacity: .35; }
-  .tri-py div { text-align: center; font-size: 13px; line-height: 21px; color: #57564F; border-radius: 4px; white-space: nowrap; transition: background .2s; }
-  .tri-py div.on { background: #E1F5EE; color: #085041; }
+  .tri-py > span.dot { position: absolute; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: rgba(29,158,117,.45); z-index: 0; transition: top .25s; }
+  .tri-py div { position: relative; z-index: 1; text-align: center; font-size: 13px; line-height: 21px; color: #57564F; border-radius: 4px; white-space: nowrap; transition: background .2s; }
+  .tri-py div.on { background: rgba(29,158,117,.12); color: #085041; }
   .tri-next { width: 100%; min-height: 46px; border: none; border-radius: 10px; background: #2A78D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 
   /* ══ pyramid text ══ */
@@ -539,8 +540,12 @@
   #pyramid-guideline { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; transform: translateX(-50%); background: #1D9E75; opacity: 0.2; pointer-events: none; }
   #pyramid-lines { text-align: center; position: relative; }
   .pyramid-line { font-size: 19px; line-height: 2.1; border-radius: 6px; transition: background .15s; }
-  .pyramid-line.is-on { background: #E1F5EE; color: #085041; }
-  /* жүгіретін маркер = ағымдағы жолдың жасыл фоны (нүкте мәтіннің ортасын жауып тастайтын); әр жолда сөз санына қарай тоқтайды */
+  .pyramid-line.is-on { background: rgba(29,158,117,.12); color: #085041; }
+  /* жүгіретін маркер: ағымдағы жолдың фоны + ортадағы жасыл нүкте. Нүкте мәтіннің АСТЫНДА және жартылай мөлдір — әріптерді жаппайды;
+     әр жолда сөз санына қарай тоқтайды */
+  #pyramid-marker { position: absolute; left: 50%; top: 0; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: rgba(29,158,117,.45); z-index: 0; display: none; pointer-events: none; transition: top .12s; }
+  #pyramid.is-playing #pyramid-marker { display: block; }
+  #pyramid-lines { z-index: 1; }
   #pyramid-best { min-height: 20px; margin-bottom: 14px; font-size: 14px; color: var(--d-text-2); text-align: center; }
   #pyramid-bar { display: none; width: 100%; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
   #pyramid.is-playing #pyramid-bar { display: flex; }
@@ -1184,6 +1189,7 @@
     <div id="pyramid-best"></div>
     <div id="pyramid-stage">
       <div id="pyramid-guideline"></div>
+      <div id="pyramid-marker"></div>
       <div id="pyramid-lines"></div>
     </div>
     <div id="pyramid-results">
@@ -3413,16 +3419,18 @@ function pyIntroSlides() {
     { icon: 'triangle', title: tr('Пирамидалы мәтін не үшін?'),
       html: '<p>' + esc(tr('Көз жолдың тек ортасына қарап, бүкіл жолды тұтас көруге үйренеді. Жолдар біртіндеп ұзарады, сондықтан көру аумағыңыз да кеңейеді.')) + '</p>' },
     { icon: 'arrow-down', title: tr('Маркерге ілесіңіз'),
-      html: '<div class="tri-py"><span class="gl"></span>' + demo.map(l => '<div>' + esc(l) + '</div>').join('') + '</div>' +
-        '<ul><li>' + esc(tr('Жасыл маркер жолдан жолға төмен жүреді — көзді ортаңғы сызықпен бірге жүргізіңіз')) + '</li>' +
+      html: '<div class="tri-py"><span class="gl"></span><span class="dot"></span>' + demo.map(l => '<div>' + esc(l) + '</div>').join('') + '</div>' +
+        '<ul><li>' + esc(tr('Жасыл нүкте ортаңғы сызықпен төмен жүреді — көзді сонымен бірге жүргізіңіз')) + '</li>' +
         '<li>' + esc(tr('Солға-оңға қарамаңыз: жолды шетімен қоса тұтас көріңіз')) + '</li></ul>',
       onShow: el => {
-        const rows = el.querySelectorAll('.tri-py div');
+        const rows = el.querySelectorAll('.tri-py div'), dot = el.querySelector('.tri-py .dot');
         let k = 0;
         const step = () => {
           if (!el.isConnected) { clearInterval(t); return; }
           rows.forEach(r => r.classList.remove('on'));
-          rows[k++ % rows.length].classList.add('on');
+          const r = rows[k++ % rows.length];
+          r.classList.add('on');
+          dot.style.top = (r.offsetTop + r.offsetHeight / 2 - 7) + 'px';
         };
         step();
         const t = setInterval(step, 700);
@@ -3577,7 +3585,9 @@ function pyUpdate() {
   if (idx >= pyLines.length) { pyramidNew(pyText); idx = 0; }      // пирамида бітті → келесі мәтіннен жаңасы
   if (idx !== pyLineIdx) {
     if (pyLines[pyLineIdx]) pyLines[pyLineIdx].el.classList.remove('is-on');
-    pyLines[idx].el.classList.add('is-on');
+    const line = pyLines[idx].el;
+    line.classList.add('is-on');
+    pyEl('pyramid-marker').style.top = (line.offsetTop + line.offsetHeight / 2 - 9) + 'px';
     pyLineIdx = idx;
   }
   pyEl('pyramid-time').textContent = tr('Уақыт {t}', { t: I18N.dec((Math.max(0, PY.totalMs - pyElapsed) / 1000).toFixed(1)) });
