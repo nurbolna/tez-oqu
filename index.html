@@ -503,6 +503,14 @@
   .tri-grid span { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #E24B4A; }
   .tri-opts { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
   .tri-opts span { border: 1px solid #D3D2C9; border-radius: 8px; padding: 5px 12px; font-size: 14px; color: #57564F; }
+  .tri-fov { display: grid; grid-template-columns: repeat(7, 28px); gap: 3px; margin: 2px 0 10px; }
+  .tri-fov div { height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 13px; color: #B4B2A9; }
+  .tri-fov div.k { color: #1F1E1B; font-weight: 700; font-size: 15px; }
+  .tri-fov div.g { background: #EAF3DE; color: #3B6D11; }
+  .tri-fov div.c::after { content: ''; width: 11px; height: 11px; border-radius: 50%; background: #C0392B; }
+  .tri-fov-btn { border: 1px solid #D3D2C9; border-radius: 8px; padding: 6px 16px; font-size: 14px; font-weight: 600; color: #1F1E1B; transition: background .15s; }
+  .tri-fov-btn.on { background: #E6F0FB; border-color: #2A78D6; color: #1F63B8; }
+  .tri-fov-v { font-size: 13px; min-height: 18px; margin: 6px 0 4px; color: #57564F; }
   .tri-next { width: 100%; min-height: 46px; border: none; border-radius: 10px; background: #2A78D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 
   /* ══ pyramid text ══ */
@@ -632,6 +640,7 @@
   #field-of-vision-grid { --fov-size: min(calc(100vw - 32px), calc(var(--fov-vh) - 290px), 560px); width: var(--fov-size); height: var(--fov-size); display: grid; grid-template-columns: repeat(var(--fov-n, 9), 1fr); grid-template-rows: repeat(var(--fov-n, 9), 1fr); }
   .field-of-vision-cell { min-width: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; border-radius: 6px; line-height: 1; font-weight: 500; color: var(--d-text); font-size: calc(var(--fov-size) / var(--fov-n, 9) * var(--fov-f, 0.62)); }
   .field-of-vision-cell.is-key { background: var(--fov-green); font-weight: 700; }
+  .field-of-vision-cell.is-center::after { content: ''; width: 14px; height: 14px; border-radius: 50%; background: #C0392B; }   /* Шульте кестесіндегідей қызыл нүкте */
   #field-of-vision-actions { grid-area: actions; width: 100%; display: flex; justify-content: center; }
   #field-of-vision-msg { grid-area: msg; min-height: 22px; margin-top: 12px; text-align: center; font-size: 14px; color: var(--d-text-2); }
   .field-of-vision-btn { min-height: 56px; width: min(100%, 340px); padding: 0 28px; font-size: 17px; border-radius: 12px; justify-content: center; }
@@ -1254,21 +1263,6 @@
       <div id="field-of-vision-newbest"></div>
       <div id="field-of-vision-chart"></div>
       <div style="display:flex;justify-content:center;"><button class="dash-btn-primary field-of-vision-btn" onclick="fovAgain()"><i class="ti ti-refresh"></i> Қайта ойнау</button></div>
-    </div>
-  </div>
-  <div id="field-of-vision-intro" class="field-of-vision-overlay">
-    <div class="field-of-vision-card">
-      <h3>Көру өрісі</h3>
-      <p>Периферия көруін жаттықтыратын жаттығу.</p>
-      <ul>
-        <li>Көзіңізді ортадағы нүктеге (•) бекітіп, қозғамаңыз.</li>
-        <li>Дайындық кезінде жасыл нүктелер шеткі 4 (немесе 8) орынды көрсетеді. Тек сол орындардағы әріптерге назар аударыңыз.</li>
-        <li>Әріптердің бәрі бірдей болса — ештеңе баспаңыз. Біреуі басқа болса — «Қате бар» батырмасын басыңыз.</li>
-        <li id="field-of-vision-intro-timing"></li>
-        <li>Артық басу дәлдікті азайтады. Күніне 2 тегін ойын бар.</li>
-        <li>Экранды көзден кемінде 40 см қашықтықта ұстаңыз.</li>
-      </ul>
-      <button class="dash-btn-primary" onclick="fovIntroClose()">Түсінікті</button>
     </div>
   </div>
   <div id="field-of-vision-settings" class="field-of-vision-overlay" onclick="if (event.target === this) fovSettingsClose()">
@@ -4706,7 +4700,6 @@ const FOV = {
   fontFactor: { small: 0.46, medium: 0.62, large: 0.78 }  // letter size as a share of the cell size
 };
 const FOV_LS_SETTINGS = 'sr5_fov_settings';
-const FOV_LS_INTRO = 'sr5_fov_intro_seen';
 
 let fovSettings = { size: 9, points: 4, font: 'medium' };
 let fovPhase = 'idle';      // idle | prep | play | results
@@ -4811,8 +4804,64 @@ function fovTimingText() {
   const parts = FOV.stages.map((s, i) => tr('{from}–{to} с: кадр {frame} с', { from: f(i ? FOV.stages[i - 1].untilMs : 0), to: f(s.untilMs), frame: f(s.frameMs) }));
   return tr('Кадр өзі ауысады ({parts}). Ойын {total} секунд, алдында {prep} секунд дайындық.', { parts: parts.join('; '), total: f(FOV.totalMs), prep: f(FOV.prepMs) });
 }
-function fovIntroOpen() { if (fovRunning()) return; fovEl('field-of-vision-intro-timing').textContent = fovTimingText(); fovEl('field-of-vision-intro').classList.add('open'); }
-function fovIntroClose() { try { localStorage.setItem(FOV_LS_INTRO, '1'); } catch (e) {} fovEl('field-of-vision-intro').classList.remove('open'); }
+// Онбординг: жалпы trainerIntroShow; ескі sr5_fov_intro_seen әдейі ескерілмейді — жаңа мазмұн бәріне қайта шығады
+const FOV_DEMO_C = 24;                                      // 7×7 демо торының ортасы; шеткі орындар — fovKeyPositions(7, 4)
+function fovDemoGrid() { return '<div class="tri-fov">' + Array.from({ length: 49 }, (_, j) => '<div' + (j === FOV_DEMO_C ? ' class="c"' : '') + '></div>').join('') + '</div>'; }
+function fovIntroSlides() {
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const gone = el => !el.isConnected;
+  return [
+    { icon: 'radar', title: tr('Көру өрісі не үшін?'),
+      html: '<p>' + esc(tr('Көз бір нүктеде тұрып, шеттегіні де көруге үйренеді. Сонда бір қарағанда бүтін сөзді, кейін бүтін жолды көресіз — оқу жылдамдайды.')) + '</p>' },
+    { icon: 'focus-centered', title: tr('Көзді ортаға бекітіңіз'),
+      html: fovDemoGrid() + '<ul><li>' + esc(tr('Көз тек ортадағы қызыл нүктеде тұрады')) + '</li>' +
+        '<li>' + esc(tr('Жасыл орындар — назар аударатын жерлер (4 немесе 8)')) + '</li></ul>',
+      onShow: el => {                                   // жасыл нүктелер жыпылықтайды, айналада кездейсоқ әріптер
+        const cells = el.querySelectorAll('.tri-fov div');
+        cells.forEach((c, j) => { if (j !== FOV_DEMO_C) c.textContent = fovRandLetter(); });
+        let on = false;
+        const t = setInterval(() => {
+          if (gone(el)) { clearInterval(t); return; }
+          on = !on;
+          fovKeyPositions(7, 4).forEach(j => { cells[j].className = on ? 'g' : ''; cells[j].textContent = on ? '•' : fovRandLetter(); });
+        }, 700);
+        return () => clearInterval(t);
+      } },
+    { icon: 'scan', title: tr('Бірдей ме, басқа ма?'),
+      html: fovDemoGrid() + '<div class="tri-fov-btn">' + esc(tr('Қате бар')) + '</div><div class="tri-fov-v"></div>' +
+        '<p>' + esc(tr('Бәрі бірдей — баспаңыз. Біреуі басқа — «Қате бар» басыңыз.')) + '</p>',
+      onShow: el => {                                   // кезек-кезек: бірдей кадр / біреуі басқа кадр
+        const cells = el.querySelectorAll('.tri-fov div'), btn = el.querySelector('.tri-fov-btn'), v = el.querySelector('.tri-fov-v');
+        let k = 0, later = null;
+        const step = () => {
+          if (gone(el)) { clearInterval(t); clearTimeout(later); return; }
+          const f = fovMakeFrame(7, 4, k++ % 2 === 1);
+          cells.forEach((c, j) => { c.className = j === FOV_DEMO_C ? 'c' : (fovKeyPositions(7, 4).includes(j) ? 'k' : ''); c.textContent = j === FOV_DEMO_C ? '' : f.cells[j]; });
+          btn.classList.remove('on'); v.textContent = '';
+          later = setTimeout(() => {
+            if (f.odd >= 0) { btn.classList.add('on'); cells[f.odd].className = 'g'; v.textContent = tr('Дұрыс: біреуі басқа'); }
+            else v.textContent = tr('Бәрі бірдей — баспадық');
+          }, 1100);
+        };
+        step();
+        const t = setInterval(step, 2400);
+        return () => { clearInterval(t); clearTimeout(later); };
+      } },
+    { icon: 'clock', title: tr('Ойын ережесі'),
+      html: '<ul><li>' + esc(fovTimingText()) + '</li>' +
+        '<li>' + esc(tr('Артық басу дәлдікті азайтады. Күніне 2 тегін ойын бар.')) + '</li>' +
+        '<li>' + esc(tr('Экраннан 40 см қашық отырыңыз')) + '</li>' +
+        '<li>' + esc(tr('⚙ — тор өлшемі, нүкте саны, қаріп')) + '</li></ul>' }
+  ];
+}
+function fovIntroMaybeShow() {
+  if (trainerIntroHidden('fov')) return;
+  trainerIntroShow({ key: 'fov', host: fovEl('field-of-vision'), slides: fovIntroSlides(), onDone: () => fovStart() });
+}
+function fovIntroOpen() {                               // тақырыптағы ⓘ: тек оқу үшін, ойынды бастамайды
+  if (fovRunning()) return;
+  trainerIntroShow({ key: 'fov', host: fovEl('field-of-vision'), slides: fovIntroSlides(), startLabel: tr('Түсінікті') });
+}
 
 /* ── grid / screen painting ── */
 function fovBuildGrid() {
@@ -4833,8 +4882,9 @@ function fovBuildGrid() {
 }
 function fovPaintCells(cells, highlight) {
   for (let i = 0; i < fovCells.length; i++) {
-    fovCells[i].textContent = cells[i];
-    fovCells[i].className = 'field-of-vision-cell' + (highlight.has(i) ? ' is-key' : '');
+    const center = cells[i] === '•' && !highlight.has(i);         // ортадағы • → қызыл нүкте (дайындықтағы жасыл • — is-key)
+    fovCells[i].textContent = center ? '' : cells[i];
+    fovCells[i].className = 'field-of-vision-cell' + (highlight.has(i) ? ' is-key' : '') + (center ? ' is-center' : '');
   }
 }
 // the cue: random letters everywhere, the 4/8 key places are green dots (shown before the game and while preparing)
@@ -4883,9 +4933,9 @@ function showFieldOfVision() {
   fovEl('field-of-vision').style.display = 'block';
   fovResetToIdle();
   fovLoadBest();
-  let seen = false;
-  try { seen = !!localStorage.getItem(FOV_LS_INTRO); } catch (e) {}
-  if (!seen) fovIntroOpen();
+  const staleIntro = document.getElementById('tri-ov');            // ⓘ ашық күйде экраннан шығып кетсе
+  if (staleIntro) staleIntro.remove();
+  fovIntroMaybeShow();
 }
 // stops everything this trainer has scheduled; safe to call at any time (also from hideAllViews)
 function fovStop() {
