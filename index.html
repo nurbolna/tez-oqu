@@ -866,7 +866,7 @@
             <div id="dash-trainers-section">
               <div class="dash-section-title">Тренажерлар</div>
               <div id="dash-trainers-grid">
-                <div class="dash-trainer-card" id="trainer-schulte" onclick="showSchulte()">
+                <div class="dash-trainer-card" id="trainer-schulte" onclick="showSchulte()" data-session-done="schulteSaveBest" data-session-sec="75">
                   <div class="dash-trainer-icon"><i class="ti ti-grid-dots"></i></div>
                   <div class="dash-trainer-name">Шульте кестесі</div>
                   <div class="dash-trainer-sub">Перифериялық көру жаттығуы</div>
@@ -876,12 +876,12 @@
                   <div class="dash-trainer-name">Көз жаттығулары</div>
                   <div class="dash-trainer-sub">60–90 сек демалыс</div>
                 </div>
-                <div class="dash-trainer-card" id="trainer-field-of-vision" onclick="showFieldOfVision()">
+                <div class="dash-trainer-card" id="trainer-field-of-vision" onclick="showFieldOfVision()" data-session-done="fovFinish" data-session-sec="80">
                   <div class="dash-trainer-icon"><i class="ti ti-focus-2"></i></div>
                   <div class="dash-trainer-name">Көру өрісі</div>
                   <div class="dash-trainer-sub">Периферия көруі · 50 секунд</div>
                 </div>
-                <div class="dash-trainer-card" id="trainer-vertical-pacer" onclick="showVerticalPacer()">
+                <div class="dash-trainer-card" id="trainer-vertical-pacer" onclick="showVerticalPacer()" data-session-done="vpFinish" data-session-sec="75" data-session-from="2026-10-04">
                   <div class="dash-trainer-icon"><i class="ti ti-arrows-down"></i></div>
                   <div class="dash-trainer-name">Нейронды үдеткіш</div>
                   <div class="dash-trainer-sub">Тік баған · 60 секунд</div>
@@ -896,7 +896,7 @@
                   <div class="dash-trainer-name">Сәйкестендіру</div>
                   <div class="dash-trainer-sub">Жақында</div>
                 </div>
-                <div class="dash-trainer-card" id="trainer-memory-matrix" onclick="showRememberNumber()">
+                <div class="dash-trainer-card" id="trainer-memory-matrix" onclick="showRememberNumber()" data-session-done="rnGameOver" data-session-sec="60">
                   <div class="dash-trainer-icon"><i class="ti ti-brain"></i></div>
                   <div class="dash-trainer-name">Санды есте сақта</div>
                   <div class="dash-trainer-sub">45 секундтық спринт</div>
@@ -3863,6 +3863,7 @@ async function showDashboard() {
   document.getElementById('dashboard').classList.remove('show-profile');
   dashNavSetActive('home');
   document.getElementById('dashboard').style.display = 'block';
+  try { if (window.TezSession) window.TezSession.onDashboard(); } catch (e) {}
   // Stale-while-revalidate: алдыңғы деректі бірден көрсетіп, фонда жаңартамыз
   // (Supabase RTT ≈ 400 мс — әйтпесе әр қайтуда спиннер шығады).
   const cacheKey = 'sr5_dash_cache_' + (authUser && authUser.id);
@@ -5491,5 +5492,6 @@ function vpRenderBest() {
 })();
 </script>
 
+<script src="session.js"></script>
 </body>
 </html>

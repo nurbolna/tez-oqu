@@ -149,6 +149,8 @@ function render(s, act) {
 
     <div id="ct-box"></div>
 
+    <div id="ds-box"></div>
+
     <div id="bl-box"></div>
 
     <div id="fb-box"></div>
@@ -178,6 +180,7 @@ function render(s, act) {
   rows();
   updateInactive();
   loadContest();
+  loadDailySessions();
   loadBaseline();
   loadFeedback();
 }
@@ -331,6 +334,98 @@ function exportContest() {
   downloadCsv('contest', [['Аты', 'Телефон', 'Белсенді күн', 'Минут', 'Тест 1', 'Тест 2', 'Тест 3', 'Өсім %', 'Тест саны', 'Күдікті', 'Тұрақтылық', 'Өсім ұпайы', 'Жалпы']]
     .concat(ctRanked.slice().sort((a, b) => b.total - a.total || b.minutes - a.minutes)
       .map(u => [u.name, u.phone, u.days, Math.round(u.minutes), u.t1 ?? '', u.t2 ?? '', u.t3 ?? '', u.growth == null ? '' : u.growth, u.nTests, u.flagged ? 'иә' : '', u.cons, u.grow, u.total])));
+}
+
+// ── Күндік 15 минут (daily_sessions.sql): көз → 2 ойын → 10 минут оқуды күн сайын қанша оқушы орындады ──
+const DS = { start: '2026-10-03', days: 14, minMinutes: 9 };
+DS.end = addDays(DS.start, DS.days - 1);
+const DS_NAMES = { eye: 'Көз', reading: 'Оқу', schulte: 'Шульте', 'field-of-vision': 'Көру өрісі', 'memory-matrix': 'Санды есте сақта', 'vertical-pacer': 'Нейронды үдеткіш' };
+const dsName = id => DS_NAMES[id] || id;
+const dsHasBug = r => Object.values(r.done || {}).some(v => v && v.bug);
+let dsRows = [], dsAct = [], dsStudents = [], dsDay = '';
+
+async function loadDailySessions() {
+  const box = document.getElementById('ds-box');
+  if (!box) return;
+  box.innerHTML = '<h2 style="margin:26px 0 0">Күндік 15 минут</h2><p class="muted">Жүктелуде…</p>';
+  const [s, a, u] = await Promise.all([
+    sb.rpc('admin_daily_sessions', { start_day: DS.start, end_day: DS.end }),
+    sb.rpc('admin_reading_days', { start_day: DS.start, end_day: DS.end }),
+    sb.rpc('admin_users', { period: 'all' })
+  ]);
+  if (s.error) {
+    box.innerHTML = '<h2 style="margin:26px 0 0">Күндік 15 минут</h2><p class="muted">Бөлім әлі қосылмаған: daily_sessions.sql дерекқорда іске қосылмаған болуы мүмкін. (' + esc(s.error.message) + ')</p>';
+    return;
+  }
+  const allUsers = u.error ? [] : (u.data || []);
+  const adminIds = new Set(allUsers.filter(x => x.is_admin).map(x => x.id));
+  dsRows = (s.data || []).filter(r => !r.is_admin);
+  dsAct = (a.error ? [] : (a.data || [])).filter(x => !adminIds.has(x.uid));
+  dsStudents = allUsers.filter(x => !x.is_admin);
+  if (!dsDay || dsDay < DS.start || dsDay > DS.end) dsDay = today && today >= DS.start && today <= DS.end ? today : DS.start;
+  renderDailySessions();
+}
+
+function dsDayStats(day) {
+  const rows = dsRows.filter(r => r.day === day);
+  const completedIds = new Set(rows.filter(r => r.completed_at).map(r => r.user_id));
+  const startedIds = new Set(rows.map(r => r.user_id));
+  return {
+    rows, started: rows.length, completed: completedIds.size, bug: rows.filter(dsHasBug).length,
+    activeOnly: dsAct.filter(x => x.d === day && Number(x.minutes) >= DS.minMinutes && !completedIds.has(x.uid)).length,
+    missing: dsStudents.filter(x => !startedIds.has(x.id))
+  };
+}
+
+function renderDailySessions() {
+  const box = document.getElementById('ds-box');
+  if (!box) return;
+  const last = today && today < DS.end ? today : DS.end;
+  const days = [];
+  for (let d = DS.start; d <= last; d = addDays(d, 1)) days.push(d);
+  if (!days.length) days.push(DS.start);
+  const total = dsStudents.length;
+  const t = dsDayStats(dsDay);
+  const tile = (v, l) => `<div class="stat"><b>${nf(v)}</b><span>${l}</span></div>`;
+  const dayRows = days.slice().reverse().map(d => {
+    const s = dsDayStats(d);
+    const pct = total ? Math.round(s.completed / total * 100) : 0;
+    return `<tr style="cursor:pointer;${d === dsDay ? 'font-weight:600' : ''}" onclick="dsPick('${d}')"><td>${dday(d)}</td><td class="num"><b>${s.completed}</b></td><td class="num">${s.started}</td><td class="num">${total}</td><td class="num">${pct}%</td></tr>`;
+  }).join('');
+  const stepCell = (r, id) => {
+    const v = (r.done || {})[id];
+    if (!v) return '<span class="muted">○ ' + esc(dsName(id)) + '</span>';
+    return v.bug ? '<span class="err" title="Ақау белгісімен жабылған">⚠ ' + esc(dsName(id)) + '</span>' : '✓ ' + esc(dsName(id));
+  };
+  const people = t.rows.slice()
+    .sort((a, b) => (b.completed_at ? 1 : 0) - (a.completed_at ? 1 : 0) || String(a.full_name || '').localeCompare(String(b.full_name || ''), 'kk'))
+    .map(r => `<tr><td>${esc(r.full_name || r.phone || '—')}</td><td>${(r.plan || []).map(id => stepCell(r, id)).join(' · ')}</td><td class="num">${nf(Number(r.session_minutes))}</td><td>${esc(r.book_title || '')}</td><td class="num">${r.completed_at ? esc(tsAlmaty(r.completed_at).slice(11)) : '<span class="muted">—</span>'}</td></tr>`).join('');
+  const missing = t.missing.map(x => esc(x.full_name || x.phone || '—')).join(', ');
+  box.innerHTML = `
+    <div class="chart-head">
+      <h2 style="margin:26px 0 0">Күндік 15 минут <span class="muted" style="font-size:14px">· ${dday(dsDay)}</span></h2>
+      <div class="periods"><button onclick="loadDailySessions()">Жаңарту</button><button onclick="exportDailySessions()">CSV ↓</button></div>
+    </div>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">Орындады = көз ✓ + 2 ойын ✓ + оқу ≥ 10 минут (▶). «Белсенді, сессиясыз» = күні ≥${DS.minMinutes} минут оқыды, бірақ сессияны аяқтамады.</p>
+    <div class="grid">${tile(t.completed, 'Орындады')}${tile(t.started, 'Бастады')}${tile(t.activeOnly, 'Белсенді, сессиясыз')}${tile(t.bug, '⚠ Ақау белгісі')}${tile(t.missing.length, 'Бастамады')}</div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Күн</th><th class="num">Орындады</th><th class="num">Бастады</th><th class="num">Оқушы</th><th class="num">%</th></tr></thead>
+      <tbody>${dayRows}</tbody>
+    </table></div>
+    <h3 style="margin:16px 0 6px;font-size:15px">${dday(dsDay)}: оқушылар</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Оқушы</th><th>Қадамдар</th><th class="num">Оқу, мин</th><th>Кітап</th><th class="num">Аяқтады</th></tr></thead>
+      <tbody>${people || '<tr><td colspan="5" class="muted">Бұл күні ешкім бастаған жоқ</td></tr>'}</tbody>
+    </table></div>
+    <p class="muted" style="font-size:14px;margin:8px 0 0"><b>Бастамағандар (${t.missing.length}):</b> ${missing || '—'}</p>`;
+}
+
+function dsPick(d) { dsDay = d; renderDailySessions(); }
+
+function exportDailySessions() {
+  downloadCsv('daily-sessions', [['Күн', 'Аты', 'Телефон', 'Жоспар', 'Орындалған қадамдар', 'Ақау', 'Оқу минуты', 'Кітап', 'Орындады', 'Аяқталған уақыт']]
+    .concat(dsRows.map(r => [dday(r.day), r.full_name || '', r.phone || '', (r.plan || []).join(' > '), Object.keys(r.done || {}).join(' > '),
+      dsHasBug(r) ? 'иә' : '', Number(r.session_minutes), r.book_title || '', r.completed_at ? 'иә' : 'жоқ', tsAlmaty(r.completed_at)])));
 }
 
 let blRows = [], blOpenNo = 0;
