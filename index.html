@@ -519,6 +519,10 @@
   .tri-cols .tri-col { width: auto; }
   .tri-cols .tri-col div { height: auto; min-height: 28px; padding: 3px 4px; white-space: normal; font-size: 13px; line-height: 1.25; text-align: center; }
   .tri-cols small { display: block; font-size: 12px; color: #8A8980; margin-bottom: 4px; }
+  .tri-py { position: relative; width: 230px; margin: 2px 0 10px; }
+  .tri-py > span.gl { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #1D9E75; opacity: .35; }
+  .tri-py div { text-align: center; font-size: 13px; line-height: 21px; color: #57564F; border-radius: 4px; white-space: nowrap; transition: background .2s; }
+  .tri-py div.on { background: #E1F5EE; color: #085041; }
   .tri-next { width: 100%; min-height: 46px; border: none; border-radius: 10px; background: #2A78D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 
   /* ══ pyramid text ══ */
@@ -534,7 +538,25 @@
   #pyramid-stage { position: relative; width: 100%; margin-bottom: 32px; }
   #pyramid-guideline { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; transform: translateX(-50%); background: #1D9E75; opacity: 0.2; pointer-events: none; }
   #pyramid-lines { text-align: center; position: relative; }
-  .pyramid-line { font-size: 19px; line-height: 2.1; }
+  .pyramid-line { font-size: 19px; line-height: 2.1; border-radius: 6px; transition: background .15s; }
+  .pyramid-line.is-on { background: #E1F5EE; color: #085041; }
+  /* жүгіретін маркер = ағымдағы жолдың жасыл фоны (нүкте мәтіннің ортасын жауып тастайтын); әр жолда сөз санына қарай тоқтайды */
+  #pyramid-best { min-height: 20px; margin-bottom: 14px; font-size: 14px; color: var(--d-text-2); text-align: center; }
+  #pyramid-bar { display: none; width: 100%; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+  #pyramid.is-playing #pyramid-bar { display: flex; }
+  #pyramid.is-playing #pyramid-start, #pyramid.is-playing .pyramid-done, #pyramid.is-playing #pyramid-best { display: none; }
+  #pyramid-info { flex: 1; text-align: center; font-size: 14px; line-height: 1.5; color: var(--d-text-2); font-variant-numeric: tabular-nums; }
+  .pyramid-step { width: 52px; min-height: 48px; border: 1px solid var(--d-border-strong); background: var(--d-panel); border-radius: 10px; font-family: inherit; font-size: 22px; color: var(--d-text); cursor: pointer; }
+  #pyramid-start { width: 100%; min-height: 50px; justify-content: center; font-size: 16px; margin-bottom: 10px; }
+  #pyramid-start:disabled { opacity: .45; cursor: default; }
+  #pyramid-msg { min-height: 20px; margin-bottom: 10px; font-size: 14px; color: var(--d-text-2); text-align: center; }
+  #pyramid-results { display: none; width: 100%; margin-bottom: 18px; }
+  #pyramid.is-results #pyramid-results { display: block; }
+  #pyramid.is-results #pyramid-stage { display: none; }
+  .pyramid-res-row { display: flex; align-items: baseline; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--d-border); font-size: 17px; color: var(--d-text-2); }
+  .pyramid-res-row b { color: var(--d-text); font-size: 22px; }
+  .pyramid-res-big b { color: var(--d-accent); font-size: 34px; }
+  #pyramid-newbest { min-height: 22px; margin-top: 10px; text-align: center; font-weight: 600; color: #1D9E75; }
   @media (max-width: 640px) { .pyramid-line { font-size: 15px; } }
 
   /* ══ remember number trainer ══ */
@@ -1153,15 +1175,31 @@
 
 <div id="pyramid">
   <div id="pyramid-header">
-    <i class="ti ti-arrow-left schulte-back" onclick="showDashboard()" title="Dashboard-қа оралу"></i>
+    <i class="ti ti-arrow-left schulte-back" onclick="pyBack()" title="Dashboard-қа оралу"></i>
     <span id="pyramid-title">Пирамидалы мәтін</span>
+    <span id="pyramid-energy" title="Бүгінгі қалған тегін ойын саны">⚡</span>
+    <i class="ti ti-info-circle schulte-back" onclick="pyIntroOpen()" title="Нұсқаулық" aria-label="Нұсқаулық"></i>
   </div>
   <div id="pyramid-body">
+    <div id="pyramid-best"></div>
     <div id="pyramid-stage">
       <div id="pyramid-guideline"></div>
       <div id="pyramid-lines"></div>
     </div>
-    <button class="dash-btn-primary" onclick="showDashboard()"><i class="ti ti-check"></i> Аяқтадым</button>
+    <div id="pyramid-results">
+      <div class="pyramid-res-row pyramid-res-big"><span>Оқылған сөз</span><b id="pyramid-res-words">0</b></div>
+      <div class="pyramid-res-row"><span>Жылдамдық</span><b id="pyramid-res-wpm">0</b></div>
+      <div id="pyramid-newbest"></div>
+    </div>
+    <div id="pyramid-bar">
+      <button class="pyramid-step" onclick="pyWpm(-50)" aria-label="Баяулату">−</button>
+      <div id="pyramid-info"><span id="pyramid-time">Уақыт 60.0</span><br><span id="pyramid-wpm">150 WPM</span></div>
+      <button class="pyramid-step" id="pyramid-play" onclick="pyTogglePause()" aria-label="Тоқтата тұру"><i class="ti ti-player-pause"></i></button>
+      <button class="pyramid-step" onclick="pyWpm(50)" aria-label="Жылдамдату">+</button>
+    </div>
+    <button id="pyramid-start" class="dash-btn-primary" onclick="pyStart()">Бастау</button>
+    <div id="pyramid-msg"></div>
+    <button class="dash-btn-primary pyramid-done" onclick="pyBack()"><i class="ti ti-check"></i> Аяқтадым</button>
   </div>
 </div>
 
@@ -2979,6 +3017,7 @@ function hideAllViews() {
   if (blView) blView.style.display = 'none';
   if (typeof fovStop === 'function') fovStop();
   if (typeof vpStop === 'function') vpStop();
+  if (typeof pyStop === 'function') pyStop();
   try { if (window.TezOnboarding) window.TezOnboarding.close(); } catch (e) {}
 }
 
@@ -3347,23 +3386,276 @@ function buildPyramidLines(text, maxLines, step) {
   return lines;
 }
 
-function pyramidNew() {
-  const text = PYRAMID_TEXTS[Math.floor(Math.random() * PYRAMID_TEXTS.length)];
+// бір пирамида: жолдар + әр жолдағы сөз саны (маркер жолда сөз санына қарай тоқтайды)
+function pyramidNew(avoidText) {
+  let text;
+  do { text = PYRAMID_TEXTS[Math.floor(Math.random() * PYRAMID_TEXTS.length)]; } while (PYRAMID_TEXTS.length > 1 && text === avoidText);
   const lines = buildPyramidLines(text, 11, 4);
   const wrap = document.getElementById('pyramid-lines');
   wrap.innerHTML = '';
-  lines.forEach(l => {
+  pyLines = lines.map(l => {
     const div = document.createElement('div');
     div.className = 'pyramid-line';
     div.textContent = l;
     wrap.appendChild(div);
+    return { el: div, words: Math.max(1, l.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length) };
   });
+  pyText = text;
+  pyBase = pyPos;                                  // осы пирамида басталғанға дейін өтілген сөз
+  pyLineIdx = -1;
+}
+
+/* ── пирамида онбордингі (жалпы trainerIntroShow; ойынды бастамайды — жылдамдық экранда таңдалады) ── */
+function pyIntroSlides() {
+  const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const demo = buildPyramidLines(PYRAMID_TEXTS[0], 7, 4);         // интерфейс тіліндегі 1-мәтін
+  return [
+    { icon: 'triangle', title: tr('Пирамидалы мәтін не үшін?'),
+      html: '<p>' + esc(tr('Көз жолдың тек ортасына қарап, бүкіл жолды тұтас көруге үйренеді. Жолдар біртіндеп ұзарады, сондықтан көру аумағыңыз да кеңейеді.')) + '</p>' },
+    { icon: 'arrow-down', title: tr('Маркерге ілесіңіз'),
+      html: '<div class="tri-py"><span class="gl"></span>' + demo.map(l => '<div>' + esc(l) + '</div>').join('') + '</div>' +
+        '<ul><li>' + esc(tr('Жасыл маркер жолдан жолға төмен жүреді — көзді ортаңғы сызықпен бірге жүргізіңіз')) + '</li>' +
+        '<li>' + esc(tr('Солға-оңға қарамаңыз: жолды шетімен қоса тұтас көріңіз')) + '</li></ul>',
+      onShow: el => {
+        const rows = el.querySelectorAll('.tri-py div');
+        let k = 0;
+        const step = () => {
+          if (!el.isConnected) { clearInterval(t); return; }
+          rows.forEach(r => r.classList.remove('on'));
+          rows[k++ % rows.length].classList.add('on');
+        };
+        step();
+        const t = setInterval(step, 700);
+        return () => clearInterval(t);
+      } },
+    { icon: 'clock', title: tr('Ойын ережесі'),
+      html: '<ul><li>' + esc(tr('60 секунд. Нәтиже — маркер өткен сөз саны')) + '</li>' +
+        '<li>' + esc(tr('Жылдамдықты (100–600 WPM) ойын кезінде де − және + батырмаларымен өзгертуге болады.')) + '</li>' +
+        '<li>' + esc(tr('Бос орын (пробел) — үзіліс.')) + '</li>' +
+        '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li>' +
+        '<li>' + esc(tr('Экраннан 40 см қашық отырыңыз')) + '</li></ul>' }
+  ];
+}
+function pyIntroMaybeShow() {
+  if (trainerIntroHidden('pyramid')) return;
+  trainerIntroShow({ key: 'pyramid', host: pyEl('pyramid'), slides: pyIntroSlides(), startLabel: tr('Түсінікті') });
+}
+function pyIntroOpen() {                               // тақырыптағы ⓘ: ойын кезінде ашылмайды
+  if (pyRunning()) return;
+  trainerIntroShow({ key: 'pyramid', host: pyEl('pyramid'), slides: pyIntroSlides(), startLabel: tr('Түсінікті') });
+}
+
+/* ── пирамида: жүгіретін маркер (60 с, рекорд — сөз саны) ── */
+const PY = { totalMs: 60000, wpmMin: 100, wpmMax: 600, wpmStep: 50, wpmDefault: 150, maxDt: 100 };
+const PY_LS_SETTINGS = 'sr5_py_settings';
+let pySettings = { wpm: PY.wpmDefault };
+let pyPhase = 'idle';      // idle | play | pause | results
+let pyGen = 0;             // әр тоқтағанда өседі: ескірген async жалғасулар тоқтайды
+let pyRaf = 0;
+let pyBusy = false;
+let pyLines = [], pyText = '', pyBase = 0, pyLineIdx = -1;
+let pyPos = 0, pyElapsed = 0, pyLast = 0;
+let pyBest = null;
+const pyEl = (id) => document.getElementById(id);
+function pyLoadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(PY_LS_SETTINGS) || 'null');
+    if (s && s.wpm >= PY.wpmMin && s.wpm <= PY.wpmMax) pySettings.wpm = Math.round(s.wpm / PY.wpmStep) * PY.wpmStep;
+  } catch (e) {}
+}
+function pyRunning() { return pyPhase === 'play' || pyPhase === 'pause'; }
+function pyScreen(name) { // idle | play | results
+  const root = pyEl('pyramid');
+  root.classList.toggle('is-playing', name === 'play');
+  root.classList.toggle('is-results', name === 'results');
+}
+function pyWpm(delta) {
+  pySettings.wpm = Math.max(PY.wpmMin, Math.min(PY.wpmMax, pySettings.wpm + delta));
+  try { localStorage.setItem(PY_LS_SETTINGS, JSON.stringify(pySettings)); } catch (e) {}
+  pyEl('pyramid-wpm').textContent = pySettings.wpm + ' WPM';
+}
+function pyStop() {
+  pyGen++;
+  if (pyRaf) cancelAnimationFrame(pyRaf);
+  pyRaf = 0;
+  pyBusy = false;
+  pyPhase = 'idle';
+  const root = pyEl('pyramid');
+  if (root) root.classList.remove('is-playing', 'is-results');
+}
+function pyBack() { pyStop(); showDashboard(); }
+function pyResetToIdle(msg) {
+  pyStop();
+  pyPos = 0; pyElapsed = 0;
+  pyScreen('idle');
+  pyramidNew();                                    // «Бастау» алдында да пирамиданы бұрынғыдай қозғалыссыз оқуға болады
+  pyEl('pyramid-wpm').textContent = pySettings.wpm + ' WPM';
+  pyEl('pyramid-msg').textContent = msg || '';
+  pyEl('pyramid-start').onclick = pyStart;          // нәтиже экранындағы «Қайта ойнау» әрекетін қалпына келтіру
+  pyRefreshEnergyUI();
+  pyRenderBest();
+}
+function pyAgain() { pyResetToIdle(); pyLoadBest(); }
+
+/* ── энергия (ортақ exercise_daily_plays кестесі) ── */
+async function pyRemainingToday() {
+  if (!sb || !authUser) return 0;
+  try {
+    const { data, error } = await sb.from('exercise_daily_plays').select('play_count')
+      .eq('user_id', authUser.id).eq('exercise', 'pyramid').eq('play_date', vpTodayStr()).maybeSingle();
+    if (error) return 0;
+    return Math.max(0, planLimit() - (data ? data.play_count : 0));
+  } catch (e) { return 0; }
+}
+// 'ok' | 'limit' | 'error'
+async function pyConsumePlay() {
+  if (!sb || !authUser) return 'error';
+  try {
+    const { data: existing, error: readError } = await sb.from('exercise_daily_plays').select('play_count')
+      .eq('user_id', authUser.id).eq('exercise', 'pyramid').eq('play_date', vpTodayStr()).maybeSingle();
+    if (readError) return 'error';
+    const used = existing ? existing.play_count : 0;
+    if (used >= planLimit()) return 'limit';
+    const { error: writeError } = await sb.from('exercise_daily_plays').upsert({
+      user_id: authUser.id, exercise: 'pyramid', play_date: vpTodayStr(), play_count: used + 1
+    }, { onConflict: 'user_id,exercise,play_date' });
+    return writeError ? 'error' : 'ok';
+  } catch (e) { return 'error'; }
+}
+async function pyRefreshEnergyUI() {
+  const gen = pyGen;
+  const remaining = await pyRemainingToday();
+  if (gen !== pyGen) return;
+  pyEl('pyramid-energy').textContent = '⚡' + energyText(remaining);
+  const btn = pyEl('pyramid-start');
+  if (pyPhase === 'idle' && !pyBusy) {
+    if (remaining <= 0) { btn.textContent = tr('Ертең қайта келіңіз'); btn.disabled = true; }
+    else { btn.textContent = tr('Бастау'); btn.disabled = false; }
+  }
+}
+
+/* ── ойын ── */
+async function pyStart() {
+  if (pyPhase !== 'idle' || pyBusy) return;
+  pyBusy = true;
+  const gen = pyGen, btn = pyEl('pyramid-start');
+  btn.disabled = true;
+  pyEl('pyramid-msg').textContent = '';
+  const r = await pyConsumePlay();
+  if (gen !== pyGen) return;
+  pyBusy = false;
+  if (r !== 'ok') {
+    pyEl('pyramid-msg').textContent = r === 'limit' ? tr('Бүгінгі тегін ойындар таусылды. Ертең қайта келіңіз.') : tr('Байланыс қатесі. Қайта байқап көріңіз.');
+    btn.disabled = r === 'limit';
+    pyRefreshEnergyUI();
+    return;
+  }
+  pyRefreshEnergyUI();
+  pyPos = 0; pyElapsed = 0;
+  pyramidNew(pyText);
+  pyScreen('play');
+  pyEl('pyramid-play').innerHTML = '<i class="ti ti-player-pause"></i>';
+  pyPhase = 'play';
+  pyUpdate();
+  pyLast = performance.now();
+  pyRaf = requestAnimationFrame(pyTick);
+}
+function pyTick(now) {
+  pyRaf = 0;
+  if (pyPhase !== 'play') return;
+  const dt = Math.min(now - pyLast, PY.maxDt);     // ұзақ кадр (қойынды ауысу) маркерді алға секіртпейді
+  pyLast = now;
+  pyElapsed += dt;
+  pyPos += dt * pySettings.wpm / 60000;
+  if (pyElapsed >= PY.totalMs) { pyFinish(); return; }
+  pyUpdate();
+  pyRaf = requestAnimationFrame(pyTick);
+}
+function pyUpdate() {
+  let acc = pyBase, idx = 0;
+  while (idx < pyLines.length && acc + pyLines[idx].words <= pyPos) { acc += pyLines[idx].words; idx++; }
+  if (idx >= pyLines.length) { pyramidNew(pyText); idx = 0; }      // пирамида бітті → келесі мәтіннен жаңасы
+  if (idx !== pyLineIdx) {
+    if (pyLines[pyLineIdx]) pyLines[pyLineIdx].el.classList.remove('is-on');
+    pyLines[idx].el.classList.add('is-on');
+    pyLineIdx = idx;
+  }
+  pyEl('pyramid-time').textContent = tr('Уақыт {t}', { t: I18N.dec((Math.max(0, PY.totalMs - pyElapsed) / 1000).toFixed(1)) });
+}
+function pyTogglePause() {
+  if (pyPhase === 'play') {
+    pyPhase = 'pause';
+    if (pyRaf) cancelAnimationFrame(pyRaf);
+    pyRaf = 0;
+    pyEl('pyramid-play').innerHTML = '<i class="ti ti-player-play"></i>';
+  } else if (pyPhase === 'pause') {
+    pyPhase = 'play';
+    pyEl('pyramid-play').innerHTML = '<i class="ti ti-player-pause"></i>';
+    pyLast = performance.now();
+    pyRaf = requestAnimationFrame(pyTick);
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && pyPhase === 'play') pyTogglePause();
+});
+document.addEventListener('keydown', (e) => {
+  if (!pyRunning() || pyEl('pyramid').style.display !== 'block') return;
+  if (e.code === 'Space') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) pyTogglePause(); }
+}, true);
+
+/* ── нәтиже және рекорд (pyramid_best_times, pyramid.sql) ── */
+function pyFinish() {
+  if (pyRaf) cancelAnimationFrame(pyRaf);
+  pyRaf = 0;
+  pyPhase = 'results';
+  const res = { words: Math.floor(pyPos), wpm: pySettings.wpm };
+  pyEl('pyramid-res-words').textContent = res.words;
+  pyEl('pyramid-res-wpm').textContent = res.wpm;
+  pyEl('pyramid-newbest').textContent = '';
+  pyScreen('results');
+  const btn = pyEl('pyramid-start');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-refresh"></i>&nbsp;' + tr('Қайта ойнау');
+  btn.onclick = pyAgain;
+  pySaveResult(res, pyGen);
+}
+async function pySaveResult(res, gen) {
+  if (!sb || !authUser) return;
+  try {
+    const { data: ex, error: readError } = await sb.from('pyramid_best_times').select('best_words').eq('user_id', authUser.id).maybeSingle();
+    if (readError) return;
+    if (!ex || res.words > ex.best_words) {
+      const row = { user_id: authUser.id, best_words: res.words, wpm: res.wpm, achieved_at: new Date().toISOString() };
+      const { error: writeError } = await sb.from('pyramid_best_times').upsert(row, { onConflict: 'user_id' });
+      if (writeError) return;
+      pyBest = row;
+      if (ex && gen === pyGen && pyPhase === 'results') pyEl('pyramid-newbest').textContent = tr('Жаңа рекорд!');
+    }
+  } catch (e) {}
+}
+async function pyLoadBest() {
+  pyBest = null;
+  if (!sb || !authUser) { pyRenderBest(); return; }
+  const gen = pyGen;
+  try {
+    const { data, error } = await sb.from('pyramid_best_times').select('best_words,wpm').eq('user_id', authUser.id).maybeSingle();
+    if (!error) pyBest = data;
+  } catch (e) {}
+  if (gen === pyGen) pyRenderBest();
+}
+function pyRenderBest() {
+  pyEl('pyramid-best').textContent = pyBest ? tr('Рекорд: {n} сөз ({wpm} WPM)', { n: pyBest.best_words, wpm: pyBest.wpm }) : '';
 }
 
 function showPyramid() {
   hideAllViews();
   document.getElementById('pyramid').style.display = 'block';
-  pyramidNew();
+  pyLoadSettings();
+  pyResetToIdle();
+  pyLoadBest();
+  const staleIntro = document.getElementById('tri-ov');            // ⓘ ашық күйде экраннан шығып кетсе
+  if (staleIntro) staleIntro.remove();
+  pyIntroMaybeShow();
 }
 
 function schultePickSize(n) {
