@@ -132,7 +132,7 @@ if (typeof window.tr !== 'function') window.tr = function (k, p) { return p ? k.
   var LAG_AFTER = (qs && parseInt(qs.get('lag'), 10)) || 90;          // сервер минуты осынша секундтан кейін артта қалса, оқушыға түсіндіреміз
   if (SESSION_MODE === 'off') return;
 
-  var EYE = { id: 'eye', name: tr('Көз жаттығуы'), sec: 90, cardId: 'trainer-eyewarmup', done: 'eyeWarmupFinish' };
+  var EYE = { id: 'eye', name: tr('Көз жаттығуы'), sec: 60, cardId: 'trainer-eyewarmup', done: 'eyeWarmupFinish' };
   var S = {
     pool: [], row: null, plan: null, openStep: null, openSince: 0,
     srvRead: 0, readBase: 0, localRead: 0,

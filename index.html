@@ -467,24 +467,20 @@
     --d-text:#1F1E1B; --d-text-2:#57564F; --d-text-3:#8A8980; --d-accent:#2A78D6; --d-accent-hover:#1F63B8;
     font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
-  #ew-header { background: var(--d-panel); border-bottom: 1px solid var(--d-border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
-  #ew-title { font-size: 16px; font-weight: 600; flex: 1; }
-  #ew-body { max-width: 100%; margin: 0 auto; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; }
-  #ew-stage { width: 100%; height: 380px; background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 16px; position: relative; overflow: hidden; margin-bottom: 24px; }
-  #ew-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; background: var(--d-accent); }
-  #ew-target.phase-h { animation: ew-horiz 3s ease-in-out infinite; }
-  #ew-target.phase-v { animation: ew-vert 3s ease-in-out infinite; }
-  #ew-target.phase-d { animation: ew-pulse 3s ease-in-out infinite; }
-  #ew-target.phase-b { animation: ew-blink 4s ease-in-out infinite; }
-  @keyframes ew-horiz { 0%,100% { left: 5%; top: 50%; } 50% { left: 95%; top: 50%; } }
-  @keyframes ew-vert { 0%,100% { left: 50%; top: 8%; } 50% { left: 50%; top: 92%; } }
-  @keyframes ew-pulse { 0%,100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(2.4); } }
-  @keyframes ew-blink { 0%,100% { opacity: 1; } 50% { opacity: .15; } }
-  #ew-label { font-size: 15px; color: var(--d-text-2); margin-bottom: 6px; text-align: center; min-height: 20px; }
-  #ew-timer { font-size: 28px; font-weight: 600; margin-bottom: 20px; }
-  #ew-done { text-align: center; }
-  #ew-done-text { font-size: 17px; font-weight: 600; margin-bottom: 14px; }
-  @media (max-width: 640px) { #ew-stage { height: 240px; } }
+  #eyewarmup { position: relative; overflow: hidden; background: var(--d-panel); }
+  /* нүкте экранның шетіне дейін барады: сахна = бүкіл экран (тек iPhone ойығын айналып өтеді) */
+  #ew-stage { position: absolute; top: env(safe-area-inset-top); right: env(safe-area-inset-right); bottom: env(safe-area-inset-bottom); left: env(safe-area-inset-left); }
+  #ew-target { position: absolute; top: 0; left: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--d-accent); will-change: transform, opacity; z-index: 2; }
+  #ew-close { position: absolute; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 5; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--d-border); background: rgba(255,255,255,.85); color: var(--d-text-2); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  #ew-hud { position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 1; text-align: center; pointer-events: none; padding: 0 16px; }
+  #ew-label { font-size: 14px; color: var(--d-text-3); min-height: 18px; }
+  #ew-timer { font-size: 18px; font-weight: 600; color: var(--d-text-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  #ew-intro, #ew-done { position: absolute; inset: 0; z-index: 4; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: var(--d-panel); }
+  #ew-intro-kicker { font-size: 14px; color: var(--d-text-3); }
+  #ew-intro-name { font-size: 28px; font-weight: 600; margin: 6px 0 10px; }
+  #ew-intro-hint { font-size: 15px; color: var(--d-text-2); }
+  #ew-intro-next { font-size: 13px; color: var(--d-text-3); margin-top: 18px; }
+  #ew-done-text { font-size: 22px; font-weight: 600; margin-bottom: 16px; }
 
   /* ══ pyramid text ══ */
   #pyramid {
@@ -1106,19 +1102,21 @@
 </div>
 
 <div id="eyewarmup">
-  <div id="ew-header">
-    <i class="ti ti-arrow-left schulte-back" onclick="eyeWarmupSkip()" title="Dashboard-қа оралу"></i>
-    <span id="ew-title">Көз жаттығулары</span>
-    <button id="ew-skip" class="schulte-size-btn" onclick="eyeWarmupSkip()">Өткізіп жіберу</button>
+  <div id="ew-stage"><div id="ew-target"></div></div>
+  <button id="ew-close" onclick="eyeWarmupSkip()" aria-label="Жабу" title="Дашбордқа оралу"><i class="ti ti-x"></i></button>
+  <div id="ew-hud">
+    <div id="ew-label"></div>
+    <div id="ew-timer">60с</div>
   </div>
-  <div id="ew-body">
-    <div id="ew-stage"><div id="ew-target"></div></div>
-    <div id="ew-label">Дайындалыңыз...</div>
-    <div id="ew-timer">75с</div>
-    <div id="ew-done" style="display:none;">
-      <div id="ew-done-text">Дайын!</div>
-      <button class="dash-btn-primary" onclick="showDashboard()"><i class="ti ti-arrow-right"></i> Дашбордқа оралу</button>
-    </div>
+  <div id="ew-intro">
+    <div id="ew-intro-kicker"></div>
+    <div id="ew-intro-name"></div>
+    <div id="ew-intro-hint"></div>
+    <div id="ew-intro-next"></div>
+  </div>
+  <div id="ew-done">
+    <div id="ew-done-text">Дайын!</div>
+    <button class="dash-btn-primary" onclick="showDashboard()"><i class="ti ti-arrow-right"></i> Дашбордқа оралу</button>
   </div>
 </div>
 
@@ -3025,15 +3023,61 @@ function showSchulte() {
 }
 
 /* ── eye warmup ── */
-const EYE_PHASES = [
-  { cls: 'phase-h', label: tr('Нүктені көзбен қуалаңыз — солдан оңға'), dur: 20 },
-  { cls: 'phase-v', label: tr('Нүктені көзбен қуалаңыз — жоғары-төмен'), dur: 20 },
-  { cls: 'phase-d', label: tr('Алыс-жақынға фокустаныңыз'), dur: 20 },
-  { cls: 'phase-b', label: tr('Жайлап жыпылықтатыңыз'), dur: 15 }
+// 3 нұсқа күн сайын кезектеседі (A → B → C → A…): әр жаттығу 3 күнде бір келеді, бір күні барлық оқушыда бірдей.
+// Жылдамдық = нүктенің бір шеттен екінші шетке жету уақыты (секунд), сондықтан телефонда да, үлкен экранда да бірдей сезіледі.
+// Әр кезең [баяу, жылдам] аралығында біртіндеп тездейді.
+const EYE_SPEED = {
+  glide: [1.8, 1.0],   // тегіс жылжу: бір шеттен бір шетке
+  jump:  [1.0, 0.55],  // секіру: секірулер арасы
+  focus: [2.0, 1.5],   // алыс-жақын: үлкею/кішірею
+  blink: [1.6, 1.6],   // жыпылықтау ырғағы
+  inf:   [5.0, 3.2],   // ∞ белгісін бір рет толық сызу
+  circ:  [4.0, 2.6]    // бір толық шеңбер
+};
+const EYE_CORNERS = [[0, 0], [1, 1], [0, 1], [1, 0]];
+// m(acc) → { x, y } (0..1, сахнаның шетінен шетіне), s — өлшем, a — мөлдірлік; acc — кезең басынан жүрілген «қадам» саны
+const EYE_MOVES = {
+  h:     { sp: 'glide', m: k => ({ x: 0.5 - 0.5 * Math.cos(Math.PI * k), y: 0.5 }) },
+  v:     { sp: 'glide', m: k => ({ x: 0.5, y: 0.5 - 0.5 * Math.cos(Math.PI * k) }) },
+  focus: { sp: 'focus', m: k => ({ x: 0.5, y: 0.5, s: 1 + 2.4 * (0.5 - 0.5 * Math.cos(Math.PI * k)) }) },
+  blink: { sp: 'blink', m: k => ({ x: 0.5, y: 0.5, s: 1.4, a: 0.15 + 0.85 * (0.5 + 0.5 * Math.cos(Math.PI * k)) }) },
+  jh:    { sp: 'jump',  m: k => ({ x: Math.floor(k) % 2, y: 0.5 }) },
+  jv:    { sp: 'jump',  m: k => ({ x: 0.5, y: Math.floor(k) % 2 }) },
+  jc:    { sp: 'jump',  m: k => { const c = EYE_CORNERS[Math.floor(k) % 4]; return { x: c[0], y: c[1] }; } },
+  infh:  { sp: 'inf',   m: k => ({ x: 0.5 + 0.5 * Math.sin(2 * Math.PI * k), y: 0.5 + 0.5 * Math.sin(4 * Math.PI * k) }) },
+  infv:  { sp: 'inf',   m: k => ({ x: 0.5 + 0.5 * Math.sin(4 * Math.PI * k), y: 0.5 + 0.5 * Math.sin(2 * Math.PI * k) }) },
+  circ:  { sp: 'circ',  m: k => ({ x: 0.5 + 0.5 * Math.cos(2 * Math.PI * k), y: 0.5 + 0.5 * Math.sin(2 * Math.PI * k) }) }
+};
+const EYE_VARIANTS = [
+  { name: tr('Классика'), hint: tr('Нүктені тегіс қуалаңыз, басыңызды қозғалтпаңыз'), phases: [
+    { mv: 'h',     dur: 15, label: tr('Нүктені көзбен қуалаңыз — солдан оңға') },
+    { mv: 'v',     dur: 15, label: tr('Нүктені көзбен қуалаңыз — жоғары-төмен') },
+    { mv: 'focus', dur: 15, label: tr('Алыс-жақынға фокустаныңыз') },
+    { mv: 'blink', dur: 15, label: tr('Жайлап жыпылықтатыңыз') }
+  ] },
+  { name: tr('Саккада'), hint: tr('Нүкте секіреді — көзіңізбен бірден ілесіңіз, басыңызды қозғалтпаңыз'), phases: [
+    { mv: 'jh',    dur: 15, label: tr('Нүкте секіреді — солдан оңға') },
+    { mv: 'jv',    dur: 15, label: tr('Нүкте секіреді — жоғары-төмен') },
+    { mv: 'jc',    dur: 15, label: tr('Нүкте бұрыштарға секіреді') },
+    { mv: 'blink', dur: 15, label: tr('Жайлап жыпылықтатыңыз') }
+  ] },
+  { name: tr('Шексіздік'), hint: tr('Нүкте тоқтамай ағады — көзіңізбен ізін сызыңыз'), phases: [
+    { mv: 'infh',  dur: 20, label: tr('Шексіздік белгісін көзбен сызыңыз') },
+    { mv: 'infv',  dur: 20, label: tr('Тік шексіздікті көзбен сызыңыз') },
+    { mv: 'circ',  dur: 10, label: tr('Нүктені шеңбер бойымен қуалаңыз') },
+    { mv: 'blink', dur: 10, label: tr('Жайлап жыпылықтатыңыз') }
+  ] }
 ];
+const EYE_INTRO_MS = 2200;
 let eyeTimeouts = [];
-let eyeStart = null;
-let eyeCountdownInterval = null;
+let eyeRaf = 0;
+let eyeRun = null;
+
+function eyeVariantIndex(date) {          // жергілікті күнтізбелік күн бойынша: түн ортасында ауысады
+  const d = date || new Date();
+  const day = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+  return ((day % EYE_VARIANTS.length) + EYE_VARIANTS.length) % EYE_VARIANTS.length;
+}
 
 function showEyeWarmup() {
   hideAllViews();
@@ -3044,43 +3088,69 @@ function showEyeWarmup() {
 function eyeWarmupClearTimers() {
   eyeTimeouts.forEach(t => clearTimeout(t));
   eyeTimeouts = [];
-  clearInterval(eyeCountdownInterval);
+  cancelAnimationFrame(eyeRaf);
+  eyeRaf = 0;
+  eyeRun = null;
 }
 
-function eyeWarmupStart() {
+function eyeWarmupStart(forceIdx) {
   eyeWarmupClearTimers();
+  const idx = forceIdx != null ? forceIdx : eyeVariantIndex();
+  const v = EYE_VARIANTS[idx];
+  const next = EYE_VARIANTS[(idx + 1) % EYE_VARIANTS.length];
+  const total = v.phases.reduce((t, p) => t + p.dur, 0);
   const target = document.getElementById('ew-target');
-  target.className = '';
-  target.id = 'ew-target';
+  target.style.transform = 'translate(-100px,-100px)';
+  target.style.opacity = '1';
   document.getElementById('ew-done').style.display = 'none';
-  document.getElementById('ew-skip').style.display = 'inline-flex';
-  document.getElementById('ew-label').textContent = tr('Дайындалыңыз...');
-  let elapsedBefore = 0;
-  EYE_PHASES.forEach(p => {
-    const t = setTimeout(() => {
-      target.className = p.cls;
-      document.getElementById('ew-label').textContent = p.label;
-    }, elapsedBefore * 1000);
-    eyeTimeouts.push(t);
-    elapsedBefore += p.dur;
-  });
-  const total = elapsedBefore;
+  document.getElementById('ew-label').textContent = '';
   document.getElementById('ew-timer').textContent = total + 'с';
-  eyeStart = performance.now();
-  eyeCountdownInterval = setInterval(() => {
-    const left = Math.max(0, total - (performance.now() - eyeStart) / 1000);
-    document.getElementById('ew-timer').textContent = Math.ceil(left) + 'с';
-  }, 250);
-  eyeTimeouts.push(setTimeout(eyeWarmupFinish, total * 1000));
+  document.getElementById('ew-intro-kicker').textContent = tr('Бүгінгі көз жаттығуы');
+  document.getElementById('ew-intro-name').textContent = v.name;
+  document.getElementById('ew-intro-hint').textContent = v.hint;
+  document.getElementById('ew-intro-next').textContent = tr('Ертең: {name}', { name: next.name });
+  const intro = document.getElementById('ew-intro');
+  intro.style.display = 'flex';
+  eyeTimeouts.push(setTimeout(() => {
+    intro.style.display = 'none';
+    eyeRun = { v, total, phase: -1, acc: 0, t0: performance.now(), last: performance.now() };
+    eyeRaf = requestAnimationFrame(eyeWarmupFrame);
+  }, EYE_INTRO_MS));
+}
+
+function eyeWarmupFrame(now) {
+  const run = eyeRun;
+  if (!run) return;
+  if (document.getElementById('eyewarmup').style.display === 'none') { eyeWarmupClearTimers(); return; }  // басқа экранға кетті
+  const el = Math.max(0, (now - run.t0) / 1000);                 // rAF уақыт белгісі t0-ден сәл ерте келуі мүмкін
+  if (el >= run.total) { eyeWarmupFinish(); return; }
+  let start = 0, i = 0;
+  while (i < run.v.phases.length - 1 && el >= start + run.v.phases[i].dur) { start += run.v.phases[i].dur; i++; }
+  const ph = run.v.phases[i], mv = EYE_MOVES[ph.mv];
+  if (i !== run.phase) {
+    run.phase = i; run.acc = 0; run.last = now;
+    document.getElementById('ew-label').textContent = ph.label;
+  }
+  const frac = Math.min(1, (el - start) / ph.dur), sp = EYE_SPEED[mv.sp];
+  const period = sp[0] + (sp[1] - sp[0]) * frac;
+  run.acc += Math.min(0.1, (now - run.last) / 1000) / period;   // фондағы қойындыдан оралғанда секірмейді
+  run.last = now;
+  const p = mv.m(run.acc);
+  const stage = document.getElementById('ew-stage'), target = document.getElementById('ew-target');
+  const d = target.offsetWidth, sc = p.s || 1;
+  const pad = d * (sc - 1) / 2;                                 // үлкейгенде де шеттен шықпайды
+  const x = pad + p.x * (stage.clientWidth - d - 2 * pad), y = pad + p.y * (stage.clientHeight - d - 2 * pad);
+  target.style.transform = `translate(${x}px,${y}px) scale(${sc})`;
+  target.style.opacity = p.a == null ? '1' : String(p.a);
+  document.getElementById('ew-timer').textContent = Math.ceil(run.total - el) + 'с';
+  eyeRaf = requestAnimationFrame(eyeWarmupFrame);
 }
 
 function eyeWarmupFinish() {
   eyeWarmupClearTimers();
-  document.getElementById('ew-target').className = '';
-  document.getElementById('ew-label').textContent = tr('Дайын!');
+  document.getElementById('ew-intro').style.display = 'none';
   document.getElementById('ew-timer').textContent = '0с';
-  document.getElementById('ew-done').style.display = 'block';
-  document.getElementById('ew-skip').style.display = 'none';
+  document.getElementById('ew-done').style.display = 'flex';
 }
 
 function eyeWarmupSkip() {
