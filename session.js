@@ -126,7 +126,7 @@ if (typeof window.tr !== 'function') window.tr = function (k, p) { return p ? k.
   var Core = window.TezSessionCore;
   var onLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   var qs = onLocal ? new URLSearchParams(location.search) : null;     // ?session=all&valve=400 тек localhost-та (тест үшін)
-  var SESSION_MODE = (qs && qs.get('session')) || 'admins';           // 'off' | 'admins' | 'all'
+  var SESSION_MODE = (qs && qs.get('session')) || 'all';           // 'off' | 'admins' | 'all'
   var VALVE_MS = (qs && parseInt(qs.get('valve'), 10)) || Core.VALVE_MS;
   var RETRY_WAITS = (qs && qs.get('retry') === 'fast') ? [20, 20, 20] : [1000, 3000, 8000];
   var LAG_AFTER = (qs && parseInt(qs.get('lag'), 10)) || 90;          // сервер минуты осынша секундтан кейін артта қалса, оқушыға түсіндіреміз
