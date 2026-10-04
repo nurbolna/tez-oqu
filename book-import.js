@@ -495,7 +495,7 @@
   //   words    — тек сөздер (бұрынғыдай: pos, бетбелгі, статистика осыған сүйенеді); ⟦i:ID⟧ бар сөз — бір «сөз»
   //   blocks   — {t:'p'|'li'|'q'|'cap', start, end} сөз аралығы; {t:'h', lvl, s, at}; {t:'img', img, txt?, at}
   //              (at = келесі сөздің нөмірі: блок сол сөздің алдында тұрады)
-  //   chapters — {title, skip, depth, start, end}
+  //   chapters — {title, skip, depth, start, end, bi} (bi — тараудың бірінші блогының индексі: тарау жаңа беттен басталады)
   // Ескі жалпақ мәтін: бір p блогы + бір тарау, words бұрынғы loadWords-пен дәл бірдей.
   //   legacyClean — ескі жалпақ мәтінді тазалайтын функция (index.html: cleanKazakhText); TZB1 әрқашан cleanText-пен тазаланады
   function deserialize(text, legacyClean) {
@@ -512,7 +512,7 @@
       if (tag === '#C') {
         const [title, skip, depth] = body.split('|');
         if (chapters.length) chapters[chapters.length - 1].end = words.length;
-        chapters.push({ title, skip: skip === '1', depth: +depth || 0, start: words.length, end: words.length });
+        chapters.push({ title, skip: skip === '1', depth: +depth || 0, start: words.length, end: words.length, bi: blocks.length });
       } else if (tag === 'H2' || tag === 'H3') {
         blocks.push({ t: 'h', lvl: tag === 'H3' ? 3 : 2, s: body, at: words.length });
       } else if (tag === 'I' || tag === 'T') {
@@ -528,7 +528,7 @@
       }
     }
     if (chapters.length) chapters[chapters.length - 1].end = words.length;
-    else chapters.push({ title: '', skip: false, depth: 0, start: 0, end: words.length });
+    else chapters.push({ title: '', skip: false, depth: 0, start: 0, end: words.length, bi: 0 });
     return { structured: true, words, blocks, chapters };
   }
   // books.total_words және сақталған позицияның total-ы үшін — words.length-пен әрқашан бірдей

@@ -1789,7 +1789,7 @@ function isSingleColumn() {
 
 function pageCacheKey(colW, colH, fontSize, fontFamily) {
   if (!currentFileName) return null;
-  return '__pagecache__' + currentFileName + '::' + colW + 'x' + colH + '|' + fontSize + '|' + fontFamily + '|' + words.length + '|v5|hy:' + hyphenationMode() + (isSingleColumn() ? '|1col' : '') + (bkStructured ? '|bk1' : '');
+  return '__pagecache__' + currentFileName + '::' + colW + 'x' + colH + '|' + fontSize + '|' + fontFamily + '|' + words.length + '|v5|hy:' + hyphenationMode() + (isSingleColumn() ? '|1col' : '') + (bkStructured ? '|bk2' : '');   // bk2: әр тарау жаңа беттен
 }
 
 let paginateRun = 0;      // bumped on every new pagination run; older runs see the change and stop
@@ -2083,6 +2083,8 @@ const bkWordAt = (bi, wi) => { const b = bkBlocks[bi]; return !b ? words.length 
 const bkCursorAfter = bi => { const n = bkBlocks[bi + 1]; return { bi: bi + 1, wi: n && BK_TEXT[n.t] ? n.start : 0 }; };
 
 // Бағанды c курсорынан бастап толтырады; соңғы курсорды қайтарады. el — өлшегіш (баған стилімен)
+// Тараудың бірінші блогы → жаңа бет. Бос тараулар (блогы жоқ) келесі тараумен бірдей bi береді — Set бәрібір бір рет.
+let bkChapterStarts = new Set();
 function bkFillColumn(el, c, colW, colH, safeH, wordSpan) {
   el.textContent = '';
   const B = bkBlocks, items = [];          // items: {bi, el} — қосылған блоктар
@@ -2090,6 +2092,8 @@ function bkFillColumn(el, c, colW, colH, safeH, wordSpan) {
   let cur = { bi: c.bi, wi: c.wi };
   while (cur.bi < B.length) {
     const b = B[cur.bi], isText = !!BK_TEXT[b.t];
+    // жаңа тарау басталды, ал бағанда бірдеңе бар → бет осы жерде бітеді (екінші баған да бос қалады)
+    if (items.length && bkChapterStarts.has(cur.bi) && (!isText || cur.wi === b.start)) { cur.brk = true; return cur; }
     const from = isText ? cur.wi : 0, to = isText ? b.end : 0;
     const node = bkBlockEl(cur.bi, from, to, colW, colH, wordSpan);
     el.appendChild(node);
@@ -2144,6 +2148,7 @@ function bkMeasurePages(myRun, colW, colH, cacheKey, targetWord) {
   const safeH = colH - 4;
   const twoCols = !isSingleColumn();
   const wordSpan = i => bkWordSpan(i, colW);
+  bkChapterStarts = new Set(bkChapters.filter(ch => ch.bi > 0 && ch.bi < bkBlocks.length).map(ch => ch.bi));
   const target = Math.max(0, Math.min(words.length - 1, targetWord === undefined ? pos : targetWord));
   const newPages = [];
   pages = newPages;
@@ -2160,7 +2165,7 @@ function bkMeasurePages(myRun, colW, colH, cacheKey, targetWord) {
       while (c.bi < bkBlocks.length) {
         if (myRun !== paginateRun) { markReady(); return; }
         const c1 = bkFillColumn(probe, c, colW, colH, safeH, wordSpan);
-        const c2 = twoCols && c1.bi < bkBlocks.length ? bkFillColumn(probe, c1, colW, colH, safeH, wordSpan) : c1;
+        const c2 = twoCols && c1.bi < bkBlocks.length && !c1.brk ? bkFillColumn(probe, c1, colW, colH, safeH, wordSpan) : c1;
         newPages.push({ start: bkWordAt(c.bi, c.wi), col1End: bkWordAt(c1.bi, c1.wi), end: bkWordAt(c2.bi, c2.wi), b: [c.bi, c.wi, c1.bi, c1.wi, c2.bi, c2.wi] });
         if (c2.bi === c.bi && c2.wi === c.wi) break;      // ілгерілемеді — тұйықталмас үшін
         c = c2;
