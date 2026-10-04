@@ -869,6 +869,7 @@
   #pf-name-err { font-size: 13px; color: #B3261E; margin-top: 6px; min-height: 16px; }
   .pf-card { background: var(--d-panel); border: 1px solid var(--d-border); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
   .pf-card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  #pf-reminder-card:empty { display: none; }   /* reminder.js жүктелмесе бос карточка көрінбейді */
   .pf-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--d-border); font-size: 14px; }
   .pf-row:last-child { border-bottom: none; padding-bottom: 0; }
   .pf-card-title + .pf-row { padding-top: 0; }
@@ -1088,6 +1089,7 @@
           <div class="pf-card-title">Тіл / Язык</div>
           <div class="lang-switch" role="group" aria-label="Тіл / Язык"><button type="button" data-setlang="kk">Қазақша</button><button type="button" data-setlang="ru">Русский</button></div>
         </div>
+        <div class="pf-card" id="pf-reminder-card"></div>
         <div class="pf-card" id="pf-install-card">
           <div class="pf-card-title">Қолданба ретінде орнату</div>
           <div class="pf-hint" id="pf-install-hint">Safari: «Бөлісу» → «Басты экранға қосу». Android Chrome: ⋮ мәзірі → «Қолданбаны орнату».</div>
@@ -5154,6 +5156,7 @@ async function showDashboard() {
   document.getElementById('dashboard').style.display = 'block';
   try { if (window.TezSession) window.TezSession.onDashboard(); } catch (e) {}
   try { if (window.TezOnboarding) window.TezOnboarding.maybeShow(); } catch (e) {}
+  setTimeout(function () { try { if (window.TezReminder) TezReminder.maybePrompt(); } catch (e) {} }, 1500);   // еске салу уақытын таңдау (онбордингтен кейін)
   // Stale-while-revalidate: алдыңғы деректі бірден көрсетіп, фонда жаңартамыз
   // (Supabase RTT ≈ 400 мс — әйтпесе әр қайтуда спиннер шығады).
   const cacheKey = 'sr5_dash_cache_' + (authUser && authUser.id);
@@ -5602,6 +5605,7 @@ function dashNavGo(key) {
     dash.scrollTo({ top: 0 });
     dashNavSetActive('profile');
     dashProfileRender();
+    try { if (window.TezReminder) TezReminder.renderProfileCard(); } catch (e) {}
     return;
   }
   const target = DASH_NAV_TARGETS[key] && document.getElementById(DASH_NAV_TARGETS[key]);
@@ -7064,5 +7068,6 @@ function vpRenderBest() {
 <script src="vp_questions.js"></script>
 <script src="vp_quiz.js"></script>
 <script src="onboarding.js"></script>
+<script src="reminder.js"></script>
 </body>
 </html>
