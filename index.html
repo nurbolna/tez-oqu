@@ -5373,7 +5373,9 @@ async function openCloudBook(book) {
 
     // Already read on this device? Skip B2 entirely — this is what makes
     // repeat "Жалғастыру" clicks near-instant instead of re-downloading every time.
+    // Бірақ кітап басқа құрылғыда қайта жүктелген болса (storage_key өзгерді), жергілікті көшірме ескі — қайта жүктейміз.
     let text = await idbGetText(book.filename);
+    if (text && book.storage_key && bkCachedKey(book.filename) !== book.storage_key) text = null;
     if (!text) {
       const { data: { session } } = await sb.auth.getSession();
       const res = await fetch(SUPABASE_URL + '/functions/v1/b2-sign', {
@@ -5386,6 +5388,7 @@ async function openCloudBook(book) {
       const textRes = await fetch(signed.downloadUrl);
       text = await textRes.text();
       await lsSaveText(book.filename, text);
+      bkSetCachedKey(book.filename, book.storage_key);
     }
     await bkEnsureCloudImages(book.filename, text);   // басқа құрылғыда жүктелген кітаптың суреттері
 
@@ -5438,16 +5441,24 @@ async function bkEnsureCloudImages(fileName, text) {
       const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).count(IDBKeyRange.bound(pre, pre + '\uffff'));
       req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
     });
-    if (have) return;
+    // суреттер осы архивтен алынған болса — жаңартудың қажеті жоқ (кітап қайта жүктелсе, архив кілті өзгереді)
+    let gotKey = null; try { gotKey = localStorage.getItem('sr5_imgkey_' + fileName); } catch(e) {}
+    if (have && gotKey === m[1]) return;
     document.getElementById('col1').innerHTML = '<div id="placeholder">' + tr('Кітаптың суреттері жүктелуде…') + '</div>';
     const { data: { session } } = await sb.auth.getSession(); if (!session) return;
     const signed = await b2Sign(session, { action: 'download', key: m[1] });
     if (!signed.downloadUrl) return;
     const zipBlob = await (await fetch(signed.downloadUrl)).blob();
-    await idbSetImages(fileName, await bkUnzipImages(zipBlob));
+    const imgs = await bkUnzipImages(zipBlob);
+    if (!imgs.size) return;
+    await idbDeleteImages(fileName);                    // ескі нұсқаның суреттері қалмасын
+    if (await idbSetImages(fileName, imgs)) { try { localStorage.setItem('sr5_imgkey_' + fileName, m[1]); } catch(e) {} }
     if (bkImgFor === fileName) bkImgFor = null;
   } catch(e) {}   // суреттерсіз де оқуға болады — белгі шығады
 }
+// Құрылғыдағы мәтін бұлттағы қай нұсқаға (books.storage_key) тиесілі — басқа құрылғыда қайта жүктелсе, көшірме жаңарады
+const bkCachedKey = name => { try { return localStorage.getItem('sr5_key_' + name); } catch(e) { return null; } };
+const bkSetCachedKey = (name, key) => { try { localStorage.setItem('sr5_key_' + name, key); } catch(e) {} };
 async function uploadBookToCloud(filename, text, images) {
   if (!sb || !authUser) return;
   try {
@@ -5462,6 +5473,7 @@ async function uploadBookToCloud(filename, text, images) {
           if (put.ok) {
             text = text.replace(BK_IMG_LINE, '@TZB1\n').replace(/^@TZB1\n/, '@TZB1\n#IMG|' + zs.key + '\n');
             await lsSaveText(filename, text);   // жергілікті көшірме де бұлттағымен бірдей болсын
+            try { localStorage.setItem('sr5_imgkey_' + filename, zs.key); } catch(e) {}   // осы құрылғыдағы суреттер — осы архив
           }
         }
       } catch(e) {}   // суреттер жүктелмесе — мәтін бәрібір жүктеледі
@@ -5489,6 +5501,7 @@ async function uploadBookToCloud(filename, text, images) {
 
     if (!error && data) {
       currentBookId = data.id;
+      bkSetCachedKey(filename, signed.key);   // осы құрылғыдағы көшірме — дәл осы бұлттағы нұсқа
     }
   } catch(e) {}
 }
