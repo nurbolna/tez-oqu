@@ -1074,7 +1074,7 @@
             <div id="pf-phone"></div>
           </div>
         </div>
-        <div class="pf-card">
+        <div class="pf-card" id="pf-energy-card">
           <div class="pf-card-title">Бүгінгі тегін ойындар</div>
           <div class="pf-row"><span class="pf-row-label">Шульте кестесі</span><span class="pf-row-value" id="pf-energy-schulte">—</span></div>
           <div class="pf-row"><span class="pf-row-label">Санды есте сақта</span><span class="pf-row-value" id="pf-energy-rn">—</span></div>
@@ -1204,7 +1204,7 @@
   <div id="schulte-header">
     <i class="ti ti-arrow-left schulte-back" onclick="showDashboard()" title="Dashboard-қа оралу"></i>
     <span id="schulte-title">Шульте кестесі</span>
-    <span id="schulte-energy" title="Бүгінгі қалған тегін ойын саны">⚡2</span>
+    <span id="schulte-energy" title="Бүгінгі қалған тегін ойын саны">⚡</span>
     <i class="ti ti-info-circle schulte-back" onclick="schulteIntroOpen()" title="Нұсқаулық"></i>
     <div id="schulte-sizes">
       <button class="schulte-size-btn" data-size="3" onclick="schultePickSize(3)">3×3</button>
@@ -1284,7 +1284,7 @@
   <div id="remember-number-header">
     <i class="ti ti-arrow-left schulte-back" onclick="showDashboard()" title="Dashboard-қа оралу"></i>
     <span id="remember-number-title">Санды есте сақта</span>
-    <span id="remember-number-energy" title="Бүгінгі қалған тегін ойын саны">⚡2</span>
+    <span id="remember-number-energy" title="Бүгінгі қалған тегін ойын саны">⚡</span>
     <i class="ti ti-info-circle schulte-back" onclick="rnIntroOpen()" title="Нұсқаулық" aria-label="Нұсқаулық"></i>
   </div>
   <div id="remember-number-body">
@@ -1359,7 +1359,7 @@
   <div id="field-of-vision-header">
     <i class="ti ti-arrow-left field-of-vision-icon" onclick="fovBack()" title="Dashboard-қа оралу" aria-label="Артқа"></i>
     <span id="field-of-vision-title">Көру өрісі</span>
-    <span id="field-of-vision-energy" title="Бүгінгі қалған тегін ойын саны">⚡2</span>
+    <span id="field-of-vision-energy" title="Бүгінгі қалған тегін ойын саны">⚡</span>
     <i class="ti ti-refresh field-of-vision-icon" onclick="fovRestart()" title="Қайта бастау" aria-label="Қайта бастау"></i>
     <i class="ti ti-info-circle field-of-vision-icon" id="field-of-vision-info" onclick="fovIntroOpen()" title="Нұсқаулық" aria-label="Нұсқаулық"></i>
     <i class="ti ti-settings field-of-vision-icon" id="field-of-vision-gear" onclick="fovSettingsOpen()" title="Баптаулар" aria-label="Баптаулар"></i>
@@ -3993,7 +3993,7 @@ function pyIntroSlides() {
       html: '<ul><li>' + esc(tr('60 секунд. Нәтиже — маркер өткен сөз саны')) + '</li>' +
         '<li>' + esc(tr('Жылдамдықты (100–600 WPM) ойын кезінде де − және + батырмаларымен өзгертуге болады.')) + '</li>' +
         '<li>' + esc(tr('Бос орын (пробел) — үзіліс.')) + '</li>' +
-        '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li>' +
+        (PLAN.limitsEnabled ? '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li>' : '') +
         '<li>' + esc(tr('Экраннан 40 см қашық отырыңыз')) + '</li></ul>' }
   ];
 }
@@ -4545,7 +4545,7 @@ function rnIntroSlides() {
       html: '<ul><li>' + esc(tr('45 секунд. Нәтиже — дұрыс тапқан сан саны')) + '</li>' +
         '<li>' + esc(tr('3 өмір бар: қате жіберсеңіз, бір өмір кетеді, ал 3 өмір біткенде ойын бітеді')) + '</li>' +
         '<li>' + esc(tr('Қатарынан 2 рет дұрыс тапсаңыз, сан ұзарады не тезірек жоғалады; қатеден кейін оңайлайды')) + '</li>' +
-        '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li></ul>' }
+        (PLAN.limitsEnabled ? '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li>' : '') + '</ul>' }
   ];
 }
 function rnIntroMaybeShow() {
@@ -5633,6 +5633,7 @@ async function dashProfileRender() {
   document.getElementById('pf-phone').textContent = authUser.phone ? formatPhoneShort(authUser.phone) : '';
   pfUpdateInstallCard();
   const [sLeft, rLeft, rec] = await Promise.all([schulteRemainingToday(), rnRemainingToday(), pfLoadRecords()]);
+  document.getElementById('pf-energy-card').style.display = PLAN.limitsEnabled ? '' : 'none';   // шектеу өшік: «∞» картасы тек шатастырады
   document.getElementById('pf-energy-schulte').textContent = '⚡ ' + energyText(sLeft) + (PLAN.limitsEnabled ? ' / ' + PLAN.freeDaily : '');
   document.getElementById('pf-energy-rn').textContent = '⚡ ' + energyText(rLeft) + (PLAN.limitsEnabled ? ' / ' + PLAN.freeDaily : '');
   document.getElementById('pf-rec-rn').textContent = rec.rn != null ? tr('{n} сан', { n: rec.rn }) : '—';
@@ -5706,7 +5707,7 @@ async function pfInstall() {
 const FOV = {
   prepMs: 3000,
   totalMs: 50000,
-  stages: [{ untilMs: 20000, frameMs: 2000 }, { untilMs: 50000, frameMs: 1500 }], // frame length by game time
+  stages: [{ untilMs: 20000, frameMs: 2500 }, { untilMs: 50000, frameMs: 1500 }], // frame length by game time (first 20 s slower: pilot students averaged 31 % at 2 s)
   missFlashMs: 400,          // a missed mismatch is shown in green this long before its frame ends
   mismatchChance: 0.5,
   maxStreak: 3,              // never more than 3 frames of the same kind in a row
@@ -5717,7 +5718,7 @@ const FOV = {
 };
 const FOV_LS_SETTINGS = 'sr5_fov_settings';
 
-let fovSettings = { size: 9, points: 4, font: 'medium' };
+let fovSettings = { size: 7, points: 4, font: 'medium' };   // 7×7 by default (pilot: 9×9 was too hard); a size saved via ⚙ still wins
 let fovPhase = 'idle';      // idle | prep | play | results
 let fovGen = 0;             // bumped on every stop: async continuations compare it and give up when stale
 let fovTimer = null;        // the only interval this trainer ever creates
@@ -5865,7 +5866,7 @@ function fovIntroSlides() {
       } },
     { icon: 'clock', title: tr('Ойын ережесі'),
       html: '<ul><li>' + esc(fovTimingText()) + '</li>' +
-        '<li>' + esc(tr('Артық басу дәлдікті азайтады. Күніне 2 тегін ойын бар.')) + '</li>' +
+        '<li>' + esc(PLAN.limitsEnabled ? tr('Артық басу дәлдікті азайтады. Күніне 2 тегін ойын бар.') : tr('Артық басу дәлдікті азайтады.')) + '</li>' +
         '<li>' + esc(tr('Экраннан 40 см қашық отырыңыз')) + '</li>' +
         '<li>' + esc(tr('⚙ — тор өлшемі, нүкте саны, қаріп')) + '</li></ul>' }
   ];
@@ -6409,7 +6410,7 @@ function vpIntroSlides() {
     { icon: 'clock', title: tr('Ойын ережесі'),
       html: '<ul><li>' + esc(tr('60 секунд. Нәтиже — маркер өткен сөз саны')) + '</li>' +
         '<li>' + esc(tr('Бос орын (пробел) — үзіліс.')) + '</li>' +
-        '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li>' +
+        (PLAN.limitsEnabled ? '<li>' + esc(tr('Күніне 2 тегін ойын ⚡')) + '</li>' : '') +
         '<li>' + esc(tr('Деңгей мен жылдамдықты бастау алдында осы экранда таңдайсыз')) + '</li></ul>' }
   ];
 }
@@ -6897,6 +6898,9 @@ function vpRenderBest() {
   #fb-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
   #fb-send { font: inherit; font-size: 14px; padding: 7px 16px; border-radius: 8px; border: 0; background: #2A78D6; color: #fff; cursor: pointer; }
   #fb-thanks { display: none; margin: 4px 0 0; font-size: 14px; color: #2E7D4F; }
+  /* 15 минуттық сессия: пікір карточкасы ашық тұрғанда «✓ … аяқталды · Бастау →» карточкасы жасырын тұрады,
+     әйтпесе «Бастау» басылып, келесі жаттығу пікір карточкасын бірден жауып тастайды (пилотта 0 мәтінді пікір) */
+  body.fb-open #tez-ses-next { display: none !important; }
 </style>
 <div id="fb-sheet" role="dialog" aria-label="Пікір">
   <div id="fb-card">
@@ -6929,7 +6933,7 @@ function vpRenderBest() {
     bad:  ['Түсініксіз', 'Баяу жұмыс істеді', 'Тым қиын', 'Қате шықты', 'Қызықсыз']
   };
   const LABEL = { good: tr('Не ұнады? (міндетті емес)'), ok: tr('Не жақсарту керек? (міндетті емес)'), bad: tr('Не болды? (міндетті емес)') };
-  const st = { src: null, id: null, mood: null, tags: [], p: null, shownAt: 0, idle: null, watch: null };
+  const st = { src: null, c: { id: null }, mood: null, tags: [], p: null, shownAt: 0, idle: null, watch: null, sent: false, tagsDirty: false, tagTimer: null };
   const el = id => document.getElementById(id);
   const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
   const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -6937,13 +6941,33 @@ function vpRenderBest() {
   const uuid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
 
+  // тег/пікірді сақтау: жазба бар болса жаңартамыз, смайл жазбасы сақталмай қалса — толық жазба қосамыз
+  function persist(tags, comment) {
+    const c = st.c, src = st.src, mood = st.mood, ctx = st.ctx;    // c — осы карточканың жазбасы (келесі карточка өз жазбасын ашады)
+    st.p = Promise.resolve(st.p).then(() => {
+      if (c.id) return sb.from('feedback').update({ tags, comment: comment || null }).eq('id', c.id);
+      if (src && mood) {
+        c.id = uuid();
+        return sb.from('feedback').insert({ id: c.id, user_id: authUser.id, source: src, mood, tags, comment: comment || null, context: ctx || null })
+          .then(r => { if (r.error) { console.warn('feedback insert', r.error.message); c.id = null; } });
+      }
+    }).catch(e => console.warn('feedback save', e));
+    return st.p;
+  }
   function hide() {
-    clearTimeout(st.idle); clearInterval(st.watch);
+    clearTimeout(st.idle); clearInterval(st.watch); clearTimeout(st.tagTimer);
+    // «Жіберу» басылмай жабылса (✕, басқа экран), белгіленген тег пен жазылған мәтін жоғалмайды
+    if (st.src && st.mood && !st.sent) {
+      const comment = el('fb-txt').value.trim();
+      if (comment || st.tagsDirty) persist(st.tags.slice(), comment);
+    }
     el('fb-sheet').classList.remove('open');
+    document.body.classList.remove('fb-open');
     st.src = null;
   }
   function open(src, ctx) {
-    st.src = src; st.ctx = ctx || ''; st.id = null; st.mood = null; st.tags = []; st.p = null; st.shownAt = Date.now();
+    st.src = src; st.ctx = ctx || ''; st.c = { id: null }; st.mood = null; st.tags = []; st.p = null; st.shownAt = Date.now();
+    st.sent = false; st.tagsDirty = false; clearTimeout(st.tagTimer);
     el('fb-title').textContent = TITLE[src] || tr('Бұл жаттығу қалай болды?');
     el('fb-more').style.display = 'none';
     el('fb-thanks').style.display = 'none';
@@ -6951,6 +6975,7 @@ function vpRenderBest() {
     el('fb-txt').value = '';
     document.querySelectorAll('.fb-mood, .fb-chip').forEach(b => b.classList.remove('sel'));
     el('fb-sheet').classList.add('open');
+    document.body.classList.add('fb-open');
     clearTimeout(st.idle);
     st.idle = setTimeout(() => { if (!st.mood) hide(); }, IDLE_HIDE_MS);
     // оқушы басқа экранға өтіп кетсе, карточка бұрынғы экранда қалып қоймайды
@@ -6993,18 +7018,20 @@ function vpRenderBest() {
     st.mood = m;
     clearTimeout(st.idle);
     if (changed) {
+      if (st.tags.length) st.tagsDirty = true;     // басқа смайл: бұрын сақталған тегтер тазаланады
       st.tags = [];
       el('fb-more-label').textContent = LABEL[m];
       el('fb-chips').innerHTML = TAGS[m].map(t => '<button class="fb-chip" data-tag="' + t + '" onclick="fbChip(this)">' + tr(t) + '</button>').join('');
     }
     document.querySelectorAll('.fb-mood').forEach(b => b.classList.toggle('sel', b.dataset.m === m));
     el('fb-more').style.display = 'block';
-    if (!st.id) {
-      st.id = uuid();
-      const row = { id: st.id, user_id: authUser.id, source: st.src, mood: m, context: st.ctx || null };
-      st.p = sb.from('feedback').insert(row).then(r => { if (r.error) { console.warn('feedback insert', r.error.message); st.id = null; } }, e => { st.id = null; });
+    const c = st.c;
+    if (!c.id) {
+      c.id = uuid();
+      const row = { id: c.id, user_id: authUser.id, source: st.src, mood: m, context: st.ctx || null };
+      st.p = sb.from('feedback').insert(row).then(r => { if (r.error) { console.warn('feedback insert', r.error.message); c.id = null; } }, e => { c.id = null; });
     } else {
-      const id = st.id;
+      const id = c.id;
       st.p = Promise.resolve(st.p).then(() => sb.from('feedback').update({ mood: m }).eq('id', id)).catch(() => {});
     }
   };
@@ -7012,23 +7039,21 @@ function vpRenderBest() {
     btn.classList.toggle('sel');
     const t = btn.dataset.tag, i = st.tags.indexOf(t);
     if (i > -1) st.tags.splice(i, 1); else st.tags.push(t);
+    // тег басылған бойда сақталады («Жіберу» міндетті емес): жылдам басуларды бір сұрауға жинаймыз
+    st.tagsDirty = true;
+    clearTimeout(st.tagTimer);
+    st.tagTimer = setTimeout(() => { if (st.src && !st.sent && st.c.id) { st.tagsDirty = false; persist(st.tags.slice(), el('fb-txt').value.trim()); } }, 700);
   };
   window.fbSend = async function () {
     if (!st.mood) return;
     const comment = el('fb-txt').value.trim();
     const tags = st.tags.slice();
-    const src = st.src, mood = st.mood, ctx = st.ctx;
+    st.sent = true; clearTimeout(st.tagTimer);
     el('fb-more').style.display = 'none';
     el('fb-moods').style.display = 'none';
     el('fb-thanks').style.display = 'block';
-    try {
-      await st.p;
-      if (st.id && (tags.length || comment)) {
-        await sb.from('feedback').update({ tags, comment: comment || null }).eq('id', st.id);
-      } else if (!st.id) {
-        await sb.from('feedback').insert({ user_id: authUser.id, source: src, mood, tags, comment: comment || null, context: ctx || null });
-      }
-    } catch (e) { console.warn('feedback send', e); }
+    await st.p;
+    if (!st.c.id || tags.length || comment || st.tagsDirty) await persist(tags, comment);
     setTimeout(hide, 1800);
   };
 })();
