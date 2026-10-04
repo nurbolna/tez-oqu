@@ -191,6 +191,62 @@
   .w.hi { background: var(--rt-hi-bg); color: #1A0E00; border-radius: 0; }
   .w.hi.hi-l { border-top-left-radius: 3px; border-bottom-left-radius: 3px; }
   .w.hi.hi-r { border-top-right-radius: 3px; border-bottom-right-radius: 3px; }
+  /* Кітап құрылымы (TZB1): блоктар бағанның ішінде; беттерге бөлгіш (bkMeasurePages) осы стильдермен өлшейді */
+  .col > :first-child { margin-top: 0 !important; }
+  .bk-p { margin: 0 0 .55em; }
+  .bk-split { text-align-last: justify; }                       /* бағанның соңында бөлінген абзацтың соңғы жолы да тегіс */
+  .bk-split.bk-p, .bk-split.bk-li, .bk-split.bk-q { margin-bottom: 0; }
+  .bk-h2, .bk-h3 { font-weight: 700; text-align: left; hyphens: none; -webkit-hyphens: none; color: var(--rt-text); }
+  .bk-h2 { font-size: 1.3em; line-height: 1.45; margin: .9em 0 .5em; }
+  .bk-h3 { font-size: 1.07em; line-height: 1.6; margin: .7em 0 .35em; }
+  .bk-li { position: relative; padding-left: 1.3em; margin: 0 0 .25em; text-align: left; }
+  .bk-li:not(.bk-cont)::before { content: '•'; position: absolute; left: .35em; color: var(--rt-text-faint); }
+  .bk-q { font-style: italic; margin: 0 0 .55em 1.2em; }
+  .bk-cap { font-size: .8em; line-height: 1.6; text-align: center; color: var(--rt-text-faint); margin: 0 0 .7em; }
+  .bk-fig { margin: .35em 0 .75em; text-align: center; line-height: 0; }
+  .bk-fig img { display: inline-block; border-radius: 3px; cursor: zoom-in; }
+  .bk-fig.bk-txt { margin: .1em 0 .35em; }
+  .bk-fig.missing { line-height: 1.6; font-size: .75em; height: 3.2em; box-sizing: border-box; padding: .85em; color: var(--rt-text-faint); border: 1px dashed var(--rt-border); border-radius: 6px; }
+  .bk-inl { vertical-align: -0.3em; }
+  .bk-inl-missing { vertical-align: baseline; font-size: .8em; opacity: .55; }
+  .bk-fig { position: relative; }
+  /* Мазмұн (тараулар) — бетбелгілер панелінің қойындысы + кітап алғаш ашылғандағы терезе */
+  .bk-tabs { display: none; align-items: center; gap: 6px; position: sticky; top: -12px; z-index: 1; background: var(--rt-bg); margin: -12px 0 6px; padding: 12px 0 8px; }   /* панель айналғанда қойындылар көрініп тұрады */
+  .bk-tabs button { flex: 0 0 auto; background: none; border: 1px solid var(--rt-border); border-radius: 14px; padding: 4px 11px; font: inherit; color: var(--rt-text-muted); cursor: pointer; }
+  .bk-tabs button.on { background: #8B5E3C; border-color: #8B5E3C; color: #fff; }
+  .bk-tabs .bm-close { margin-left: auto; }
+  #pop-bookmarks.bk-has-toc .bk-tabs { display: flex; }
+  #pop-bookmarks.bk-has-toc .bm-head { display: none; }
+  #pop-bookmarks.bk-has-toc.bk-tab-toc #bookmarks-list { display: none; }
+  #pop-bookmarks:not(.bk-tab-toc) .bk-toc, #pop-bookmarks:not(.bk-has-toc) .bk-toc { display: none; }
+  .bk-toc-row { display: flex; align-items: baseline; gap: 8px; padding: 7px 6px; border-radius: 6px; cursor: pointer; color: var(--rt-text); line-height: 1.35; }
+  @media (hover: hover) { .bk-toc-row:hover { background: var(--rt-word-hover); } }
+  .bk-toc-row.cur { background: var(--rt-hi-bg); color: #1A0E00; }
+  .bk-toc-row.skip { color: var(--rt-text-faint); }
+  .bk-toc-row.part { font-weight: 600; }
+  .bk-toc-t { flex: 1; min-width: 0; }
+  .bk-toc-m { font-size: 11px; color: var(--rt-text-faint); white-space: nowrap; }
+  .bk-toc-row.cur .bk-toc-m { color: #5a3f22; }
+  .bk-toc-s { font-size: 10px; border: 1px solid var(--rt-border); border-radius: 6px; padding: 0 5px; white-space: nowrap; color: var(--rt-text-faint); }
+  .bk-ov { position: fixed; inset: 0; z-index: 55; background: rgba(44,26,14,.45); display: none; align-items: center; justify-content: center; padding: 16px; }
+  .bk-ov.show { display: flex; }
+  .bk-ov-card { background: var(--rt-bg); color: var(--rt-text); border: 1px solid var(--rt-border); border-radius: 14px; width: min(460px, 100%); max-height: min(640px, 88dvh); display: flex; flex-direction: column; box-shadow: 0 10px 34px rgba(44,26,14,.3); font-size: 14px; }
+  .bk-ov-head { padding: 18px 20px 6px; }
+  .bk-ov-head h3 { margin: 0; font-size: 20px; }
+  .bk-ov-head div { margin-top: 3px; font-size: 12px; color: var(--rt-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bk-ov-body { overflow-y: auto; padding: 6px 14px; flex: 1; }
+  .bk-ov-foot { padding: 12px 20px 18px; display: flex; gap: 10px; justify-content: flex-end; }
+  .bk-ov-foot button { font: inherit; border-radius: 9px; padding: 9px 16px; cursor: pointer; border: 1px solid var(--rt-border); background: none; color: var(--rt-text); }
+  .bk-ov-foot button.primary { background: #8B5E3C; border-color: #8B5E3C; color: #fff; }
+  .bk-end-msg { padding: 4px 20px 6px; color: var(--rt-text-muted); line-height: 1.5; }
+  @media (max-width: 700px) { .bk-tabs { top: -18px; margin-top: -18px; padding-top: 18px; } }
+  @media (max-width: 700px) { .bk-ov { align-items: flex-end; padding: 0; } .bk-ov-card { width: 100%; border-radius: 18px 18px 0 0; max-height: 86dvh; padding-bottom: env(safe-area-inset-bottom); } .bk-toc-row { padding: 10px 6px; } }
+  .bk-fig.on img { outline: 3px solid var(--rt-hi-bg); outline-offset: 4px; }
+  .bk-cd { position: absolute; top: 8px; right: 8px; background: var(--rt-hi-bg); color: #1A0E00; font: 600 13px/1 -apple-system, system-ui, sans-serif; border-radius: 12px; padding: 5px 10px; pointer-events: none; }
+  #bk-lb { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.9); display: none; overflow: auto; touch-action: pinch-zoom; }
+  #bk-lb img { display: block; max-width: 100vw; max-height: 100dvh; margin: auto; position: absolute; inset: 0; cursor: zoom-in; background: #fff; }
+  #bk-lb.zoom img { max-width: none; max-height: none; position: static; cursor: zoom-out; }
+  #bk-lb .bk-lb-x { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 16px; color: #fff; font-size: 30px; line-height: 1; cursor: pointer; z-index: 61; }
   #placeholder { color: var(--rt-text-faint); font-size: 18px; text-align: center; font-style: italic; padding: 60px 0; grid-column: 1/-1; }
 
 
@@ -936,6 +992,8 @@
   </div>
 
   <div id="pop-bookmarks" class="chrome-pop" style="width:270px;">
+    <div id="bk-tabs" class="bk-tabs"><button type="button" data-tab="toc">Мазмұн</button><button type="button" data-tab="bm">Бетбелгілер</button><i class="ti ti-x bm-close" onclick="closeAllPops()" aria-label="Жабу"></i></div>
+    <div id="bk-toc-list" class="bk-toc"></div>
     <div class="chrome-pop-label bm-head"><span>Бетбелгілер · <span id="bookmarks-count">0</span></span><i class="ti ti-x bm-close" onclick="closeAllPops()" aria-label="Жабу"></i></div>
     <div id="bookmarks-list"></div>
   </div>
@@ -1467,11 +1525,14 @@
 <script>I18N.apply();   /* статикалық HTML-дің орысша аудармасы: негізгі скрипттер DOM-дағы мәтінді оқымай тұрып */</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="book-import.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let words = [], pos = 0, playing = false, timer = null;
+// Кітап құрылымы (book-import.js → TezBookImport.deserialize): words тек сөздер, құрылым бөлек сөз аралықтарымен
+let bkBlocks = [], bkChapters = [], bkStructured = false;
 let currentFileName = '', autoSaveTimer = null, cloudSyncInterval = null, statsBasePos = 0;
 let currentBookPrivate = false;
 let pages = [], currentPage = 0, pageSpans = {};
@@ -1593,7 +1654,10 @@ const getIv = () => Math.round((AVG_WORDS_PER_CHUNK / getWPM()) * 60000);
    ══════════════════════════════════════════ */
 function cleanKazakhText(text) {
   const kazAlpha = 'а-яёА-ЯЁәіңқғүұөһӘІҢҚҒҮҰӨҺa-zA-Z';
-  text = text.replace(new RegExp('([' + kazAlpha + '])-\s+([' + kazAlpha + '])', 'g'), '$1$2');
+  // Бұрын мұнда «сөз- жалғасы» тасымалын біріктіретін replace тұратын, бірақ жолдағы '\s' 's' болып кетіп,
+  // ол «self-sufficient» → «selfufficient» етіп латын сөздерін бұзатын. Алып тасталды: сөз саны өзгермейді
+  // (ол тек бір сөздің ішінде жұмыс істейтін), сондықтан ескі кітаптардың сақталған позициясы сақталады.
+  // Жаңа (TZB1) кітаптар өз тазалағышымен өтеді: TezBookImport.cleanText.
   const tokens = text.split(/\s+/);
   const cleaned = [];
   for (let tok of tokens) {
@@ -1715,7 +1779,7 @@ function isSingleColumn() {
 
 function pageCacheKey(colW, colH, fontSize, fontFamily) {
   if (!currentFileName) return null;
-  return '__pagecache__' + currentFileName + '::' + colW + 'x' + colH + '|' + fontSize + '|' + fontFamily + '|' + words.length + '|v5|hy:' + hyphenationMode() + (isSingleColumn() ? '|1col' : '');
+  return '__pagecache__' + currentFileName + '::' + colW + 'x' + colH + '|' + fontSize + '|' + fontFamily + '|' + words.length + '|v5|hy:' + hyphenationMode() + (isSingleColumn() ? '|1col' : '') + (bkStructured ? '|bk1' : '');
 }
 
 let paginateRun = 0;      // bumped on every new pagination run; older runs see the change and stop
@@ -1755,6 +1819,8 @@ async function measureWordsPerPage(targetWord) {
       } catch(e) {}
     }
   }
+
+  if (bkStructured) return bkMeasurePages(myRun, colW, colH, cacheKey, targetWord);
 
   const probe = document.createElement('div');
   probe.style.cssText = `position:absolute;visibility:hidden;width:${colW}px;font-size:${curFontSize};line-height:2;text-align:justify;word-spacing:1px;font-family:${curFontFamily};white-space:normal;`;
@@ -1907,6 +1973,214 @@ async function measureWordsPerPage(targetWord) {
   return ready;
 }
 
+/* ══════════════════════════════════════════
+   КІТАП ҚҰРЫЛЫМЫ: блоктар → беттер (тек TZB1 кітаптары; ескі кітаптар жоғарыдағы бөлгішпен)
+   Бет шекарасы — курсор {bi, wi}: bkBlocks индексі + (мәтін блогында) басталатын сөз нөмірі.
+   Курсор керек, себебі қатар тұрған суреттердің арасында сөз жоқ, ал шекара солардың арасына түсуі мүмкін.
+   pages[i] = {start, col1End, end (сөз нөмірлері, бұрынғыдай), b:[bi,wi, bi,wi, bi,wi] (бет басы, 2-баған, бет соңы)}
+   ══════════════════════════════════════════ */
+const BK_TEXT = { p: 'bk-p', li: 'bk-li', q: 'bk-q', cap: 'bk-cap' };
+const BK_INL = /⟦i:(\d+)⟧/;          // сөздің ішіндегі сурет (сөздің өзі болуы да, ортасында тұруы да мүмкін)
+let bkImg = {};         // id → {url, w, h} — осы кітаптың суреттері (IndexedDB-ден, объект URL)
+let bkImgFor = null;    // bkImg қай кітапқа тиесілі
+
+// Кітаптың барлық суретін IndexedDB-ден оқып, өлшемін алу — бөлгіш суреттің биіктігін алдын ала білуі керек
+async function bkLoadImages(fileName) {
+  if (bkImgFor === fileName) return;
+  Object.values(bkImg).forEach(x => URL.revokeObjectURL(x.url));
+  bkImg = {}; bkImgFor = fileName;
+  try {
+    const db = await idbDB(), pre = IDB_IMG(fileName), range = IDBKeyRange.bound(pre, pre + '\uffff');
+    const [keys, blobs] = await Promise.all(['getAllKeys', 'getAll'].map(m => new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE)[m](range);
+      req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+    })));
+    const out = {};
+    await Promise.all(keys.map(async (k, i) => {
+      const blob = blobs[i]; if (!(blob instanceof Blob)) return;
+      let w = 0, h = 0;
+      try { const bm = await createImageBitmap(blob); w = bm.width; h = bm.height; bm.close && bm.close(); } catch(e) { return; }
+      out[k.slice(pre.length)] = { url: URL.createObjectURL(blob), w, h };
+    }));
+    if (bkImgFor === fileName) bkImg = out; else Object.values(out).forEach(x => URL.revokeObjectURL(x.url));
+  } catch(e) {}
+}
+
+function bkFontPx() { return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rt-font-size')) || 19; }
+// Суреттің көрсетілетін өлшемі (px): бағанның енінен, беттің жартысынан (бір бағанда 60%) аспайды.
+// T — бұзылған шрифтті мәтін жолағы: PDF-тен 2× қиылған, сондықтан шамамен мәтін өлшеміне келтіріледі.
+function bkFigSize(b, colW, colH) {
+  const info = bkImg[b.img]; if (!info || !info.w || !info.h) return null;
+  let w = info.w, h = info.h, maxH = colH * (isSingleColumn() ? 0.6 : 0.5);
+  if (b.txt) { const k = bkFontPx() / 26; w *= k; h *= k; maxH = colH * 0.9; }
+  const sc = Math.min(1, colW / w, maxH / h);
+  return { w: Math.floor(w * sc), h: Math.floor(h * sc) };
+}
+// Сөйлем ішіндегі сурет: биіктігі 1.25em, ені пропорциямен (бағаннан аспайды)
+function bkInlineImg(id, colW) {
+  const info = bkImg[id];
+  if (!info) {   // басқа құрылғы: сурет бұлтта сақталмайды — кішкентай белгі (ені тұрақты, беттерге бөлу өзгермейді)
+    const m = document.createElement('span'); m.className = 'bk-inl bk-inl-missing'; m.textContent = '🖼'; m.title = tr('Сурет бұл құрылғыда жоқ');
+    return m;
+  }
+  const img = document.createElement('img');
+  img.className = 'bk-inl'; img.alt = '';
+  const hPx = bkFontPx() * 1.25, ratio = info && info.h ? info.w / info.h : 3;
+  const w = Math.min(colW || 9999, hPx * ratio);
+  img.style.width = w + 'px'; img.style.height = (w / ratio) + 'px';
+  if (info) img.src = info.url;
+  return img;
+}
+// Бір сөздің span-ы (бет пен өлшегіш бірдей жасайды; бетте onclick қосылады)
+function bkWordSpan(i, colW) {
+  const s = document.createElement('span');
+  s.className = 'w';
+  if (BK_INL.test(words[i])) {
+    // мәтін бөліктері + суреттер, сөз бөлінбейді; тасымал белгілері қойылмайды
+    words[i].split(/(⟦i:\d+⟧)/).forEach(part => { const m = /^⟦i:(\d+)⟧$/.exec(part); if (m) s.appendChild(bkInlineImg(m[1], colW)); else if (part) s.appendChild(document.createTextNode(part)); });
+    s.appendChild(document.createTextNode(' '));
+  } else s.textContent = displayWord(i) + ' ';
+  return s;
+}
+// Блок элементі: мәтін блогы [from, to) сөздерімен; тақырып; сурет
+function bkBlockEl(bi, from, to, colW, colH, wordSpan) {
+  const b = bkBlocks[bi];
+  if (BK_TEXT[b.t]) {
+    const el = document.createElement('div');
+    el.className = BK_TEXT[b.t] + (from > b.start ? ' bk-cont' : '') + (to < b.end ? ' bk-split' : '');
+    for (let i = from; i < to; i++) el.appendChild(wordSpan(i));
+    return el;
+  }
+  if (b.t === 'h') {
+    const el = document.createElement('div');
+    el.className = b.lvl === 3 ? 'bk-h3' : 'bk-h2';
+    el.textContent = b.s.replace(/⟦i:\d+⟧/g, '').trim();
+    return el;
+  }
+  // сурет
+  const el = document.createElement('div'), sz = bkFigSize(b, colW, colH);
+  el.className = 'bk-fig' + (b.txt ? ' bk-txt' : '');
+  el.dataset.img = b.img; el.dataset.at = b.at;
+  if (sz) {
+    const img = document.createElement('img');
+    img.src = bkImg[b.img].url; img.alt = '';
+    img.style.width = sz.w + 'px'; img.style.height = sz.h + 'px';
+    el.appendChild(img);
+  } else { el.classList.add('missing'); el.textContent = '🖼 ' + tr('Сурет бұл құрылғыда жоқ'); }
+  return el;
+}
+const bkWordAt = (bi, wi) => { const b = bkBlocks[bi]; return !b ? words.length : (BK_TEXT[b.t] ? wi : b.at); };
+const bkCursorAfter = bi => { const n = bkBlocks[bi + 1]; return { bi: bi + 1, wi: n && BK_TEXT[n.t] ? n.start : 0 }; };
+
+// Бағанды c курсорынан бастап толтырады; соңғы курсорды қайтарады. el — өлшегіш (баған стилімен)
+function bkFillColumn(el, c, colW, colH, safeH, wordSpan) {
+  el.textContent = '';
+  const B = bkBlocks, items = [];          // items: {bi, el} — қосылған блоктар
+  const bottom = () => { const l = el.lastElementChild; return l ? l.offsetTop + l.offsetHeight : 0; };
+  let cur = { bi: c.bi, wi: c.wi };
+  while (cur.bi < B.length) {
+    const b = B[cur.bi], isText = !!BK_TEXT[b.t];
+    const from = isText ? cur.wi : 0, to = isText ? b.end : 0;
+    const node = bkBlockEl(cur.bi, from, to, colW, colH, wordSpan);
+    el.appendChild(node);
+    if (bottom() <= safeH) { items.push({ bi: cur.bi, node }); cur = bkCursorAfter(cur.bi); continue; }
+    if (!isText) {
+      if (!items.length) { items.push({ bi: cur.bi, node }); cur = bkCursorAfter(cur.bi); }   // бос бағанға бәрібір сыяды (өлшемі шектелген)
+      else el.removeChild(node);
+      break;
+    }
+    // Мәтін блогы сыймады: жол шекарасынан бөлеміз. Жолдар сараң (greedy) бөлінеді — алдыңғы жолдар
+    // кейінгі сөздерге тәуелді емес, сондықтан сөздердің орнынан қай жолға дейін сыятынын санаймыз, сосын нақты тексереміз.
+    const lineH = parseFloat(getComputedStyle(node).lineHeight) || bkFontPx() * 2;
+    const top0 = node.offsetTop, spans = node.children;
+    let k = 0;
+    while (k < spans.length) {
+      const line = Math.floor((spans[k].offsetTop - top0 + 1) / lineH);
+      if (top0 + (line + 1) * lineH > safeH + 0.5) break;
+      k++;
+    }
+    let part = null;
+    while (k > 0) {
+      el.removeChild(el.lastElementChild);
+      part = bkBlockEl(cur.bi, from, from + k, colW, colH, wordSpan);
+      el.appendChild(part);
+      if (bottom() <= safeH) break;
+      k--; part = null;
+    }
+    if (!part) {
+      if (el.lastElementChild && el.lastElementChild !== (items.length ? items[items.length - 1].node : null)) el.removeChild(el.lastElementChild);
+      if (!items.length) {                 // бос баған: кемінде бір сөз
+        el.appendChild(bkBlockEl(cur.bi, from, from + 1, colW, colH, wordSpan));
+        cur = from + 1 < b.end ? { bi: cur.bi, wi: from + 1 } : bkCursorAfter(cur.bi);
+        return cur;
+      }
+    } else { items.push({ bi: cur.bi, node: part }); cur = { bi: cur.bi, wi: from + k }; }
+    break;
+  }
+  // Тақырып бағанның соңында жалғыз қалмасын — келесі бағанға көшеді
+  if (cur.bi < B.length && items.length > 1) {
+    const last = items[items.length - 1];
+    if (B[last.bi].t === 'h' && last.bi !== cur.bi) { el.removeChild(last.node); cur = { bi: last.bi, wi: 0 }; }
+  }
+  return cur;
+}
+
+function bkMeasurePages(myRun, colW, colH, cacheKey, targetWord) {
+  const wrap = document.getElementById('columns-wrap');
+  const probe = document.createElement('div');
+  probe.className = 'col';                 // баған стильдері (шрифт, жол биіктігі, блоктар) дәл бірдей болуы үшін
+  probe.style.cssText = `position:absolute;visibility:hidden;left:0;top:0;width:${colW}px;height:auto;`;
+  wrap.appendChild(probe);
+  const safeH = colH - 4;
+  const twoCols = !isSingleColumn();
+  const wordSpan = i => bkWordSpan(i, colW);
+  const target = Math.max(0, Math.min(words.length - 1, targetWord === undefined ? pos : targetWord));
+  const newPages = [];
+  pages = newPages;
+  paginating = true;
+  let markReady;
+  const ready = new Promise(r => { markReady = r; });
+  let readyDone = false;
+  const SLICE_MS = 100;
+
+  (async () => {
+    try {
+      let c = bkBlocks.length ? { bi: 0, wi: BK_TEXT[bkBlocks[0].t] ? bkBlocks[0].start : 0 } : { bi: 0, wi: 0 };
+      let sliceStart = performance.now();
+      while (c.bi < bkBlocks.length) {
+        if (myRun !== paginateRun) { markReady(); return; }
+        const c1 = bkFillColumn(probe, c, colW, colH, safeH, wordSpan);
+        const c2 = twoCols && c1.bi < bkBlocks.length ? bkFillColumn(probe, c1, colW, colH, safeH, wordSpan) : c1;
+        newPages.push({ start: bkWordAt(c.bi, c.wi), col1End: bkWordAt(c1.bi, c1.wi), end: bkWordAt(c2.bi, c2.wi), b: [c.bi, c.wi, c1.bi, c1.wi, c2.bi, c2.wi] });
+        if (c2.bi === c.bi && c2.wi === c.wi) break;      // ілгерілемеді — тұйықталмас үшін
+        c = c2;
+        if (!readyDone && newPages[newPages.length - 1].end > target) {
+          readyDone = true;
+          markReady();
+          await new Promise(r => { const t = setTimeout(r, 60); requestAnimationFrame(() => { clearTimeout(t); setTimeout(r, 0); }); });
+          sliceStart = performance.now();
+          continue;
+        }
+        if (performance.now() - sliceStart > SLICE_MS) {
+          await new Promise(r => setTimeout(r, 0));
+          sliceStart = performance.now();
+          if (readyDone && myRun === paginateRun) updateUI();
+        }
+      }
+      if (myRun !== paginateRun) { markReady(); return; }
+      paginating = false;
+      if (cacheKey) idbSetText(cacheKey, JSON.stringify(newPages)).catch(() => {});
+      markReady();
+      updateUI();
+    } finally {
+      probe.remove();
+      if (myRun === paginateRun) paginating = false;
+      markReady();
+    }
+  })();
+  return ready;
+}
+
 // lineChunks: array of {start, end} word indices per 1/3 of visual line
 let lineChunks = [];
 let chunkIndex = 0;
@@ -1970,8 +2244,22 @@ function buildLineChunks() {
   lineChunks.sort((a, b) => a.start - b.start);
 }
 
+// Сөзді басу: сол сөздің бөлігіне (chunk) секіру
+function wordClick(ii) {
+  return () => {
+    bkFigClear();
+    const ci = lineChunks.findIndex(c => ii >= c.start && ii < c.end);
+    chunkIndex = ci >= 0 ? ci : 0;
+    pos = lineChunks[chunkIndex] ? lineChunks[chunkIndex].start : ii;
+    applyHighlight();
+    if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(lsSave, 2000);
+  };
+}
 function renderPage(pageIdx) {
   if (pageIdx < 0 || pageIdx >= pages.length) return;
+  bkFigClear();
   currentPage = pageIdx;
   const pg = pages[pageIdx];
   const col1 = document.getElementById('col1');
@@ -1986,23 +2274,32 @@ function renderPage(pageIdx) {
       s.className = 'w';
       s.textContent = displayWord(i) + ' ';
       s.dataset.idx = i;  // store word index for buildLineChunks
-      const ii = i;
-      s.onclick = () => {
-        const ci = lineChunks.findIndex(c => ii >= c.start && ii < c.end);
-        chunkIndex = ci >= 0 ? ci : 0;
-        pos = lineChunks[chunkIndex] ? lineChunks[chunkIndex].start : ii;
-        applyHighlight();
-        if (playing) { clearInterval(timer); timer = setInterval(step, getIv()); }
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(lsSave, 2000);
-      };
+      s.onclick = wordClick(i);
       container.appendChild(s);
       pageSpans[i] = s;
     }
   }
 
-  fill(col1, pg.start, pg.col1End);
-  fill(col2, pg.col1End, pg.end);
+  if (bkStructured && pg.b) {
+    // TZB1 кітабы: блоктар курсор аралығымен; сөздер бұрынғыдай span.w (onclick, pageSpans, lineChunks)
+    const colW = col1.clientWidth, ra = getComputedStyle(document.getElementById('reader-area'));
+    const colH = document.getElementById('reader-area').clientHeight - parseFloat(ra.paddingTop) - parseFloat(ra.paddingBottom);
+    const wordSpan = i => { const s = bkWordSpan(i, colW); s.dataset.idx = i; s.onclick = wordClick(i); pageSpans[i] = s; return s; };
+    const bkFill = (container, bi0, wi0, bi1, wi1) => {
+      for (let bi = bi0; bi < bkBlocks.length && (bi < bi1 || (bi === bi1 && BK_TEXT[bkBlocks[bi].t])); bi++) {
+        const b = bkBlocks[bi];
+        if (BK_TEXT[b.t]) {
+          const from = bi === bi0 ? wi0 : b.start, to = bi === bi1 ? wi1 : b.end;
+          if (from < to) container.appendChild(bkBlockEl(bi, from, to, colW, colH, wordSpan));
+        } else if (bi < bi1) container.appendChild(bkBlockEl(bi, 0, 0, colW, colH, wordSpan));
+      }
+    };
+    bkFill(col1, pg.b[0], pg.b[1], pg.b[2], pg.b[3]);
+    bkFill(col2, pg.b[2], pg.b[3], pg.b[4], pg.b[5]);
+  } else {
+    fill(col1, pg.start, pg.col1End);
+    fill(col2, pg.col1End, pg.end);
+  }
   updateUI();
 
   // Synchronous: reading getBoundingClientRect() inside buildLineChunks()
@@ -2130,26 +2427,110 @@ function updateUI() {
     document.getElementById('scrub-fill').style.width = clamped.toFixed(1) + '%';
     document.getElementById('scrub-thumb').style.left = clamped.toFixed(1) + '%';
   }
+  let chap = '';
+  if (bkHasToc()) {
+    // «3/13 тарау · …» — өткізілетін тарауда (мыс. Notes) нөмір көрсетілмейді
+    const r = bkReadable(), c = bkChapterAt(pos), i = r.indexOf(c);
+    if (i >= 0) chap = tr('{c}/{n} тарау', { c: i + 1, n: r.length }) + ' · ';
+    document.getElementById('scrub-label').title = c ? c.title : '';
+  }
   document.getElementById('scrub-label').textContent = pages.length
-    ? tr('{pct}% · {p} / {total} бет · ~{mins} мин', { pct: Math.round(clamped), p: currentPage + 1, total: paginating ? '…' : pages.length, mins })
+    ? chap + tr('{pct}% · {p} / {total} бет · ~{mins} мин', { pct: Math.round(clamped), p: currentPage + 1, total: paginating ? '…' : pages.length, mins })
     : '—';
 }
 
 /* ══════════════════════════════════════════
    PLAYBACK
    ══════════════════════════════════════════ */
+/* ── Маркер суретте 3 секунд тоқтайды (TZB1 кітабы). Суретті жасыл жиекпен белгілеп, «3 с → 2 с → 1 с» деп санап,
+   сосын өзі жалғасады. Space кері санауды кідіртеді, қайта басса — тоқтаған жерінен. Сурет «келесі сөзінің» алдында
+   тұрады (data-at), сондықтан маркер сол сөзге жетер алдында тоқтайды. Құрылғыда жоқ сурет (missing) — кідіріссіз. */
+const BK_FIG_PAUSE = 3000;
+let bkFig = null;                              // {el, left, before} — кідіріп тұрған сурет
+let bkFigSeen = { page: -1, keys: new Set() }; // осы бетте кідіріс жасалған суреттер
+function bkFigClear() {
+  if (!bkFig) return;
+  bkFig.el.classList.remove('on');
+  const cd = bkFig.el.querySelector('.bk-cd'); if (cd) cd.remove();
+  bkFig = null;
+}
+// Беттегі әлі өтілмеген, зәкірі [from, upto] аралығындағы бірінші сурет → кідіріс басталады (true).
+// from әдепкіде pos+1: ағымдағы бөліктің алдындағы (артта қалған) сурет қайта тоқтатпайды.
+function bkPauseOnFig(upto, from) {
+  if (from === undefined) from = pos + 1;
+  if (!bkStructured || !playing) return false;
+  if (bkFigSeen.page !== currentPage) bkFigSeen = { page: currentPage, keys: new Set() };
+  const el = [...document.querySelectorAll('#col1 .bk-fig, #col2 .bk-fig')].find(f =>
+    !f.classList.contains('missing') && !bkFigSeen.keys.has(f.dataset.img + '@' + f.dataset.at) && +f.dataset.at >= from && +f.dataset.at <= upto);
+  if (!el) return false;
+  bkFigSeen.keys.add(el.dataset.img + '@' + el.dataset.at);
+  clearInterval(timer);
+  Object.values(pageSpans).forEach(sp => sp.classList.remove('hi', 'hi-l', 'hi-r'));   // көз суретке ауыссын
+  el.classList.add('on');
+  const cd = document.createElement('span'); cd.className = 'bk-cd'; el.appendChild(cd);
+  bkFig = { el, left: BK_FIG_PAUSE, from, upto, before: +el.dataset.at <= pos };   // before: сурет ағымдағы бөліктің алдында (бет басы)
+  bkFigTick();
+  return true;
+}
+function bkFigTick() {
+  if (!bkFig) return;
+  const cd = bkFig.el.querySelector('.bk-cd'); if (cd) cd.textContent = Math.ceil(bkFig.left / 1000) + ' с';
+  clearInterval(timer);
+  timer = setTimeout(() => {
+    if (!bkFig) return;
+    bkFig.left -= 1000;
+    if (bkFig.left > 0) { bkFigTick(); return; }
+    const { before, from, upto } = bkFig;
+    bkFigClear();
+    if (bkPauseOnFig(upto, from)) return;                  // сол жердегі келесі сурет (мыс. қатар тұрған суреттер)
+    if (before) { _doHighlight(); clearInterval(timer); timer = setTimeout(step, getIv()); }   // бет басындағы сурет: енді бірінші бөлікті оқимыз
+    else step();
+  }, 1000);
+}
+
+// Суретті толық экранда көру: басса — үлкейту/кішірейту, ✕ / фон / Esc — жабу. Ашылғанда маркер тоқтайды.
+function bkLbEl() {
+  let lb = document.getElementById('bk-lb');
+  if (!lb) {
+    lb = document.createElement('div'); lb.id = 'bk-lb';
+    lb.innerHTML = '<span class="bk-lb-x">✕</span><img alt="">';
+    lb.addEventListener('click', e => { e.stopPropagation(); if (e.target.tagName === 'IMG') lb.classList.toggle('zoom'); else bkCloseLightbox(); });
+    document.body.appendChild(lb);
+  }
+  return lb;
+}
+const bkLbOpen = () => { const lb = document.getElementById('bk-lb'); return !!lb && lb.style.display === 'block'; };
+function bkOpenFigFromEvent(e) {
+  const img = e.target.closest && e.target.closest('.bk-fig img');
+  if (!img) return false;
+  e.stopPropagation();
+  if (playing) stop();
+  const lb = bkLbEl();
+  lb.querySelector('img').src = img.src;
+  lb.classList.remove('zoom');
+  lb.style.display = 'block';
+  return true;
+}
+function bkCloseLightbox() { const lb = document.getElementById('bk-lb'); if (lb) lb.style.display = 'none'; }
+
 function step() {
+  bkFigClear();   // кідіріс сырттан үзілсе (жылдамдық өзгерді т.б.), белгісі қалып қоймасын
   const advance = getChunk();
   if (chunkIndex + advance >= lineChunks.length) {
-    if (currentPage + 1 >= pages.length) { stop(); return; }
+    if (bkPauseOnFig(Infinity)) return;                     // беттің соңындағы суреттер
+    if (currentPage + 1 >= pages.length) { stop(); if (bkHasToc() && !bkEndAck) bkShowBookEnd(false); return; }
     const nextPage = currentPage + 1;
+    if (bkCheckBookEnd(pages[nextPage].start)) return;
     pos = pages[nextPage].start;
     chunkIndex = 0;
     renderPage(nextPage);
+    bkPauseOnFig(lineChunks.length ? lineChunks[0].start : Infinity, pages[nextPage].start);   // жаңа беттің басындағы суреттер
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(lsSave, 5000);
     return;
   }
+  if (bkPauseOnFig(lineChunks[chunkIndex + advance].start)) return;   // келесі бөліктің алдындағы сурет
+  if (bkCheckBookEnd(lineChunks[chunkIndex + advance].start)) return;
   chunkIndex += advance;
   pos = lineChunks[chunkIndex].start;
   _doHighlight();
@@ -2192,7 +2573,9 @@ function start() {
   acquireWakeLock();
   document.getElementById('play-btn').innerHTML = '<i class="ti ti-player-pause"></i>';
   // Use setTimeout chain instead of setInterval for accurate per-chunk timing
-  timer = setInterval(step, getIv());
+  clearInterval(timer);
+  if (bkFig) bkFigTick();                 // суреттегі кері санау тоқтаған жерінен жалғасады
+  else timer = setInterval(step, getIv());
   statsBasePos = pos;
   clearInterval(cloudSyncInterval);
   cloudSyncInterval = setInterval(periodicCheckpoint, 20000);
@@ -2351,6 +2734,37 @@ async function idbAllTextKeys() {
     });
   } catch(e) { return new Set(); }
 }
+// Кітап суреттері (book-import.js) — сол store-да Blob ретінде, кілті '__img__<файл>__<id>'.
+// Тек осы құрылғыда: бұлтқа тек мәтін кетеді. Квота жетпесе — суреттер сақталмайды, мәтін бәрібір сақталады.
+const IDB_IMG = name => '__img__' + name + '__';
+async function idbSetImages(fileName, images) {
+  if (!images || !images.size) return true;
+  try {
+    const db = await idbDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite'), st = tx.objectStore(IDB_STORE);
+      images.forEach((blob, id) => st.put(blob, IDB_IMG(fileName) + id));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    return true;
+  } catch(e) { await idbDeleteImages(fileName); return false; }
+}
+async function idbGetImage(fileName, id) { return idbGetText(IDB_IMG(fileName) + id); }
+async function idbDeleteImages(fileName) { return idbDeleteByPrefix(IDB_IMG(fileName)); }
+async function idbDeleteByPrefix(pre) {
+  try {
+    const db = await idbDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(IDBKeyRange.bound(pre, pre + '\uffff'));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e) {}
+}
+
 // One-time move of any pre-existing localStorage-cached texts into IndexedDB.
 async function migrateTextsToIndexedDB() {
   const FLAG = 'sr5_idb_migrated';
@@ -2419,7 +2833,10 @@ async function renderPrivateBooksList() {
       e.stopPropagation();
       if (confirm(tr('"{name}" жоясыз ба?', { name }))) {
         localStorage.removeItem(LS + name);
+        localStorage.removeItem(bkTocSeenKey(name));
         idbDeleteText(name);
+        idbDeleteImages(name);
+        idbDeleteByPrefix('__pagecache__' + name + '::');   // беттер кэші бұрын өшірілмей қалатын
         renderPrivateBooksList();
       }
     };
@@ -2466,8 +2883,12 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   currentBookPrivate = forcePrivate !== undefined ? forcePrivate : !!(savedProgress && savedProgress.private);
   const cloudBm = savedProgress ? savedProgress.bm : undefined; // undefined = бұлттан оқылмады
   bmCloudReadyFor = null;
-  const cleaned = cleanKazakhText(text);
-  words = cleaned.split(/\s+/).filter(w => w.length > 0);
+  // Ескі жалпақ мәтін → бір p блогы (words бұрынғымен дәл бірдей); TZB1 → тараулар + блоктар
+  // book-import.js жүктелмей қалса (желі/кэш) — ескі жолмен ашамыз, оқу бұзылмасын
+  const bk = window.TezBookImport ? TezBookImport.deserialize(text, cleanKazakhText)
+    : (w => ({ words: w, blocks: [{ t: 'p', start: 0, end: w.length }], chapters: [{ title: '', skip: false, depth: 0, start: 0, end: w.length }], structured: false }))(cleanKazakhText(text).split(/\s+/).filter(x => x.length > 0));
+  words = bk.words; bkBlocks = bk.blocks; bkChapters = bk.chapters; bkStructured = bk.structured;
+  bkEndAck = false;
   bookScript = detectBookScript(words);
   applyBookLang();
   pos = 0; stop();
@@ -2479,6 +2900,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   const resumeAt = (savedProgress && savedProgress.total === words.length && savedProgress.pos > 0) ? savedProgress.pos : 0;
   document.getElementById('col1').innerHTML = '<div id="placeholder">' + tr('Беттер дайындалуда…') + '</div>';
   setTimeout(async () => {
+    if (bkStructured) await bkLoadImages(fileName);   // бөлгіш суреттердің өлшемін білуі керек
     await measureWordsPerPage(resumeAt);
     if (!pages.length) { await new Promise(r => setTimeout(r, 120)); await measureWordsPerPage(resumeAt); }
     if (savedProgress && savedProgress.total === words.length && savedProgress.pos > 0) {
@@ -2495,63 +2917,14 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
     }
     renderPage(pageOf(pos));
     applyHighlight();
+    // Жаңа құрылымды кітап алғаш ашылды → мазмұн (позиция бірінші оқылатын тарауға қойылады)
+    let tocSeen = true; try { tocSeen = !!localStorage.getItem(bkTocSeenKey(fileName)); } catch(e) {}
+    if (bkHasToc() && !tocSeen && pos === 0) bkShowFirstToc();
     loadBookmark(fileName);
     if (currentBookId && cloudBm !== undefined) applyCloudBookmarks(currentBookId, cloudBm);
   }, 0);
 }
 
-
-/* ══════════════════════════════════════════
-   EPUB PARSER
-   ══════════════════════════════════════════ */
-async function parseEpub(arrayBuffer) {
-  const zip = await JSZip.loadAsync(arrayBuffer);
-
-  // 1. Find container.xml to get OPF path
-  const containerXml = await zip.file('META-INF/container.xml').async('string');
-  const parser = new DOMParser();
-  const containerDoc = parser.parseFromString(containerXml, 'application/xml');
-  const opfPath = containerDoc.querySelector('rootfile').getAttribute('full-path');
-  const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
-
-  // 2. Parse OPF to get spine order
-  const opfXml = await zip.file(opfPath).async('string');
-  const opfDoc = parser.parseFromString(opfXml, 'application/xml');
-
-  // Get manifest items
-  const manifest = {};
-  opfDoc.querySelectorAll('manifest item').forEach(item => {
-    manifest[item.getAttribute('id')] = {
-      href: item.getAttribute('href'),
-      type: item.getAttribute('media-type')
-    };
-  });
-
-  // Get spine order
-  const spineItems = [];
-  opfDoc.querySelectorAll('spine itemref').forEach(ref => {
-    const id = ref.getAttribute('idref');
-    if (manifest[id]) spineItems.push(manifest[id].href);
-  });
-
-  // 3. Extract text from each spine item in order
-  let fullText = '';
-  for (const href of spineItems) {
-    const fullHref = opfDir + href;
-    const file = zip.file(fullHref) || zip.file(href);
-    if (!file) continue;
-    try {
-      const html = await file.async('string');
-      const doc = parser.parseFromString(html, 'application/xhtml+xml');
-      // Remove script, style tags
-      doc.querySelectorAll('script, style').forEach(el => el.remove());
-      // Get text content
-      const body = doc.querySelector('body');
-      if (body) fullText += body.textContent + ' ';
-    } catch(e) { continue; }
-  }
-  return fullText;
-}
 
 /* ══════════════════════════════════════════
    FILE INPUT
@@ -2595,25 +2968,48 @@ async function confirmSaveChoice(wantsPrivate) {
 
 async function processUpload(file, wantsPrivate) {
   showReaderView();
-  let rawText = '';
-  if (file.name.endsWith('.txt')) {
-    rawText = await file.text();
-  } else if (file.name.endsWith('.pdf')) {
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const pg = await pdf.getPage(i);
-      rawText += (await pg.getTextContent()).items.map(x => x.str).join(' ') + ' ';
+  const lower = file.name.toLowerCase();
+  let text, loadText;   // text — сақталатын/бұлтқа жүктелетін мәтін; loadText — loadWords-қа берілетіні
+  try {
+    if (lower.endsWith('.pdf') || lower.endsWith('.epub')) {
+      // EPUB/PDF → тараулар, тақырыптар, тізімдер, суреттер (book-import.js) → TZB1 мәтін + суреттер IndexedDB-де
+      bkImportProgress({ stage: 'text', done: 0, total: 1 });
+      const book = await TezBookImport.parse(file, bkImportProgress);
+      if (book.scanned) {
+        alert(tr('Бұл PDF сурет түрінде сканерленген — ішінде мәтін жоқ, сондықтан оны оқу мүмкін емес. EPUB нұсқасын немесе мәтіні бар PDF жүктеп көріңіз.'));
+        document.getElementById('file-input').value = '';
+        showDashboard();
+        return;
+      }
+      text = loadText = TezBookImport.serialize(book);
+      await idbDeleteImages(file.name);                     // сол атпен қайта жүктелсе — ескі суреттер қалмасын
+      await idbSetImages(file.name, book.images);
+      if (bkImgFor === file.name) bkImgFor = null;          // суреттер кэшін қайта оқиды
+    } else {
+      const rawText = await file.text();
+      text = cleanKazakhText(rawText); loadText = rawText;  // .txt — бұрынғыдай
     }
-  } else if (file.name.endsWith('.epub')) {
-    rawText = await parseEpub(await file.arrayBuffer());
+  } catch(e) {
+    alert(tr('Файлды оқу мүмкін болмады. Файл бүлінген немесе қолдау көрсетілмейтін түрде болуы мүмкін.'));
+    document.getElementById('file-input').value = '';
+    showDashboard();
+    return;
   }
-  const cleanedText = cleanKazakhText(rawText);
-  await lsSaveText(file.name, cleanedText);
-  loadWords(rawText, file.name, lsLoadProgress(file.name), wantsPrivate);
+  await lsSaveText(file.name, text);
+  loadWords(loadText, file.name, lsLoadProgress(file.name), wantsPrivate);
   lsSave(); // persist the private flag right away, don't rely on the next autosave
   document.getElementById('file-input').value = '';
 
-  if (authUser && !wantsPrivate) uploadBookToCloud(file.name, cleanedText).catch(() => {});
+  if (authUser && !wantsPrivate) uploadBookToCloud(file.name, text).catch(() => {});
+}
+// Импорт прогресі: PDF-те алдымен мәтін+графика (≈85%), сосын суреттерді қию
+let bkImportPct = -1;
+function bkImportProgress(p) {
+  const pct = p.stage === 'images' ? 85 + Math.round(15 * p.done / Math.max(1, p.total)) : Math.round(85 * p.done / Math.max(1, p.total));
+  if (pct === bkImportPct && document.getElementById('placeholder')) return;   // бетті тек пайыз өзгергенде жаңартамыз
+  bkImportPct = pct;
+  document.getElementById('col1').innerHTML = '<div id="placeholder">' + tr('Кітап дайындалып жатыр… {pct}%', { pct: Math.min(100, pct) }) + '</div>';
+  document.getElementById('col2').innerHTML = '';
 }
 
 /* ══════════════════════════════════════════
@@ -2635,6 +3031,7 @@ function closeAllPops() {
 document.getElementById('reader-area').addEventListener('click', (e) => {
   if (swipeHandledThisGesture) { swipeHandledThisGesture = false; return; }
   if (!words.length || e.target.closest('.w')) return;
+  if (bkOpenFigFromEvent(e)) return;
   toggleFS();
 });
 
@@ -2661,6 +3058,7 @@ readerAreaEl.addEventListener('click', (e) => {
   e.stopPropagation(); // on touch this handler owns the tap: word taps no longer fire
   if (lpFired) { lpFired = false; return; }
   if (document.querySelector('.chrome-pop.show')) { closeAllPops(); return; }
+  if (bkOpenFigFromEvent(e)) return;     // суретті басу — толық экран көрініс (бет ауыстырмайды)
   const r = readerAreaEl.getBoundingClientRect();
   const x = (e.clientX - r.left) / r.width;
   if (x < 0.28) goPage(currentPage - 1);
@@ -2732,13 +3130,17 @@ document.getElementById('toc-btn').addEventListener('click', (e) => {
   const pop = document.getElementById('pop-bookmarks');
   const wasOpen = pop.classList.contains('show');
   closeAllPops();
-  if (!wasOpen) { renderBookmarksPanel(); pop.classList.add('show'); }
+  if (!wasOpen) {
+    if (bkHasToc()) pop.classList.add('bk-tab-toc'); else pop.classList.remove('bk-tab-toc');
+    renderBookmarksPanel(); pop.classList.add('show'); renderTocPanel();   // көрінгеннен кейін — ағымдағы тарауға айналдыру үшін
+  }
 });
 document.querySelectorAll('.chrome-pop').forEach(p => p.addEventListener('click', e => e.stopPropagation()));
 document.getElementById('chrome-top-actions').addEventListener('click', e => e.stopPropagation());
 document.addEventListener('click', () => closeAllPops());
 
 document.addEventListener('keydown', e => {
+  if (bkLbOpen()) { if (e.code === 'Escape' || e.code === 'Space') { e.preventDefault(); bkCloseLightbox(); } return; }
   if (e.code === 'Space')      { e.preventDefault(); togglePlay(); }
   if (e.code === 'ArrowLeft')  goPage(currentPage - 1);
   if (e.code === 'ArrowRight') goPage(currentPage + 1);
@@ -2798,7 +3200,7 @@ function currentPageBookmarks() {
 }
 
 function addBookmarkHere() {
-  const snippet = words.slice(pos, pos + 8).join(' ');
+  const snippet = words.slice(pos, pos + 8).map(w => w.replace(/⟦i:\d+⟧/g, '…')).filter(w => w !== '…').join(' ');   // сурет белгісі (⟦i:N⟧) үзіндіге кірмейді
   bookmarks.push({ pos, createdAt: Date.now(), snippet });
   bookmarks.sort((a, b) => a.pos - b.pos);
   saveBookmarks();
@@ -2858,6 +3260,107 @@ function timeAgoShort(ts) {
   if (hrs < 24) return tr('{n} сағат бұрын', { n: hrs });
   const days = Math.round(hrs / 24);
   return days === 1 ? tr('кеше') : tr('{n} күн бұрын', { n: days });
+}
+
+/* ══════════════════════════════════════════
+   МАЗМҰН (тараулар) — тек TZB1 кітабы, тарау саны > 1
+   ══════════════════════════════════════════ */
+const bkHasToc = () => bkStructured && bkChapters.length > 1;
+// «Оқылатын» тараулар: өткізілмейтін және ішінде сөзі бар (Part One сияқты бос бөлім атаулары санға кірмейді)
+const bkReadable = () => bkChapters.filter(c => !c.skip && c.end > c.start);
+function bkChapterAt(p) { let cur = null; for (const c of bkChapters) { if (c.start <= p && c.end > c.start) cur = c; } return cur; }
+// Оқу осы сөзде бітеді: соңғы оқылатын тараудан кейін тек өткізілетін тараулар (Notes, Acknowledgments) қалса
+function bkReadEnd() { const r = bkReadable(); return r.length ? r[r.length - 1].end : words.length; }
+let bkEndAck = false;   // «Кітап аяқталды» хабарынан кейін «Жалғастыру» басылды — қайта тоқтатпаймыз
+
+function bkTocHtml() {
+  const cur = bkChapterAt(pos), wpm = getWPM();
+  return bkChapters.map((c, i) => {
+    const n = c.end - c.start, part = !c.skip && n < 60 && bkChapters[i + 1] && bkChapters[i + 1].depth > c.depth;
+    const meta = c.skip ? '<span class="bk-toc-s">' + tr('өткізіледі') + '</span>'
+      : (n ? '<span class="bk-toc-m">' + tr('≈{n} мин', { n: Math.max(1, Math.round(n / wpm)) }) + '</span>' : '');
+    return '<div class="bk-toc-row' + (c.skip ? ' skip' : '') + (c === cur ? ' cur' : '') + (part ? ' part' : '') + '" data-i="' + i + '" style="padding-left:' + (6 + c.depth * 16) + 'px">' +
+      '<span class="bk-toc-t">' + escapeHtml(c.title || tr('Бөлім')) + '</span>' + meta + '</div>';
+  }).join('');
+}
+// Беттер фонда әлі есептеліп жатса, p сөзі тұрған бет дайын болғанша күтеміз (әйтпесе pageOf 0-бетті қайтарады)
+async function bkWaitPagesCover(p) {
+  for (let i = 0; i < 600 && paginating && (!pages.length || pages[pages.length - 1].end <= p); i++) await new Promise(r => setTimeout(r, 50));
+}
+async function bkGotoChapter(i) {
+  const c = bkChapters[i]; if (!c) return;
+  if (playing) stop();
+  const target = Math.min(c.start, Math.max(0, words.length - 1)), forFile = currentFileName;
+  await bkWaitPagesCover(target);
+  if (currentFileName !== forFile) return;
+  pos = target;
+  renderPage(pageOf(pos));          // renderPage маркер бөлігін pos бойынша табады
+  clearTimeout(autoSaveTimer); autoSaveTimer = setTimeout(lsSave, 1000);
+}
+function renderTocPanel() {
+  const pop = document.getElementById('pop-bookmarks');
+  pop.classList.toggle('bk-has-toc', bkHasToc());
+  if (!bkHasToc()) return;
+  document.getElementById('bk-toc-list').innerHTML = bkTocHtml();
+  document.querySelectorAll('#bk-tabs button').forEach(b => b.classList.toggle('on', (b.dataset.tab === 'toc') === pop.classList.contains('bk-tab-toc')));
+  const curRow = document.querySelector('#bk-toc-list .bk-toc-row.cur');
+  if (curRow) curRow.scrollIntoView({ block: 'center' });
+}
+document.getElementById('bk-tabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]'); if (!b) return;
+  document.getElementById('pop-bookmarks').classList.toggle('bk-tab-toc', b.dataset.tab === 'toc');
+  renderTocPanel();
+});
+document.getElementById('bk-toc-list').addEventListener('click', e => {
+  const row = e.target.closest('.bk-toc-row'); if (!row) return;
+  closeAllPops();
+  bkGotoChapter(+row.dataset.i);
+});
+
+// Модаль терезелер (кітап алғаш ашылғанда — мазмұн; оқу біткенде — «Кітап аяқталды»)
+function bkOverlay(id, html) {
+  let ov = document.getElementById(id);
+  if (!ov) { ov = document.createElement('div'); ov.id = id; ov.className = 'bk-ov'; document.body.appendChild(ov); }
+  ov.innerHTML = '<div class="bk-ov-card">' + html + '</div>';
+  ov.onclick = e => { if (e.target === ov) ov.classList.remove('show'); };
+  ov.classList.add('show');
+  return ov;
+}
+const bkTocSeenKey = name => 'sr5_toc_seen_' + name;
+// Жаңа кітап алғаш ашылғанда: мазмұн тізімі. Позиция бірінші оқылатын тарауға қойылады; маркер өзі басталмайды.
+async function bkShowFirstToc() {
+  const first = bkReadable()[0], forFile = currentFileName;
+  if (first) { await bkWaitPagesCover(first.start); if (currentFileName !== forFile) return; pos = first.start; renderPage(pageOf(pos)); }
+  const ov = bkOverlay('bk-toc-ov',
+    '<div class="bk-ov-head"><h3>' + tr('Мазмұн') + '</h3><div>' + escapeHtml(currentFileName || '') + '</div></div>' +
+    '<div class="bk-ov-body">' + bkTocHtml() + '</div>' +
+    '<div class="bk-ov-foot"><button type="button" class="primary" data-act="start">' + tr('Оқуды бастау') + '</button></div>');
+  ov.querySelector('.bk-ov-body').addEventListener('click', e => {
+    const row = e.target.closest('.bk-toc-row'); if (!row) return;
+    ov.classList.remove('show'); bkGotoChapter(+row.dataset.i);
+  });
+  ov.querySelector('[data-act="start"]').onclick = () => ov.classList.remove('show');
+  try { localStorage.setItem(bkTocSeenKey(currentFileName), '1'); } catch(e) {}
+}
+// Оқылатын бөлім бітті: маркер тоқтайды, хабар шығады
+function bkShowBookEnd(canContinue) {
+  if (playing) stop();
+  const ov = bkOverlay('bk-end-ov',
+    '<div class="bk-ov-head"><h3>' + tr('Кітап аяқталды 🎉') + '</h3></div>' +
+    '<div class="bk-end-msg">' + tr('Жарайсыз! Кітаптың негізгі бөлімін оқып шықтыңыз.') + (canContinue ? ' ' + tr('Әрі қарай тек қосымша бөлімдер (ескертпелер, алғыс) қалды.') : '') + '</div>' +
+    '<div class="bk-ov-foot">' + (canContinue ? '<button type="button" data-act="cont">' + tr('Жалғастыру') + '</button>' : '') +
+    '<button type="button" class="primary" data-act="close">' + tr('Жабу') + '</button></div>');
+  const cont = ov.querySelector('[data-act="cont"]');
+  if (cont) cont.onclick = () => { bkEndAck = true; ov.classList.remove('show'); start(); };
+  ov.querySelector('[data-act="close"]').onclick = () => ov.classList.remove('show');
+}
+// step() шақырады: маркер target сөзіне өтпек — оқу шегінен асса, тоқтатып хабар шығарамыз (true)
+function bkCheckBookEnd(target) {
+  if (!bkHasToc() || bkEndAck) return false;
+  const end = bkReadEnd();
+  if (end >= words.length || pos >= end || target < end) return false;
+  bkShowBookEnd(true);
+  return true;
 }
 
 function renderBookmarksPanel() {
@@ -4880,7 +5383,7 @@ async function uploadBookToCloud(filename, text) {
     if (!signed.uploadUrl) return;
     await fetch(signed.uploadUrl, { method: 'PUT', body: bytes });
 
-    const totalWords = text.split(/\s+/).filter(w => w).length;
+    const totalWords = TezBookImport.countWords(text, cleanKazakhText);   // loadWords-тағы words.length-пен әрқашан бірдей
     const { data, error } = await sb.from('books').upsert({
       user_id: session.user.id,
       filename: filename,

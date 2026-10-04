@@ -2,10 +2,10 @@
 // - App shell (index.html, manifest, icons): network-first, cache fallback → updates arrive immediately, still opens offline.
 // - Static CDN libs (tabler icons, pdf.js, jszip, supabase-js): stale-while-revalidate.
 // - Everything else (Supabase API/auth, Backblaze B2, Telegram, POST requests): never touched.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = 'tez-oqu-shell-' + VERSION;
 const LIB_CACHE = 'tez-oqu-libs-' + VERSION;
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const SHELL = ['./', './index.html', './book-import.js', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 const LIB_HOSTS = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
 
 self.addEventListener('install', (e) => {
