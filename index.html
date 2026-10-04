@@ -208,6 +208,12 @@
   .bk-fig.bk-txt { margin: .1em 0 .35em; }
   .bk-fig.missing { line-height: 1.6; font-size: .75em; height: 3.2em; box-sizing: border-box; padding: .85em; color: var(--rt-text-faint); border: 1px dashed var(--rt-border); border-radius: 6px; }
   .bk-inl { vertical-align: -0.3em; }
+  #bk-import { max-width: 440px; margin: 12vh auto 0; font-style: normal; }
+  .bk-imp-title { font-size: 19px; color: var(--rt-text); margin-bottom: 14px; }
+  .bk-imp-bar { height: 6px; border-radius: 3px; background: var(--rt-border); overflow: hidden; margin: 0 auto 18px; max-width: 320px; }
+  #bk-imp-fill { height: 100%; width: 0; background: #8B5E3C; border-radius: 3px; transition: width .3s; }
+  .bk-imp-sub { font-size: 15px; line-height: 1.6; color: var(--rt-text-muted); }
+  .bk-imp-hint { font-size: 13px; line-height: 1.5; color: var(--rt-text-faint); margin-top: 10px; }
   .bk-inl-missing { vertical-align: baseline; font-size: .8em; opacity: .55; }
   .bk-fig { position: relative; }
   /* Мазмұн (тараулар) — бетбелгілер панелінің қойындысы + кітап алғаш ашылғандағы терезе */
@@ -2883,6 +2889,7 @@ function loadWords(text, fileName, savedProgress, forcePrivate) {
   currentBookPrivate = forcePrivate !== undefined ? forcePrivate : !!(savedProgress && savedProgress.private);
   const cloudBm = savedProgress ? savedProgress.bm : undefined; // undefined = бұлттан оқылмады
   bmCloudReadyFor = null;
+  document.getElementById('col1').style.gridColumn = '';   // импорт экраны бағанды созған болса
   // Ескі жалпақ мәтін → бір p блогы (words бұрынғымен дәл бірдей); TZB1 → тараулар + блоктар
   // book-import.js жүктелмей қалса (желі/кэш) — ескі жолмен ашамыз, оқу бұзылмасын
   const bk = window.TezBookImport ? TezBookImport.deserialize(text, cleanKazakhText)
@@ -2978,6 +2985,7 @@ async function processUpload(file, wantsPrivate) {
       if (book.scanned) {
         alert(tr('Бұл PDF сурет түрінде сканерленген — ішінде мәтін жоқ, сондықтан оны оқу мүмкін емес. EPUB нұсқасын немесе мәтіні бар PDF жүктеп көріңіз.'));
         document.getElementById('file-input').value = '';
+        document.getElementById('col1').style.gridColumn = '';
         showDashboard();
         return;
       }
@@ -2992,6 +3000,7 @@ async function processUpload(file, wantsPrivate) {
   } catch(e) {
     alert(tr('Файлды оқу мүмкін болмады. Файл бүлінген немесе қолдау көрсетілмейтін түрде болуы мүмкін.'));
     document.getElementById('file-input').value = '';
+    document.getElementById('col1').style.gridColumn = '';
     showDashboard();
     return;
   }
@@ -3004,12 +3013,27 @@ async function processUpload(file, wantsPrivate) {
 }
 // Импорт прогресі: PDF-те алдымен мәтін+графика (≈85%), сосын суреттерді қию
 let bkImportPct = -1;
+// Импорт экраны: не болып жатқанын түсіндіреді (үлкен PDF 6–8 с, телефонда одан да ұзақ). Бірінші шақыруда салынады,
+// кейін тек пайыз бен жолақ жаңартылады.
 function bkImportProgress(p) {
-  const pct = p.stage === 'images' ? 85 + Math.round(15 * p.done / Math.max(1, p.total)) : Math.round(85 * p.done / Math.max(1, p.total));
-  if (pct === bkImportPct && document.getElementById('placeholder')) return;   // бетті тек пайыз өзгергенде жаңартамыз
+  const pct = Math.min(100, p.stage === 'images' ? 85 + Math.round(15 * p.done / Math.max(1, p.total)) : Math.round(85 * p.done / Math.max(1, p.total)));
+  let box = document.getElementById('bk-import');
+  if (!box) {
+    bkImportPct = -1;
+    document.getElementById('col2').innerHTML = '';
+    document.getElementById('col1').style.gridColumn = '1 / -1';   // екі бағанды жайда — беттің ортасында; loadWords қалпына келтіреді
+    document.getElementById('col1').innerHTML =
+      '<div id="placeholder"><div id="bk-import">' +
+        '<div class="bk-imp-title"><span id="bk-imp-text"></span></div>' +
+        '<div class="bk-imp-bar"><div id="bk-imp-fill"></div></div>' +
+        '<div class="bk-imp-sub">' + tr('Кітапты ыңғайлы оқу үшін оны тарауларға, тақырыптарға және суреттерге бөліп жатырмыз. Сәл күте тұрыңыз.') + '</div>' +
+        '<div class="bk-imp-hint">' + tr('Бетті жаппаңыз: басқа бетке ауыссаңыз, дайындау баяулайды.') + '</div>' +
+      '</div></div>';
+  }
+  if (pct === bkImportPct) return;   // бетті тек пайыз өзгергенде жаңартамыз
   bkImportPct = pct;
-  document.getElementById('col1').innerHTML = '<div id="placeholder">' + tr('Кітап дайындалып жатыр… {pct}%', { pct: Math.min(100, pct) }) + '</div>';
-  document.getElementById('col2').innerHTML = '';
+  document.getElementById('bk-imp-text').textContent = tr('Кітап дайындалып жатыр… {pct}%', { pct });
+  document.getElementById('bk-imp-fill').style.width = pct + '%';
 }
 
 /* ══════════════════════════════════════════
