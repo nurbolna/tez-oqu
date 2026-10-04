@@ -2984,7 +2984,7 @@ async function confirmSaveChoice(wantsPrivate) {
 async function processUpload(file, wantsPrivate) {
   showReaderView();
   const lower = file.name.toLowerCase();
-  let text, loadText;   // text — сақталатын/бұлтқа жүктелетін мәтін; loadText — loadWords-қа берілетіні
+  let text, loadText, images = null;   // text — сақталатын/бұлтқа жүктелетін мәтін; loadText — loadWords-қа берілетіні; images — кітап суреттері
   try {
     if (lower.endsWith('.pdf') || lower.endsWith('.epub')) {
       // EPUB/PDF → тараулар, тақырыптар, тізімдер, суреттер (book-import.js) → TZB1 мәтін + суреттер IndexedDB-де
@@ -3000,6 +3000,7 @@ async function processUpload(file, wantsPrivate) {
       text = loadText = TezBookImport.serialize(book);
       await idbDeleteImages(file.name);                     // сол атпен қайта жүктелсе — ескі суреттер қалмасын
       await idbSetImages(file.name, book.images);
+      images = book.images;
       if (bkImgFor === file.name) bkImgFor = null;          // суреттер кэшін қайта оқиды
     } else {
       const rawText = await file.text();
@@ -3017,7 +3018,7 @@ async function processUpload(file, wantsPrivate) {
   lsSave(); // persist the private flag right away, don't rely on the next autosave
   document.getElementById('file-input').value = '';
 
-  if (authUser && !wantsPrivate) uploadBookToCloud(file.name, text).catch(() => {});
+  if (authUser && !wantsPrivate) uploadBookToCloud(file.name, text, images).catch(() => {});
 }
 // Импорт прогресі: PDF-те алдымен мәтін+графика (≈85%), сосын суреттерді қию
 let bkImportPct = -1;
@@ -5386,6 +5387,7 @@ async function openCloudBook(book) {
       text = await textRes.text();
       await lsSaveText(book.filename, text);
     }
+    await bkEnsureCloudImages(book.filename, text);   // басқа құрылғыда жүктелген кітаптың суреттері
 
     loadWords(text, book.filename, savedProgress);
     currentBookId = book.id;
@@ -5400,11 +5402,70 @@ async function openCloudBook(book) {
   }
 }
 
-async function uploadBookToCloud(filename, text) {
+// Кітап суреттері бұлтта: бір zip-архив (B2, b2-sign 'zip' кеңейтімін қабылдайды — 8-нұсқа, 2026-10-04).
+// Архивтің кілті TZB1 мәтінінің екінші жолында: «#IMG|books/<user>/<uuid>.zip» (deserialize бұл жолды елемейді) —
+// сондықтан Supabase-те жаңа баған керек емес. Басқа құрылғыда openCloudBook архивті жүктеп, суреттерді IndexedDB-ге салады.
+const BK_IMG_LINE = /^@TZB1\n#IMG\|([^\n]+)\n/;
+async function b2Sign(session, body) {
+  const res = await fetch(SUPABASE_URL + '/functions/v1/b2-sign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token, 'apikey': SUPABASE_ANON_KEY },
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+const BK_IMG_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
+const BK_IMG_MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+async function bkImagesZip(images) {
+  const zip = new JSZip();
+  images.forEach((blob, id) => zip.file(id + '.' + (BK_IMG_EXT[blob.type] || 'jpg'), blob));
+  return zip.generateAsync({ type: 'blob', compression: 'STORE' });   // JPEG/PNG онсыз да сығылған
+}
+async function bkUnzipImages(blob) {
+  const zip = await JSZip.loadAsync(blob), out = new Map();
+  await Promise.all(Object.values(zip.files).filter(f => !f.dir).map(async f => {
+    const m = /^(.+)\.([a-z0-9]+)$/i.exec(f.name); if (!m) return;
+    out.set(m[1], new Blob([await f.async('arraybuffer')], { type: BK_IMG_MIME[m[2].toLowerCase()] || 'image/jpeg' }));
+  }));
+  return out;
+}
+// Басқа құрылғы: мәтінде архив кілті бар, ал суреттер IndexedDB-де жоқ → архивті жүктеп, суреттерді сақтаймыз
+async function bkEnsureCloudImages(fileName, text) {
+  const m = BK_IMG_LINE.exec(text || ''); if (!m) return;
+  try {
+    const db = await idbDB(), pre = IDB_IMG(fileName);
+    const have = await new Promise((resolve, reject) => {
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).count(IDBKeyRange.bound(pre, pre + '\uffff'));
+      req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+    });
+    if (have) return;
+    document.getElementById('col1').innerHTML = '<div id="placeholder">' + tr('Кітаптың суреттері жүктелуде…') + '</div>';
+    const { data: { session } } = await sb.auth.getSession(); if (!session) return;
+    const signed = await b2Sign(session, { action: 'download', key: m[1] });
+    if (!signed.downloadUrl) return;
+    const zipBlob = await (await fetch(signed.downloadUrl)).blob();
+    await idbSetImages(fileName, await bkUnzipImages(zipBlob));
+    if (bkImgFor === fileName) bkImgFor = null;
+  } catch(e) {}   // суреттерсіз де оқуға болады — белгі шығады
+}
+async function uploadBookToCloud(filename, text, images) {
   if (!sb || !authUser) return;
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
+    if (images && images.size && TezBookImport.isStructured(text)) {
+      try {
+        const zipBlob = await bkImagesZip(images);
+        const zs = await b2Sign(session, { action: 'upload', filename: 'images.zip', size: zipBlob.size });
+        if (zs.uploadUrl) {
+          const put = await fetch(zs.uploadUrl, { method: 'PUT', body: zipBlob });
+          if (put.ok) {
+            text = text.replace(BK_IMG_LINE, '@TZB1\n').replace(/^@TZB1\n/, '@TZB1\n#IMG|' + zs.key + '\n');
+            await lsSaveText(filename, text);   // жергілікті көшірме де бұлттағымен бірдей болсын
+          }
+        }
+      } catch(e) {}   // суреттер жүктелмесе — мәтін бәрібір жүктеледі
+    }
     const bytes = new TextEncoder().encode(text);
     const extRaw = (filename.split('.').pop() || 'txt').toLowerCase();
     const ext = ['pdf','txt','epub'].includes(extRaw) ? extRaw : 'txt';
