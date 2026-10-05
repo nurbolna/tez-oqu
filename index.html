@@ -2849,16 +2849,19 @@ async function renderPrivateBooksList() {
     card.querySelector('.ti-trash').onclick = (e) => {
       e.stopPropagation();
       if (confirm(tr('"{name}" жоясыз ба?', { name }))) {
-        localStorage.removeItem(LS + name);
-        localStorage.removeItem(bkTocSeenKey(name));
-        idbDeleteText(name);
-        idbDeleteImages(name);
-        idbDeleteByPrefix('__pagecache__' + name + '::');   // беттер кэші бұрын өшірілмей қалатын
+        bkForgetLocal(name);
         renderPrivateBooksList();
       }
     };
     wrap.appendChild(card);
   });
+}
+
+// Кітаптың осы құрылғыдағы барлық ізі: оқу орны, бетбелгілер, мазмұн белгісі, бұлт кілттері, мәтін, суреттер, беттер кэші
+function bkForgetLocal(name) {
+  [LS + name, LS + name + '_bm', bkTocSeenKey(name), 'sr5_key_' + name, 'sr5_imgkey_' + name]
+    .forEach(k => { try { localStorage.removeItem(k); } catch(e) {} });
+  return Promise.all([idbDeleteText(name), idbDeleteImages(name), idbDeleteByPrefix('__pagecache__' + name + '::')]);
 }
 
 async function loadFromCache(fileName) {
@@ -5179,8 +5182,9 @@ async function showDashboard() {
   document.getElementById('dash-phone').textContent = displayName || (authUser.phone ? formatPhoneShort(authUser.phone) : '');
   document.getElementById('dash-greeting').textContent = displayName ? tr('Қош келдіңіз, {name}!', { name: displayName }) : tr('Қайта келдіңіз!');
 
-  const [statsData, booksData] = await Promise.all([loadStats(), loadCloudBooks()]);
+  const [statsData, booksAll] = await Promise.all([loadStats(), loadCloudBooks()]);
   if (runId !== dashRunId) return; // жаңа showDashboard() шақырылды — ескі жауап қажет емес
+  const booksData = booksAll.filter(b => !bkDeletedIds.has(b.id));   // сұраныс өшіруден бұрын кеткен болуы мүмкін
   dashFresh = true;
   try { localStorage.setItem(cacheKey, JSON.stringify({ stats: statsData, books: booksData })); } catch (e) {}
   renderStats(statsData);
@@ -5360,10 +5364,59 @@ function renderBooksGrid(books) {
       '<div class="dash-book-title">' + escapeHtml(b.filename) + '</div>' +
       '<div class="dash-book-progress-track"><div class="dash-book-progress-fill" style="width:' + pct + '%;"></div></div>' +
       '<div class="dash-book-meta">' + tr('{pct}% оқылды', { pct }) + (prog ? ' · ' + timeAgoKk(prog.updated_at) : '') + '</div></div>' +
-      '<button class="dash-continue-btn">' + tr('Жалғастыру') + ' <i class="ti ti-arrow-right"></i></button>';
+      '<button class="dash-continue-btn">' + tr('Жалғастыру') + ' <i class="ti ti-arrow-right"></i></button>' +
+      '<i class="ti ti-trash dash-book-delete" title="' + tr('Жою') + '"></i>';
     card.querySelector('.dash-continue-btn').onclick = () => openCloudBook(b);
+    card.querySelector('.ti-trash').onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm(tr('"{name}" жоясыз ба?', { name: b.filename }))) return;
+      card.style.opacity = '.4'; card.style.pointerEvents = 'none';
+      try {
+        await deleteCloudBook(b);
+      } catch(err) {
+        card.style.opacity = ''; card.style.pointerEvents = '';
+        alert(tr('Кітапты өшіру мүмкін болмады, қайталап көріңіз'));
+        return;
+      }
+      renderBooksGrid(books.filter(x => x.id !== b.id));
+    };
     wrap.appendChild(card);
   });
+}
+
+// Бұлттағы кітапты толық өшіру: B2 файлдары (мәтін + суреттер архиві, барлық нұсқасымен — b2-sign v9),
+// books жолы (reading_progress каскадпен өшеді) және осы құрылғыдағы көшірмелер.
+// reading_sessions қалады (book_id → NULL), сондықтан оқылған беттер статистикадан жоғалмайды.
+// Алдымен B2, сосын жол: B2 сәтсіз болса жол қалады да, қайта басуға болады.
+const bkDeletedIds = new Set();   // фонда келе жатқан ескі тізім өшірілген кітапты қайта көрсетпесін
+async function deleteCloudBook(book) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error('no session');
+  // Суреттер архивінің кілті мәтіннің 2-жолында: осы құрылғыдағы көшірме осы нұсқа болса — содан, әйтпесе B2-ден басын ғана оқимыз
+  let head = await idbGetText(book.filename);
+  if (head && book.storage_key && bkCachedKey(book.filename) !== book.storage_key) head = null;
+  if (!head && book.storage_key) {
+    try {
+      const s = await b2Sign(session, { action: 'download', key: book.storage_key });
+      const get = h => fetch(s.downloadUrl, h ? { headers: h } : undefined).then(r => r.ok ? r.text() : '');
+      if (s.downloadUrl) head = await get({ Range: 'bytes=0-1023' }).catch(() => get());
+    } catch(e) {}
+  }
+  const m = BK_IMG_LINE.exec(head || '');
+  for (const key of [book.storage_key, m && m[1]].filter(Boolean)) {
+    const r = await b2Sign(session, { action: 'delete', key });
+    if (!r.success) throw new Error('b2 delete failed');
+  }
+  const { error } = await sb.from('books').delete().eq('id', book.id);
+  if (error) throw error;
+  bkDeletedIds.add(book.id);
+  if (currentBookId === book.id) currentBookId = null;
+  await bkForgetLocal(book.filename);
+  try {   // дашборд кэшінен де алып тастаймыз
+    const cacheKey = 'sr5_dash_cache_' + (authUser && authUser.id);
+    const c = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (c && Array.isArray(c.books)) { c.books = c.books.filter(x => x.id !== book.id); localStorage.setItem(cacheKey, JSON.stringify(c)); }
+  } catch(e) {}
 }
 
 document.getElementById('dash-upload-btn').addEventListener('click', () => {
