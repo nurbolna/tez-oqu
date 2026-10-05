@@ -5389,24 +5389,31 @@ function renderBooksGrid(books) {
 // reading_sessions қалады (book_id → NULL), сондықтан оқылған беттер статистикадан жоғалмайды.
 // Алдымен B2, сосын жол: B2 сәтсіз болса жол қалады да, қайта басуға болады.
 const bkDeletedIds = new Set();   // фонда келе жатқан ескі тізім өшірілген кітапты қайта көрсетпесін
-async function deleteCloudBook(book) {
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) throw new Error('no session');
-  // Суреттер архивінің кілті мәтіннің 2-жолында: осы құрылғыдағы көшірме осы нұсқа болса — содан, әйтпесе B2-ден басын ғана оқимыз
-  let head = await idbGetText(book.filename);
-  if (head && book.storage_key && bkCachedKey(book.filename) !== book.storage_key) head = null;
-  if (!head && book.storage_key) {
+// Кітаптың B2-дегі файлдары: мәтін + (болса) суреттер архиві. Архив кілті мәтіннің 2-жолында («#IMG|…»):
+// trustLocal болса және осы құрылғыдағы көшірме дәл осы нұсқа болса — содан, әйтпесе B2-ден мәтіннің басын ғана оқимыз.
+async function bkCloudFileKeys(session, filename, storageKey, trustLocal) {
+  if (!storageKey) return [];
+  let head = trustLocal && bkCachedKey(filename) === storageKey ? await idbGetText(filename) : null;
+  if (!head) {
     try {
-      const s = await b2Sign(session, { action: 'download', key: book.storage_key });
+      const s = await b2Sign(session, { action: 'download', key: storageKey });
       const get = h => fetch(s.downloadUrl, h ? { headers: h } : undefined).then(r => r.ok ? r.text() : '');
       if (s.downloadUrl) head = await get({ Range: 'bytes=0-1023' }).catch(() => get());
     } catch(e) {}
   }
   const m = BK_IMG_LINE.exec(head || '');
-  for (const key of [book.storage_key, m && m[1]].filter(Boolean)) {
+  return [storageKey, m && m[1]].filter(Boolean);
+}
+async function bkDeleteFromB2(session, keys) {
+  for (const key of keys) {
     const r = await b2Sign(session, { action: 'delete', key });
     if (!r.success) throw new Error('b2 delete failed');
   }
+}
+async function deleteCloudBook(book) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) throw new Error('no session');
+  await bkDeleteFromB2(session, await bkCloudFileKeys(session, book.filename, book.storage_key, true));
   const { error } = await sb.from('books').delete().eq('id', book.id);
   if (error) throw error;
   bkDeletedIds.add(book.id);
@@ -5525,6 +5532,13 @@ async function uploadBookToCloud(filename, text, images) {
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
+    // Сол атпен қайта жүктелсе, upsert жолдағы storage_key-ді ауыстырады — ескі мәтін мен суреттер архиві B2-де иесіз қалмасын.
+    // Ескі кілтті жүктеуден бұрын аламыз, ал өшіреміз жаңа нұсқа толық сақталғаннан кейін ғана.
+    let oldKey = null;
+    try {
+      const { data: old } = await sb.from('books').select('storage_key').eq('user_id', session.user.id).eq('filename', filename).maybeSingle();
+      oldKey = old && old.storage_key;
+    } catch(e) {}
     if (images && images.size && TezBookImport.isStructured(text)) {
       try {
         const zipBlob = await bkImagesZip(images);
@@ -5549,7 +5563,8 @@ async function uploadBookToCloud(filename, text, images) {
     });
     const signed = await signRes.json();
     if (!signed.uploadUrl) return;
-    await fetch(signed.uploadUrl, { method: 'PUT', body: bytes });
+    const put = await fetch(signed.uploadUrl, { method: 'PUT', body: bytes });
+    if (!put.ok) return;   // файл жүктелмесе, жол ескі (жұмыс істейтін) нұсқаны көрсетіп тұра берсін
 
     const totalWords = TezBookImport.countWords(text, cleanKazakhText);   // loadWords-тағы words.length-пен әрқашан бірдей
     const { data, error } = await sb.from('books').upsert({
@@ -5563,6 +5578,9 @@ async function uploadBookToCloud(filename, text, images) {
     if (!error && data) {
       currentBookId = data.id;
       bkSetCachedKey(filename, signed.key);   // осы құрылғыдағы көшірме — дәл осы бұлттағы нұсқа
+      // жергілікті мәтін жаңасымен ауысқан, сондықтан ескі архив кілтін B2-дегі ескі мәтіннен оқимыз (trustLocal = false)
+      if (oldKey && oldKey !== signed.key)
+        bkCloudFileKeys(session, filename, oldKey, false).then(keys => bkDeleteFromB2(session, keys)).catch(() => {});
     }
   } catch(e) {}
 }
