@@ -475,8 +475,19 @@
   .dash-book-meta { font-size: 11px; color: var(--d-text-3); }
   .dash-continue-btn { font-family: inherit; background: var(--d-accent); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   @media (hover: hover) { .dash-continue-btn:hover { background: var(--d-accent-hover); } }
-  .dash-book-delete { cursor: pointer; color: var(--d-text-3); font-size: 17px; margin-left: 4px; }
-  @media (hover: hover) { .dash-book-delete:hover { color: var(--d-danger); } }
+  .dash-book-card { position: relative; }
+  .dash-book-more { flex-shrink: 0; width: 36px; height: 36px; margin-right: -8px; border: none; background: none; border-radius: 8px; color: var(--d-text-3); font-size: 18px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .dash-book-more[aria-expanded="true"] { background: var(--d-tile); color: var(--d-text-2); }
+  @media (hover: hover) { .dash-book-more:hover { background: var(--d-tile); color: var(--d-text-2); } }
+  .dash-book-menu { position: absolute; right: 12px; top: calc(50% + 22px); z-index: 5; min-width: 150px; padding: 4px; background: var(--d-panel); border: 1px solid var(--d-border-strong); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .dash-book-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: none; background: none; border-radius: 6px; font-family: inherit; font-size: 13px; color: var(--d-danger); cursor: pointer; text-align: left; }
+  @media (hover: hover) { .dash-book-menu button:hover { background: #FCEBEB; } }
+  .dash-book-confirm { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px 8px; width: 100%; }
+  .dash-book-confirm span { flex: 1 1 100%; min-width: 0; font-size: 13px; line-height: 1.45; color: var(--d-text); overflow-wrap: anywhere; }
+  .dash-book-confirm button { font-family: inherit; font-size: 13px; font-weight: 500; border-radius: 8px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
+  .dash-book-confirm button:disabled { opacity: .5; cursor: default; }
+  .dash-book-confirm .cancel { background: none; border: 1px solid var(--d-border-strong); color: var(--d-text-2); }
+  .dash-book-confirm .yes { background: var(--d-danger); border: 1px solid var(--d-danger); color: #fff; }
   @media (max-width: 640px) { #dash-topnav { display: none; } #dashboard-content { padding: 20px 16px 36px; } #dash-stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } #dash-cols { grid-template-columns: 1fr; } #dash-trainers-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
   @media (min-width: 641px) and (max-width: 1000px) { #dash-cols { grid-template-columns: 1fr; } }
   @media (hover: hover) { .save-choice-row:hover { background: #EDE0C0; } }
@@ -2844,17 +2855,56 @@ async function renderPrivateBooksList() {
       '<div class="dash-book-progress-track"><div class="dash-book-progress-fill" style="width:' + pct + '%;"></div></div>' +
       '<div class="dash-book-meta">' + tr('{pct}% оқылды', { pct }) + (hasText ? '' : ' · ' + tr('файл табылмады, қайта жүктеңіз')) + '</div></div>' +
       (hasText ? '<button class="dash-continue-btn">' + tr('Жалғастыру') + ' <i class="ti ti-arrow-right"></i></button>' : '') +
-      '<i class="ti ti-trash dash-book-delete" title="' + tr('Жою') + '"></i>';
+      bkMoreBtnHtml();
     if (hasText) card.querySelector('.dash-continue-btn').onclick = () => loadFromCache(name);
-    card.querySelector('.ti-trash').onclick = (e) => {
-      e.stopPropagation();
-      if (confirm(tr('"{name}" жоясыз ба?', { name }))) {
-        bkForgetLocal(name);
-        renderPrivateBooksList();
-      }
-    };
+    bkAttachMenu(card, name, async () => { await bkForgetLocal(name); renderPrivateBooksList(); });
     wrap.appendChild(card);
   });
+}
+
+// Кітап карточкасы: «⋯» → мәзір → «Жою» → карточканың өз ішінде растау (браузердің confirm() терезесінің орнына)
+function bkMoreBtnHtml() {
+  return '<button type="button" class="dash-book-more" aria-label="' + tr('Тағы') + '" aria-haspopup="menu" aria-expanded="false"><i class="ti ti-dots-vertical"></i></button>';
+}
+function bkCloseMenus() {
+  document.querySelectorAll('.dash-book-menu').forEach(m => m.remove());
+  document.querySelectorAll('.dash-book-more[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+}
+document.addEventListener('click', e => { if (!e.target.closest('.dash-book-menu')) bkCloseMenus(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') bkCloseMenus(); });
+function bkAttachMenu(card, name, onDelete) {
+  const more = card.querySelector('.dash-book-more');
+  more.onclick = (e) => {
+    e.stopPropagation();
+    const wasOpen = more.getAttribute('aria-expanded') === 'true';
+    bkCloseMenus();
+    if (wasOpen) return;
+    const menu = document.createElement('div');
+    menu.className = 'dash-book-menu';
+    menu.setAttribute('role', 'menu');
+    menu.innerHTML = '<button type="button" role="menuitem"><i class="ti ti-trash"></i>' + tr('Жою') + '</button>';
+    menu.querySelector('button').onclick = (ev) => { ev.stopPropagation(); bkCloseMenus(); bkAskDelete(card, name, onDelete); };
+    card.appendChild(menu);
+    more.setAttribute('aria-expanded', 'true');
+  };
+}
+function bkAskDelete(card, name, onDelete) {
+  const kids = [...card.childNodes];   // «Бас тарту» басылса, сол түйіндерді (өңдеушілерімен бірге) қайтарамыз
+  const shortName = name.length > 42 ? name.slice(0, 40) + '…' : name;
+  const box = document.createElement('div');
+  box.className = 'dash-book-confirm';
+  box.innerHTML = '<span>' + escapeHtml(tr('«{name}» жойылсын ба? Қайтару мүмкін емес.', { name: shortName })) + '</span>' +
+    '<button type="button" class="cancel">' + tr('Бас тарту') + '</button>' +
+    '<button type="button" class="yes">' + tr('Жою') + '</button>';
+  card.replaceChildren(box);
+  const restore = () => card.replaceChildren(...kids);
+  box.querySelector('.cancel').onclick = (e) => { e.stopPropagation(); restore(); };
+  box.querySelector('.yes').onclick = async (e) => {
+    e.stopPropagation();
+    box.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    try { await onDelete(); }
+    catch (err) { restore(); alert(tr('Кітапты өшіру мүмкін болмады, қайталап көріңіз')); }
+  };
 }
 
 // Кітаптың осы құрылғыдағы барлық ізі: оқу орны, бетбелгілер, мазмұн белгісі, бұлт кілттері, мәтін, суреттер, беттер кэші
@@ -5365,21 +5415,9 @@ function renderBooksGrid(books) {
       '<div class="dash-book-progress-track"><div class="dash-book-progress-fill" style="width:' + pct + '%;"></div></div>' +
       '<div class="dash-book-meta">' + tr('{pct}% оқылды', { pct }) + (prog ? ' · ' + timeAgoKk(prog.updated_at) : '') + '</div></div>' +
       '<button class="dash-continue-btn">' + tr('Жалғастыру') + ' <i class="ti ti-arrow-right"></i></button>' +
-      '<i class="ti ti-trash dash-book-delete" title="' + tr('Жою') + '"></i>';
+      bkMoreBtnHtml();
     card.querySelector('.dash-continue-btn').onclick = () => openCloudBook(b);
-    card.querySelector('.ti-trash').onclick = async (e) => {
-      e.stopPropagation();
-      if (!confirm(tr('"{name}" жоясыз ба?', { name: b.filename }))) return;
-      card.style.opacity = '.4'; card.style.pointerEvents = 'none';
-      try {
-        await deleteCloudBook(b);
-      } catch(err) {
-        card.style.opacity = ''; card.style.pointerEvents = '';
-        alert(tr('Кітапты өшіру мүмкін болмады, қайталап көріңіз'));
-        return;
-      }
-      renderBooksGrid(books.filter(x => x.id !== b.id));
-    };
+    bkAttachMenu(card, b.filename, async () => { await deleteCloudBook(b); renderBooksGrid(books.filter(x => x.id !== b.id)); });
     wrap.appendChild(card);
   });
 }
